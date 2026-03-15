@@ -12,6 +12,10 @@ argument-hint: "file or symbol to document"
 - Reviewing or rewriting existing docstrings for quality
 - Auditing a module for missing or stale documentation
 
+## Scope Constraint
+
+Only add or update docstrings. Do **not** modify, refactor, or restructure any code — even if issues are noticed. Report code-level findings separately but leave the code unchanged.
+
 ## Class Docstrings
 
 Open with what the class is **for** and why it matters to the caller — not a description of its internal mechanics.
@@ -87,4 +91,4 @@ Use `double backticks` for all symbol names, including:
 - [ ] Method docstrings are one line unless non-obvious behavior needs explanation
 - [ ] All symbol references use `double backticks`
 - [ ] No `__init__` docstring if class docstring covers parameters
-- [ ] No docstrings added to code that wasn't changed
+- [ ] Only docstrings were changed — no code was modified, refactored, or restructured
