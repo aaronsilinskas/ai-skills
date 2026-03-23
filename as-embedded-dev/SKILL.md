@@ -1,5 +1,5 @@
 ---
-name: embedded-dev
+name: as-embedded-dev
 description: "Write, review, or optimize Python code for embedded and constrained runtimes such as CircuitPython and MicroPython. Use when implementing animation loops, per-frame update logic, per-pixel sampling, or any hot-path code that runs on limited CPU/RAM hardware. Use when reviewing code for GC pressure, unnecessary allocations, or CircuitPython compatibility issues."
 argument-hint: "file or function to review or implement"
 ---

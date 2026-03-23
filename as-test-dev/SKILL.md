@@ -1,5 +1,5 @@
 ---
-name: test-dev
+name: as-test-dev
 description: Write, review, or restructure tests with a product-focused philosophy. Use when writing new tests, auditing existing tests for quality, naming test functions, planning test coverage, or identifying edge cases. Covers naming conventions, test structure, and the distinction between behavior-driven tests and code-path-mirroring tests.
 argument-hint: "feature, module, or behavior to test"
 ---

@@ -1,5 +1,5 @@
 ---
-name: python-docstrings
+name: as-python-docstrings
 description: "Write or review Python docstrings for classes, methods, functions, and modules. Use when adding docstrings to new or undocumented code, rewriting poor docstrings, auditing a module for missing documentation, or deciding whether a docstring is needed at all."
 argument-hint: "file or symbol to document"
 ---
