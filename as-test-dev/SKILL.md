@@ -1,6 +1,6 @@
 ---
 name: as-test-dev
-description: Write, review, or restructure tests with a product-focused philosophy. Use when writing new tests, auditing existing tests for quality, naming test functions, planning test coverage, or identifying edge cases. Covers naming conventions, test structure, and the distinction between behavior-driven tests and code-path-mirroring tests.
+description: "Write, review, or restructure Python tests with a product-focused, behavior-driven philosophy. Use this skill whenever writing new tests, auditing existing ones, naming test functions, or planning coverage — even if the user just says 'add tests' or 'check my tests.' Also use when the user asks whether a test is good, what to test next, or whether their test suite is missing something. Covers naming conventions, test structure, and distinguishing behavior-driven tests from code-path-mirroring tests."
 argument-hint: "feature, module, or behavior to test"
 ---
 

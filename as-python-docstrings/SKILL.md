@@ -1,6 +1,6 @@
 ---
 name: as-python-docstrings
-description: "Write or review Python docstrings for classes, methods, functions, and modules. Use when adding docstrings to new or undocumented code, rewriting poor docstrings, auditing a module for missing documentation, or deciding whether a docstring is needed at all."
+description: "Write or review Python docstrings for classes, methods, functions, and modules. Use this skill whenever touching Python documentation — adding docstrings to new or undocumented code, rewriting vague or unhelpful ones, auditing a module for missing or stale docs, or deciding whether a symbol even needs a docstring. Use even when the user just says 'add docs' or 'document this' without specifying a format. Scope is strictly docstrings only — no code changes."
 argument-hint: "file or symbol to document"
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: as-embedded-dev
-description: "Write, review, or optimize Python code for embedded and constrained runtimes such as CircuitPython and MicroPython. Use when implementing animation loops, per-frame update logic, per-pixel sampling, or any hot-path code that runs on limited CPU/RAM hardware. Use when reviewing code for GC pressure, unnecessary allocations, or CircuitPython compatibility issues."
+description: "Write, review, or optimize Python code for CircuitPython and MicroPython constrained runtimes. Use this skill whenever writing or reviewing Python that runs on microcontrollers, LED strips, or embedded hardware — even if the user doesn't say 'CircuitPython' explicitly. Always use for animation loops, per-frame update logic, per-pixel sampling, hot paths, or any code where GC pauses, memory allocations, or CPU limits matter. Also use when the user asks whether a Python pattern is safe, efficient, or compatible with constrained hardware."
 argument-hint: "file or function to review or implement"
 ---
 
