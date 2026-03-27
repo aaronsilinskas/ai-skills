@@ -235,11 +235,19 @@ def cmd_history(args, api_key):
     date_to = args.end_date
 
     if date_from:
-        from datetime import datetime
-        _start = datetime.strptime(date_from, "%Y-%m-%d")
-        _end = datetime.strptime(date_to, "%Y-%m-%d") if date_to else datetime.utcnow()
+        from datetime import datetime, timezone
+
+        _start = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        _end = (
+            datetime.strptime(date_to, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if date_to
+            else datetime.now(timezone.utc)
+        )
         if (_end - _start).days > 365:
-            print(json.dumps({"error": "date range cannot exceed 1 year (365 days)"}), file=sys.stderr)
+            print(
+                json.dumps({"error": "date range cannot exceed 1 year (365 days)"}),
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     raw = fetch_measurements(
