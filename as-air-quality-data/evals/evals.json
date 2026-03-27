@@ -60,7 +60,7 @@
     },
     {
       "id": 4,
-      "prompt": "How did air quality in Pittsburgh vary month by month over 2025? Use PurpleAir sensor 160166 and give me monthly averages and the worst day each month.",
+      "prompt": "How did air quality in Pittsburgh vary month by month over 2025? Use PurpleAir sensor 157167 and give me monthly averages and the worst day each month.",
       "expected_output": "A monthly breakdown table or list showing avg PM2.5 and the single worst day for each month in 2025. Should fetch daily history via fetch_purpleair.py --history --average 1440 and process the output. Opens with which month was worst overall before showing the full breakdown.",
       "files": [],
       "expectations": [

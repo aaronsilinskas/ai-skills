@@ -218,7 +218,7 @@ python <skill-path>/scripts/analyze_history.py tokyo_sensor.json
 
 **For current conditions:** Lead with the AQI number and category — e.g., "AQI 52 — Moderate". Follow with the dominant pollutant and a one-sentence health takeaway.
 
-**For historical data:** Group daily readings by month using the `time_stamp` field (Unix seconds) present in the history JSON, then report monthly average and maximum PM2.5 (µg/m³). Open with the single worst month, then show the full table:
+**For historical data:** Always open your response by calling out the single worst month — e.g., "Worst month: June 2025 — avg 11.9 µg/m³" — before showing any table. This gives the user the key takeaway immediately. Then show the full monthly breakdown:
 
 ```
 Month       Avg PM2.5   Max PM2.5
