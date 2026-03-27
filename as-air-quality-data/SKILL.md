@@ -7,13 +7,16 @@ description: "Retrieve live air quality data by running scripts from this skill.
 
 Fetch live air quality data by running Python scripts from this skill's `scripts/` directory. All scripts output JSON to stdout and read API keys from environment variables.
 
+`<skill-path>` below refers to the directory containing this SKILL.md file.
+
 ## Setup
 
 Store API keys in `~/.config/as-air-quality-data/.env`:
 
 ```bash
 mkdir -p ~/.config/as-air-quality-data
-cat >> ~/.config/as-air-quality-data/.env << 'EOF'
+# Warning: this overwrites the file. To update a single key, edit the file directly instead.
+cat > ~/.config/as-air-quality-data/.env << 'EOF'
 AIRNOW_API_KEY=your_key_here
 PURPLEAIR_API_KEY=your_key_here
 IQAIR_API_KEY=your_key_here
@@ -48,19 +51,19 @@ Query EPA AirNow for current AQI, forecasts, or historical data.
 
 ```bash
 # Current AQI by zip code
-python scripts/fetch_airnow.py --zip 94103
+python <skill-path>/scripts/fetch_airnow.py --zip 94103
 
 # Current AQI by lat/lng
-python scripts/fetch_airnow.py --lat 37.77 --lng -122.41
+python <skill-path>/scripts/fetch_airnow.py --lat 37.77 --lng -122.41
 
 # Forecast (defaults to today; provide --date for another day YYYY-MM-DD)
-python scripts/fetch_airnow.py --zip 94103 --mode forecast --date 2024-03-16
+python <skill-path>/scripts/fetch_airnow.py --zip 94103 --mode forecast --date 2024-03-16
 
 # Historical (requires --date)
-python scripts/fetch_airnow.py --zip 94103 --mode historical --date 2024-03-10
+python <skill-path>/scripts/fetch_airnow.py --zip 94103 --mode historical --date 2024-03-10
 
 # Wider search radius in miles (default 25)
-python scripts/fetch_airnow.py --zip 94103 --distance 50
+python <skill-path>/scripts/fetch_airnow.py --zip 94103 --distance 50
 ```
 
 **Output:** Array of observations, one per pollutant. Multiple entries are normal — each has `ParameterName`, `AQI`, and `Category.Name`. The entry with the highest `AQI` is the overall air quality.
@@ -75,22 +78,22 @@ Query PurpleAir for hyperlocal PM2.5 from community sensors near a location.
 
 ```bash
 # Sensors near a lat/lng (default 5-mile radius)
-python scripts/fetch_purpleair.py --lat 37.77 --lng -122.41
+python <skill-path>/scripts/fetch_purpleair.py --lat 37.77 --lng -122.41
 
 # Adjust search radius in miles
-python scripts/fetch_purpleair.py --lat 37.77 --lng -122.41 --radius 2
+python <skill-path>/scripts/fetch_purpleair.py --lat 37.77 --lng -122.41 --radius 2
 
 # Single sensor by index (find index from a nearby-sensors query)
-python scripts/fetch_purpleair.py --sensor-index 12345
+python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345
 
 # Historical data for a sensor (last 24 hours, hourly averages)
-python scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 24
+python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 24
 
 # Historical data for a date range (daily averages — one API call)
-python scripts/fetch_purpleair.py --sensor-index 12345 --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440
+python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440
 
 # Last 7 days at 6-hour averages
-python scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 168 --average 360
+python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 168 --average 360
 ```
 
 **Output:** For nearby sensors: array with `name`, `latitude`, `longitude`, `pm25_corrected` (EPA correction applied), `pm25_raw`, `aqi_category`. For single sensor: full reading with humidity and temperature included.
@@ -105,14 +108,14 @@ Query IQAir for city-level AQI and weather. Works globally; free plan limited to
 
 ```bash
 # City by name
-python scripts/fetch_iqair.py --city "Los Angeles" --state California --country USA
+python <skill-path>/scripts/fetch_iqair.py --city "Los Angeles" --state California --country USA
 
 # Use IP geolocation (unreliable in cloud/server environments)
-python scripts/fetch_iqair.py --nearest
+python <skill-path>/scripts/fetch_iqair.py --nearest
 
 # Discover available locations
-python scripts/fetch_iqair.py --list-states --country USA
-python scripts/fetch_iqair.py --list-cities --state California --country USA
+python <skill-path>/scripts/fetch_iqair.py --list-states --country USA
+python <skill-path>/scripts/fetch_iqair.py --list-cities --state California --country USA
 ```
 
 **Output:** Current AQI (US scale), main pollutant, temperature (°C), humidity, wind speed and direction.
@@ -125,10 +128,10 @@ Summarize one or more PurpleAir history JSON files (produced by `fetch_purpleair
 
 ```bash
 # Analyze a single sensor history file
-python scripts/analyze_history.py sensor_12345.json
+python <skill-path>/scripts/analyze_history.py sensor_12345.json
 
 # Analyze multiple files at once (glob supported)
-python scripts/analyze_history.py /tmp/pgh_*.json
+python <skill-path>/scripts/analyze_history.py /tmp/pgh_*.json
 ```
 
 **Input:** JSON files from `fetch_purpleair.py --history`. Accepts both formats:
@@ -140,12 +143,27 @@ python scripts/analyze_history.py /tmp/pgh_*.json
 **Typical workflow:**
 ```bash
 # 1. Fetch a year of daily averages for a sensor
-python scripts/fetch_purpleair.py --sensor-index 12345 \
+python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 \
   --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440 \
   > sensor_12345.json
 
 # 2. Summarize
-python scripts/analyze_history.py sensor_12345.json
+python <skill-path>/scripts/analyze_history.py sensor_12345.json
+```
+
+---
+
+## Presenting results
+
+**For current conditions:** Lead with the AQI number and category — e.g., "AQI 52 — Moderate". Follow with the dominant pollutant and a one-sentence health takeaway.
+
+**For historical data:** Group daily readings by month using the `time_stamp` field (Unix seconds) present in the history JSON, then report monthly average and maximum PM2.5 (µg/m³). Open with the single worst month, then show the full table:
+
+```
+Month       Avg PM2.5   Max PM2.5
+Jan 2025    8.2 µg/m³   23.1 µg/m³
+Feb 2025    9.7 µg/m³   31.4 µg/m³
+…
 ```
 
 ---

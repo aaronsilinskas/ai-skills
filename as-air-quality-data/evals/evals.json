@@ -57,6 +57,25 @@
         {"text": "AirNow or IQAir is recommended as the authoritative source for health guidance", "type": "output_check"},
         {"text": "Response uses live fetched data, not general knowledge about typical LA air quality", "type": "output_check"}
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "How did air quality in Pittsburgh vary month by month over 2025? Use PurpleAir sensor 160166 and give me monthly averages and the worst day each month.",
+      "expected_output": "A monthly breakdown table or list showing avg PM2.5 and the single worst day for each month in 2025. Should fetch daily history via fetch_purpleair.py --history --average 1440 and process the output. Opens with which month was worst overall before showing the full breakdown.",
+      "files": [],
+      "expectations": [
+        "The response shows monthly avg PM2.5 for each month in 2025",
+        "The response identifies the worst day (highest PM2.5) for each month",
+        "The response opens by naming the worst month before the full table",
+        "Data is fetched via the skill scripts, not generated from general knowledge"
+      ],
+      "assertions": [
+        {"text": "Response shows monthly avg PM2.5 values for each month across 2025", "type": "output_check"},
+        {"text": "Response identifies the highest single-day PM2.5 or worst day per month", "type": "output_check"},
+        {"text": "Response leads with or prominently names the worst month overall", "type": "output_check"},
+        {"text": "Data is fetched live via PurpleAir scripts, not estimated from general knowledge", "type": "output_check"},
+        {"text": "Response covers at least 10 of 12 months (some gaps acceptable for sparse sensors)", "type": "output_check"}
+      ]
     }
   ]
 }
