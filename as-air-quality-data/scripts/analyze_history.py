@@ -1,19 +1,20 @@
 """
-Analyze PurpleAir history JSON files produced by fetch_purpleair.py --history.
+Analyze PM2.5 history JSON files from fetch_purpleair.py or fetch_openaq.py.
 
 Usage:
     python scripts/analyze_history.py file1.json [file2.json ...]
-    python scripts/analyze_history.py /tmp/pgh_*.json
+    python scripts/analyze_history.py /tmp/sensors_*.json
 
-Each file must be either:
-  - A single-sensor history object: {"sensor_index": N, "history": [{...}, ...]}
-  - A list of daily readings:       [{...}, ...]
-
-Each reading is expected to have "pm2.5_cf_1_corrected" (EPA-corrected PM2.5) and
-"time_stamp" (Unix seconds) fields. Readings with null or negative values are excluded.
+Accepted formats
+----------------
+PurpleAir  — {"sensor_index": N, "history": [{time_stamp, pm2.5_cf_1_corrected, ...}]}
+             or a bare list of those dicts
+OpenAQ     — {"sensor_id": N, "daily_values": {"YYYY-MM-DD": float, ...}}
+             (produced by fetch_openaq.py history)
 
 Output per file:
-  - Monthly breakdown: avg and max PM2.5 (µg/m³) per month, sorted worst-first then full table
+  - Worst month (shown first)
+  - Monthly table: avg and max PM2.5 (µg/m³)
   - Annual summary: mean PM2.5, day counts/percentages for Good / Moderate / USG+ categories
   - 5 worst daily values
 """
@@ -29,44 +30,55 @@ GOOD_MAX = 12.0
 MODERATE_MAX = 35.4
 
 
+def load_daily_values(data) -> dict:
+    """Return {YYYY-MM-DD: pm25_float} from either PurpleAir or OpenAQ format."""
+    # OpenAQ format: {"sensor_id": N, "daily_values": {"YYYY-MM-DD": float}}
+    if isinstance(data, dict) and "daily_values" in data:
+        return {
+            k: float(v)
+            for k, v in data["daily_values"].items()
+            if v is not None and float(v) >= 0
+        }
+    # PurpleAir format: {"sensor_index": N, "history": [...]} or bare list
+    rows = data.get("history", data) if isinstance(data, dict) else data
+    daily = {}
+    for r in rows:
+        pm25 = r.get("pm2.5_cf_1_corrected")
+        ts = r.get("time_stamp")
+        if pm25 is None or pm25 < 0 or ts is None:
+            continue
+        date = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        daily[date] = pm25
+    return daily
+
+
 def analyze(path: Path) -> None:
     with open(path) as f:
         data = json.load(f)
 
-    rows = data.get("history", data) if isinstance(data, dict) else data
-    valid_rows = [
-        r
-        for r in rows
-        if r.get("pm2.5_cf_1_corrected") is not None
-        and r["pm2.5_cf_1_corrected"] >= 0
-        and r.get("time_stamp") is not None
-    ]
-
+    daily = load_daily_values(data)
     label = path.stem
-    if not valid_rows:
+    if not daily:
         print(f"\n{label}: No valid readings")
         return
 
-    readings = [r["pm2.5_cf_1_corrected"] for r in valid_rows]
-    n = len(readings)
-    avg = sum(readings) / n
-    good = sum(1 for x in readings if x <= GOOD_MAX)
-    moderate = sum(1 for x in readings if GOOD_MAX < x <= MODERATE_MAX)
-    usg = sum(1 for x in readings if x > MODERATE_MAX)
-    top5 = sorted(readings, reverse=True)[:5]
+    values = list(daily.values())
+    n = len(values)
+    avg = sum(values) / n
+    good = sum(1 for x in values if x <= GOOD_MAX)
+    moderate = sum(1 for x in values if GOOD_MAX < x <= MODERATE_MAX)
+    usg = sum(1 for x in values if x > MODERATE_MAX)
+    top5 = sorted(values, reverse=True)[:5]
 
-    # Monthly grouping
-    by_month: dict[str, list[float]] = defaultdict(list)
-    for r in valid_rows:
-        dt = datetime.fromtimestamp(r["time_stamp"], tz=timezone.utc)
-        key = dt.strftime("%b %Y")
-        by_month[key].append(r["pm2.5_cf_1_corrected"])
+    by_month: dict[str, list] = defaultdict(list)
+    for date, pm25 in daily.items():
+        key = datetime.strptime(date, "%Y-%m-%d").strftime("%b %Y")
+        by_month[key].append(pm25)
 
-    monthly = [
-        (month, sum(vals) / len(vals), max(vals)) for month, vals in by_month.items()
-    ]
-    # Sort chronologically for the full table
-    monthly_chrono = sorted(monthly, key=lambda x: datetime.strptime(x[0], "%b %Y"))
+    monthly_chrono = sorted(
+        [(m, sum(v) / len(v), max(v)) for m, v in by_month.items()],
+        key=lambda x: datetime.strptime(x[0], "%b %Y"),
+    )
     worst_month = max(monthly_chrono, key=lambda x: x[1])
 
     print(f"\n{'='*60}")

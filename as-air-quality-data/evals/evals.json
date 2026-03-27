@@ -76,6 +76,25 @@
         {"text": "Data is fetched live via PurpleAir scripts, not estimated from general knowledge", "type": "output_check"},
         {"text": "Response covers at least 10 of 12 months (some gaps acceptable for sparse sensors)", "type": "output_check"}
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "What was the air quality like in Tokyo in 2024? Give me monthly averages.",
+      "expected_output": "Monthly PM2.5 averages for Tokyo in 2024 fetched from OpenAQ government monitors. Should use fetch_openaq.py sensors to discover nearby monitors, then fetch history. Opens with the worst month before the full table. Notes any ingestion lag if recent months are missing.",
+      "files": [],
+      "expectations": [
+        "Uses fetch_openaq.py, not AirNow or PurpleAir",
+        "Shows monthly PM2.5 averages for multiple months in 2024",
+        "Opens with or prominently calls out the worst month",
+        "Data is fetched live from OpenAQ, not estimated from general knowledge"
+      ],
+      "assertions": [
+        {"text": "Response uses fetch_openaq.py to fetch the data (not AirNow or PurpleAir)", "type": "output_check"},
+        {"text": "Response shows monthly PM2.5 averages for multiple months in 2024", "type": "output_check"},
+        {"text": "Response leads with or prominently names the worst month", "type": "output_check"},
+        {"text": "Data is fetched live from OpenAQ, not estimated from general knowledge about Tokyo air quality", "type": "output_check"},
+        {"text": "Response covers at least 6 months of 2024 (ingestion lag may limit more recent months)", "type": "output_check"}
+      ]
     }
   ]
 }

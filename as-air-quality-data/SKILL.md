@@ -1,6 +1,6 @@
 ---
 name: as-air-quality-data
-description: "Retrieve live air quality data by running scripts from this skill. Use this skill whenever the user wants to fetch, check, or compare air quality data, AQI values, PM2.5, PM10, or pollutant levels for any location — even if they just say 'what's the air quality near me' or 'is it safe to go outside'. Also use when combining data across multiple sources or applying correction factors to sensor readings. Runs Python scripts directly against EPA AirNow, PurpleAir, and IQAir — no API knowledge required."
+description: "Retrieve live air quality data by running scripts from this skill. Use this skill whenever the user wants to fetch, check, or compare air quality data, AQI values, PM2.5, PM10, or pollutant levels for any location — even if they just say 'what's the air quality near me' or 'is it safe to go outside'. Works globally including non-US cities (Tokyo, Seoul, London, Paris, etc.) via OpenAQ government monitors. Also use when combining data across multiple sources or applying correction factors to sensor readings. Runs Python scripts directly against EPA AirNow, PurpleAir, IQAir, and OpenAQ — no API knowledge required."
 ---
 
 # Air Quality Data
@@ -25,11 +25,12 @@ EOF
 
 You only need keys for the sources you'll use. Environment variables take precedence over the file.
 
-| Variable | Register at | Cost |
-|---|---|---|
-| `AIRNOW_API_KEY` | https://docs.airnowapi.org/ | Free |
-| `PURPLEAIR_API_KEY` | https://develop.purpleair.com/ | Free (1M points) |
-| `IQAIR_API_KEY` | https://dashboard.iqair.com/personal/api-keys | Free community tier |
+| Variable            | Register at                                   | Cost                |
+| ------------------- | --------------------------------------------- | ------------------- |
+| `AIRNOW_API_KEY`    | https://docs.airnowapi.org/                   | Free                |
+| `PURPLEAIR_API_KEY` | https://develop.purpleair.com/                | Free (1M points)    |
+| `IQAIR_API_KEY`     | https://dashboard.iqair.com/personal/api-keys | Free community tier |
+| `OPENAQ_API_KEY`    | https://openaq.org/register                   | Free                |
 
 Install the one dependency if needed: `pip install requests`
 
@@ -37,11 +38,12 @@ Install the one dependency if needed: `pip install requests`
 
 ## Which script to use
 
-| Need | Script |
-|---|---|
-| Official US/Canada/Mexico AQI, forecasts, historical | `fetch_airnow.py` |
-| Neighborhood-level PM2.5, wildfire smoke, dense local sensors | `fetch_purpleair.py` |
-| Global city/station data + weather | `fetch_iqair.py` |
+| Need                                                            | Script               |
+| --------------------------------------------------------------- | -------------------- |
+| Official US/Canada/Mexico AQI, forecasts, historical            | `fetch_airnow.py`    |
+| Neighborhood-level PM2.5, wildfire smoke, dense local sensors   | `fetch_purpleair.py` |
+| Global city/station data + weather                              | `fetch_iqair.py`     |
+| Official government PM2.5 monitors, global (esp. non-US cities) | `fetch_openaq.py`    |
 
 ---
 
@@ -122,33 +124,88 @@ python <skill-path>/scripts/fetch_iqair.py --list-cities --state California --co
 
 ---
 
-## analyze_history.py
+## fetch_openaq.py
 
-Summarize one or more PurpleAir history JSON files (produced by `fetch_purpleair.py --history`) into annual statistics.
+Query OpenAQ for official government PM2.5 monitors worldwide. Especially useful for countries with sparse PurpleAir coverage — Japan, Korea, and most of Europe report regulatory-grade data through OpenAQ. Data has a 6–8 month ingestion lag in some countries (MOE stations in Japan, for example), so recent months may be missing.
+
+Two subcommands: **`sensors`** to discover monitors near a location, and **`history`** to fetch all available measurements for a single sensor.
 
 ```bash
-# Analyze a single sensor history file
+# Find PM2.5 monitors near Tokyo (default 15 km radius)
+python <skill-path>/scripts/fetch_openaq.py sensors --lat 35.685 --lon 139.751
+
+# Widen search radius
+python <skill-path>/scripts/fetch_openaq.py sensors --lat 33.590 --lon 130.401 --radius 25
+
+# Include non-official community sensors (excluded by default)
+python <skill-path>/scripts/fetch_openaq.py sensors --lat 35.685 --lon 139.751 --all
+
+# Fetch all available history for a sensor (up to 25 pages = ~12,500 hourly readings)
+python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6515867
+
+# Restrict to a date range and include daily statistics summary
+python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6515867 \
+    --start-date 2024-01-01 --end-date 2024-12-31 --stats
+
+# Fetch more history (raise page cap for sensors with years of data)
+python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6515867 --page-limit 50
+```
+
+**sensors output:** Array of `{sensor_id, location_id, name, provider, lat, lon, distance_km, last_updated}`, sorted by distance. Use `sensor_id` (not `location_id`) with the `history` subcommand.
+
+**history output:** `{sensor_id, date_from, date_to, raw_measurements, daily_values}` where `daily_values` is a dict of `{"YYYY-MM-DD": avg_pm25_float}`. Add `--stats` for a full summary including monthly averages, day-count breakdowns, and worst-5 days.
+
+**Note on data:** OpenAQ returns raw, uncorrected PM2.5 from regulatory instruments (these are already accurate — no correction factor needed). `isMonitor: true` locations are government stations; the `--all` flag also includes lower-quality community sensors.
+
+**Typical workflow for a new city:**
+
+```bash
+# 1. Find nearby government monitors
+python <skill-path>/scripts/fetch_openaq.py sensors --lat 35.685 --lon 139.751 > sensors.json
+
+# 2. Pick a sensor with a recent last_updated date and reasonable distance
+# 3. Fetch its history with stats
+python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6516560 --stats
+```
+
+---
+
+## analyze_history.py
+
+Summarize PM2.5 history JSON files into monthly and annual statistics. Accepts output from both `fetch_purpleair.py --history` and `fetch_openaq.py history`.
+
+```bash
+# Analyze a single file
 python <skill-path>/scripts/analyze_history.py sensor_12345.json
 
 # Analyze multiple files at once (glob supported)
-python <skill-path>/scripts/analyze_history.py /tmp/pgh_*.json
+python <skill-path>/scripts/analyze_history.py /tmp/sensors_*.json
 ```
 
-**Input:** JSON files from `fetch_purpleair.py --history`. Accepts both formats:
-- Single-sensor object: `{"sensor_index": N, "history": [{...}, ...]}`
-- Raw list: `[{...}, ...]`
+**Accepted formats:**
 
-**Output per file:** number of valid days, mean PM2.5 (µg/m³), day counts and percentages for Good / Moderate / USG+, and the 5 worst daily values.
+- PurpleAir: `{"sensor_index": N, "history": [{time_stamp, pm2.5_cf_1_corrected, ...}]}` or bare list
+- OpenAQ: `{"sensor_id": N, "daily_values": {"YYYY-MM-DD": float}}` (from `fetch_openaq.py history`)
 
-**Typical workflow:**
+Note: use `fetch_openaq.py history --stats` if you just need a quick summary for a single OpenAQ sensor — it computes stats inline without a separate file.
+
+**Output per file:** worst month (shown first), monthly avg/max table, annual mean, Good/Moderate/USG+ day counts, 5 worst days.
+
+**PurpleAir workflow:**
+
 ```bash
-# 1. Fetch a year of daily averages for a sensor
 python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 \
   --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440 \
   > sensor_12345.json
-
-# 2. Summarize
 python <skill-path>/scripts/analyze_history.py sensor_12345.json
+```
+
+**OpenAQ workflow:**
+
+```bash
+python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6516560 \
+  --start-date 2024-01-01 --end-date 2024-12-31 > tokyo_sensor.json
+python <skill-path>/scripts/analyze_history.py tokyo_sensor.json
 ```
 
 ---
@@ -172,5 +229,6 @@ Feb 2025    9.7 µg/m³   31.4 µg/m³
 
 - **AirNow and IQAir** both use the official US EPA AQI scale — values are directly comparable.
 - **PurpleAir** `pm25_corrected` is converted to AQI-equivalent and comparable after correction.
-- If sources disagree by more than ~30 AQI points, trust AirNow or IQAir — they use validated instruments. PurpleAir is best used for spatial density (finding the worst microzone) rather than absolute values.
-- Timestamps: IQAir uses UTC ISO 8601; AirNow uses local time with a timezone label.  
+- **OpenAQ** returns raw PM2.5 µg/m³ from government regulatory instruments — no correction needed. Values are directly comparable to AirNow reference monitors.
+- If sources disagree by more than ~30 AQI points, trust AirNow, IQAir, or OpenAQ — they use validated instruments. PurpleAir is best used for spatial density (finding the worst microzone) rather than absolute values.
+- Timestamps: IQAir uses UTC ISO 8601; AirNow uses local time with a timezone label.
