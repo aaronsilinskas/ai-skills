@@ -85,6 +85,12 @@ python scripts/fetch_purpleair.py --sensor-index 12345
 
 # Historical data for a sensor (last 24 hours, hourly averages)
 python scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 24
+
+# Historical data for a date range (daily averages — one API call)
+python scripts/fetch_purpleair.py --sensor-index 12345 --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440
+
+# Last 7 days at 6-hour averages
+python scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 168 --average 360
 ```
 
 **Output:** For nearby sensors: array with `name`, `latitude`, `longitude`, `pm25_corrected` (EPA correction applied), `pm25_raw`, `aqi_category`. For single sensor: full reading with humidity and temperature included.
@@ -110,6 +116,37 @@ python scripts/fetch_iqair.py --list-cities --state California --country USA
 ```
 
 **Output:** Current AQI (US scale), main pollutant, temperature (°C), humidity, wind speed and direction.
+
+---
+
+## analyze_history.py
+
+Summarize one or more PurpleAir history JSON files (produced by `fetch_purpleair.py --history`) into annual statistics.
+
+```bash
+# Analyze a single sensor history file
+python scripts/analyze_history.py sensor_12345.json
+
+# Analyze multiple files at once (glob supported)
+python scripts/analyze_history.py /tmp/pgh_*.json
+```
+
+**Input:** JSON files from `fetch_purpleair.py --history`. Accepts both formats:
+- Single-sensor object: `{"sensor_index": N, "history": [{...}, ...]}`
+- Raw list: `[{...}, ...]`
+
+**Output per file:** number of valid days, mean PM2.5 (µg/m³), day counts and percentages for Good / Moderate / USG+, and the 5 worst daily values.
+
+**Typical workflow:**
+```bash
+# 1. Fetch a year of daily averages for a sensor
+python scripts/fetch_purpleair.py --sensor-index 12345 \
+  --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440 \
+  > sensor_12345.json
+
+# 2. Summarize
+python scripts/analyze_history.py sensor_12345.json
+```
 
 ---
 

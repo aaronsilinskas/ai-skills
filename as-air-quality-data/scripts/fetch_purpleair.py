@@ -117,13 +117,27 @@ def main():
     parser.add_argument(
         "--history",
         action="store_true",
-        help="Fetch historical hourly averages (only valid with --sensor-index)",
+        help="Fetch historical data (only valid with --sensor-index)",
     )
     parser.add_argument(
         "--hours",
         type=int,
-        default=24,
-        help="Number of hours of history to return (default: 24)",
+        help="Number of hours of history to return (default: 24). Mutually exclusive with --start-date/--end-date.",
+    )
+    parser.add_argument(
+        "--start-date",
+        help="Start date for history range (YYYY-MM-DD). Use with --end-date.",
+    )
+    parser.add_argument(
+        "--end-date",
+        help="End date for history range, inclusive (YYYY-MM-DD). Defaults to today.",
+    )
+    parser.add_argument(
+        "--average",
+        type=int,
+        default=60,
+        choices=[0, 10, 30, 60, 360, 1440],
+        help="Averaging period in minutes: 0=raw, 10, 30, 60 (default), 360, 1440=daily",
     )
     args = parser.parse_args()
 
@@ -133,17 +147,33 @@ def main():
     if args.history and args.sensor_index is None:
         parser.error("--history requires --sensor-index")
 
+    if args.start_date and args.hours:
+        parser.error("--start-date and --hours are mutually exclusive")
+
     if args.sensor_index is not None:
         if args.history:
+            import time as _time
+            from datetime import datetime, timezone, timedelta
+
+            if args.start_date:
+                start_dt = datetime.strptime(args.start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                start_ts = int(start_dt.timestamp())
+                if args.end_date:
+                    end_dt = datetime.strptime(args.end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
+                else:
+                    end_dt = datetime.now(timezone.utc)
+                end_ts = int(end_dt.timestamp())
+            else:
+                hours = args.hours if args.hours else 24
+                end_ts = int(_time.time())
+                start_ts = end_ts - hours * 3600
+
             params = {
                 "fields": HISTORY_FIELDS,
-                "average": 60,
-                "start_timestamp": None,  # will use hours to derive
+                "average": args.average,
+                "start_timestamp": start_ts,
+                "end_timestamp": end_ts,
             }
-            import time as _time
-
-            start_ts = int(_time.time()) - args.hours * 3600
-            params["start_timestamp"] = start_ts
             data = fetch(
                 f"sensors/{args.sensor_index}/history", params=params, api_key=api_key
             )
