@@ -49,7 +49,11 @@ def get_api_key():
     key = os.environ.get("OPENAQ_API_KEY")
     if not key:
         print(
-            json.dumps({"error": "OPENAQ_API_KEY not set. Register at https://openaq.org/register"}),
+            json.dumps(
+                {
+                    "error": "OPENAQ_API_KEY not set. Register at https://openaq.org/register"
+                }
+            ),
             file=sys.stderr,
         )
         sys.exit(1)
@@ -100,11 +104,15 @@ def fetch_all_pages(path, params, api_key, page_limit=50, delay=0.2):
 
 def find_pm25_sensors(lat, lon, radius_km, api_key, monitors_only=True):
     """Return list of PM2.5 sensor dicts near a coordinate."""
-    data = api_get("/locations", {
-        "coordinates": f"{lat},{lon}",
-        "radius": int(radius_km * 1000),
-        "limit": 50,
-    }, api_key)
+    data = api_get(
+        "/locations",
+        {
+            "coordinates": f"{lat},{lon}",
+            "radius": int(radius_km * 1000),
+            "limit": 50,
+        },
+        api_key,
+    )
 
     sensors = []
     for loc in data.get("results", []):
@@ -113,16 +121,18 @@ def find_pm25_sensors(lat, lon, radius_km, api_key, monitors_only=True):
         for sensor in loc.get("sensors", []):
             if sensor.get("parameter", {}).get("id") == PM25_PARAMETER_ID:
                 last = sensor.get("lastUpdated", "")
-                sensors.append({
-                    "sensor_id": sensor["id"],
-                    "location_id": loc.get("id"),
-                    "name": loc.get("name", ""),
-                    "provider": loc.get("provider", {}).get("name", ""),
-                    "lat": loc.get("coordinates", {}).get("latitude"),
-                    "lon": loc.get("coordinates", {}).get("longitude"),
-                    "distance_km": round(loc.get("distance", 0) / 1000, 2),
-                    "last_updated": last[:10] if isinstance(last, str) else "",
-                })
+                sensors.append(
+                    {
+                        "sensor_id": sensor["id"],
+                        "location_id": loc.get("id"),
+                        "name": loc.get("name", ""),
+                        "provider": loc.get("provider", {}).get("name", ""),
+                        "lat": loc.get("coordinates", {}).get("latitude"),
+                        "lon": loc.get("coordinates", {}).get("longitude"),
+                        "distance_km": round(loc.get("distance", 0) / 1000, 2),
+                        "last_updated": last[:10] if isinstance(last, str) else "",
+                    }
+                )
     # Sort by distance
     sensors.sort(key=lambda s: s["distance_km"])
     return sensors
@@ -131,11 +141,13 @@ def find_pm25_sensors(lat, lon, radius_km, api_key, monitors_only=True):
 def fetch_measurements(sensor_id, date_from, date_to, api_key, page_limit=25):
     """Fetch all available measurements for a sensor in the given date range."""
     params = {
-        "date_from": f"{date_from}T00:00:00Z",
-        "date_to":   f"{date_to}T23:59:59Z",
+        "datetime_from": f"{date_from}T00:00:00Z",
+        "datetime_to": f"{date_to}T23:59:59Z",
         "limit": 500,
     }
-    return fetch_all_pages(f"/sensors/{sensor_id}/measurements", params, api_key, page_limit=page_limit)
+    return fetch_all_pages(
+        f"/sensors/{sensor_id}/measurements", params, api_key, page_limit=page_limit
+    )
 
 
 def hourly_to_daily(measurements, date_from=None, date_to=None):
@@ -173,8 +185,8 @@ def daily_stats(daily_vals):
     values = list(daily_vals.values())
     mean = sum(values) / len(values)
     good = sum(1 for v in values if v <= 12)
-    mod  = sum(1 for v in values if 12 < v <= 35.4)
-    usg  = sum(1 for v in values if v > 35.4)
+    mod = sum(1 for v in values if 12 < v <= 35.4)
+    usg = sum(1 for v in values if v > 35.4)
     total = len(values)
     worst5 = sorted(values, reverse=True)[:5]
     worst_m = max(monthly, key=lambda k: sum(monthly[k]) / len(monthly[k]))
@@ -209,17 +221,22 @@ def daily_stats(daily_vals):
 
 def cmd_sensors(args, api_key):
     sensors = find_pm25_sensors(
-        args.lat, args.lon, args.radius,
-        api_key, monitors_only=not args.all,
+        args.lat,
+        args.lon,
+        args.radius,
+        api_key,
+        monitors_only=not args.all,
     )
     print(json.dumps({"count": len(sensors), "sensors": sensors}, indent=2))
 
 
 def cmd_history(args, api_key):
     date_from = args.start_date
-    date_to   = args.end_date
+    date_to = args.end_date
 
-    raw = fetch_measurements(args.sensor_id, date_from, date_to, api_key, page_limit=args.page_limit)
+    raw = fetch_measurements(
+        args.sensor_id, date_from, date_to, api_key, page_limit=args.page_limit
+    )
     daily = hourly_to_daily(raw, date_from=date_from, date_to=date_to)
 
     output = {
@@ -264,23 +281,39 @@ Examples:
     p_sensors = sub.add_parser("sensors", help="Find PM2.5 monitors near a location")
     p_sensors.add_argument("--lat", type=float, required=True)
     p_sensors.add_argument("--lon", type=float, required=True)
-    p_sensors.add_argument("--radius", type=float, default=15,
-                            help="Search radius in km (default: 15)")
-    p_sensors.add_argument("--all", action="store_true",
-                            help="Include non-monitor community sensors (default: monitors only)")
+    p_sensors.add_argument(
+        "--radius", type=float, default=15, help="Search radius in km (default: 15)"
+    )
+    p_sensors.add_argument(
+        "--all",
+        action="store_true",
+        help="Include non-monitor community sensors (default: monitors only)",
+    )
     p_sensors.set_defaults(func=cmd_sensors)
 
     # ---- history subcommand ----
-    p_hist = sub.add_parser("history", help="Fetch PM2.5 measurement history for a sensor")
+    p_hist = sub.add_parser(
+        "history", help="Fetch PM2.5 measurement history for a sensor"
+    )
     p_hist.add_argument("--sensor-id", type=int, required=True, dest="sensor_id")
-    p_hist.add_argument("--start-date", default=None,
-                         help="Start date YYYY-MM-DD (default: no filter)")
-    p_hist.add_argument("--end-date", default=None,
-                         help="End date YYYY-MM-DD (default: no filter)")
-    p_hist.add_argument("--stats", action="store_true",
-                         help="Include daily statistics summary in output")
-    p_hist.add_argument("--page-limit", type=int, default=25, dest="page_limit",
-                         help="Max pages to fetch (default: 25 = ~12,500 hourly readings)")
+    p_hist.add_argument(
+        "--start-date", default=None, help="Start date YYYY-MM-DD (default: no filter)"
+    )
+    p_hist.add_argument(
+        "--end-date", default=None, help="End date YYYY-MM-DD (default: no filter)"
+    )
+    p_hist.add_argument(
+        "--stats",
+        action="store_true",
+        help="Include daily statistics summary in output",
+    )
+    p_hist.add_argument(
+        "--page-limit",
+        type=int,
+        default=25,
+        dest="page_limit",
+        help="Max pages to fetch (default: 25 = ~12,500 hourly readings)",
+    )
     p_hist.set_defaults(func=cmd_history)
 
     args = parser.parse_args()
