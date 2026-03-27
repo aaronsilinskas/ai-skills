@@ -98,6 +98,8 @@ python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --
 python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 168 --average 360
 ```
 
+**History limit:** `--hours` cannot exceed 8760 (1 year). `--start-date`/`--end-date` range cannot exceed 365 days.
+
 **Output:** For nearby sensors: array with `name`, `latitude`, `longitude`, `pm25_corrected` (EPA correction applied), `pm25_raw`, `aqi_category`. For single sensor: full reading with humidity and temperature included.
 
 **Note on correction:** `pm25_corrected` uses the EPA 2021 US-wide formula. Raw PurpleAir values tend to read 20–50% high compared to regulatory monitors. Always use `pm25_corrected` for health guidance.
@@ -150,6 +152,8 @@ python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6515867 \
 # Fetch more history (raise page cap for sensors with years of data)
 python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6515867 --page-limit 50
 ```
+
+**History limit:** `--start-date` to `--end-date` range cannot exceed 365 days. If no end date is given, the range is measured from `--start-date` to today.
 
 **sensors output:** Array of `{sensor_id, location_id, name, provider, lat, lon, distance_km, last_updated}`, sorted by distance. Use `sensor_id` (not `location_id`) with the `history` subcommand.
 

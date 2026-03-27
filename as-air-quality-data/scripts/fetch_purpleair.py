@@ -150,6 +150,20 @@ def main():
     if args.start_date and args.hours:
         parser.error("--start-date and --hours are mutually exclusive")
 
+    if args.hours and args.hours > 8760:
+        parser.error("--hours cannot exceed 8760 (1 year)")
+
+    if args.start_date:
+        from datetime import datetime, timezone
+        _start = datetime.strptime(args.start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        _end = (
+            datetime.strptime(args.end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if args.end_date
+            else datetime.now(timezone.utc)
+        )
+        if (_end - _start).days > 365:
+            parser.error("date range cannot exceed 1 year (365 days)")
+
     if args.sensor_index is not None:
         if args.history:
             import time as _time

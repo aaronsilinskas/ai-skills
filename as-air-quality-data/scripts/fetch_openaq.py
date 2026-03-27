@@ -140,11 +140,11 @@ def find_pm25_sensors(lat, lon, radius_km, api_key, monitors_only=True):
 
 def fetch_measurements(sensor_id, date_from, date_to, api_key, page_limit=25):
     """Fetch all available measurements for a sensor in the given date range."""
-    params = {
-        "datetime_from": f"{date_from}T00:00:00Z",
-        "datetime_to": f"{date_to}T23:59:59Z",
-        "limit": 500,
-    }
+    params = {"limit": 500}
+    if date_from:
+        params["datetime_from"] = f"{date_from}T00:00:00Z"
+    if date_to:
+        params["datetime_to"] = f"{date_to}T23:59:59Z"
     return fetch_all_pages(
         f"/sensors/{sensor_id}/measurements", params, api_key, page_limit=page_limit
     )
@@ -233,6 +233,14 @@ def cmd_sensors(args, api_key):
 def cmd_history(args, api_key):
     date_from = args.start_date
     date_to = args.end_date
+
+    if date_from:
+        from datetime import datetime
+        _start = datetime.strptime(date_from, "%Y-%m-%d")
+        _end = datetime.strptime(date_to, "%Y-%m-%d") if date_to else datetime.utcnow()
+        if (_end - _start).days > 365:
+            print(json.dumps({"error": "date range cannot exceed 1 year (365 days)"}), file=sys.stderr)
+            sys.exit(1)
 
     raw = fetch_measurements(
         args.sensor_id, date_from, date_to, api_key, page_limit=args.page_limit
