@@ -11,6 +11,13 @@
         "The response identifies the main pollutant (PM2.5, O3, etc.)",
         "The response names the AQI category (Good, Moderate, etc.)",
         "The data comes from a live source, not general knowledge"
+      ],
+      "assertions": [
+        {"text": "Response includes a specific numerical AQI value for Seattle", "type": "output_check"},
+        {"text": "Response identifies the main pollutant by name (e.g., PM2.5, O3)", "type": "output_check"},
+        {"text": "Response names the AQI category (Good, Moderate, Unhealthy, etc.)", "type": "output_check"},
+        {"text": "Data comes from a live source, not general knowledge or a seasonal estimate", "type": "output_check"},
+        {"text": "Response names the data source used (e.g., AirNow, IQAir, PurpleAir)", "type": "output_check"}
       ]
     },
     {
@@ -23,6 +30,13 @@
         "The response gives a clear recommendation (safe / use caution / avoid)",
         "The recommendation references AQI thresholds relevant to physical activity",
         "The data is from a live source, not a generic seasonal estimate"
+      ],
+      "assertions": [
+        {"text": "Response includes a specific numerical AQI value for Portland, OR", "type": "output_check"},
+        {"text": "Response gives a clear recommendation (safe / use caution / avoid)", "type": "output_check"},
+        {"text": "Recommendation references AQI thresholds relevant to physical activity", "type": "output_check"},
+        {"text": "Data is from a live source, not a generic seasonal estimate", "type": "output_check"},
+        {"text": "Response identifies the dominant pollutant", "type": "output_check"}
       ]
     },
     {
@@ -35,6 +49,13 @@
         "The response mentions the EPA correction factor or corrected PurpleAir values",
         "The response explains which source to trust for health decisions and why",
         "AirNow or IQAir is recommended as the authoritative source for health guidance"
+      ],
+      "assertions": [
+        {"text": "Response shows AQI or PM2.5 values from at least 2 different sources", "type": "output_check"},
+        {"text": "Response mentions the EPA correction factor or corrected PurpleAir values", "type": "output_check"},
+        {"text": "Response explains which source to trust for health decisions and why", "type": "output_check"},
+        {"text": "AirNow or IQAir is recommended as the authoritative source for health guidance", "type": "output_check"},
+        {"text": "Response uses live fetched data, not general knowledge about typical LA air quality", "type": "output_check"}
       ]
     }
   ]
