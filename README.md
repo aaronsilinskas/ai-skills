@@ -8,6 +8,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 | Skill                                              | Description                                                                                    |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [as-air-quality-data](as-air-quality-data/SKILL.md) | Retrieve and process air quality data from EPA AirNow, PurpleAir, and IQAir APIs.            |
 | [as-embedded-dev](as-embedded-dev/SKILL.md)        | Write, review, or optimize Python code for CircuitPython and MicroPython constrained runtimes. |
 | [as-python-docstrings](as-python-docstrings/SKILL.md) | Write or review Python docstrings for classes, methods, functions, and modules.             |
 | [as-test-dev](as-test-dev/SKILL.md)                | Write, review, or restructure tests with a product-focused, behavior-driven philosophy.        |

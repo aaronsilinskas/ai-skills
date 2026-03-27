@@ -1,0 +1,41 @@
+{
+  "skill_name": "as-air-quality-data",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "What's the air quality in Seattle right now?",
+      "expected_output": "A response with live AQI data for Seattle, identifying the main pollutant and AQI category. Should include a specific numerical AQI value fetched from a real source, not a generic estimate.",
+      "files": [],
+      "expectations": [
+        "The response includes a specific numerical AQI value for Seattle",
+        "The response identifies the main pollutant (PM2.5, O3, etc.)",
+        "The response names the AQI category (Good, Moderate, etc.)",
+        "The data comes from a live source, not general knowledge"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Is the air safe enough to go for a run outside in Portland, Oregon today?",
+      "expected_output": "A clear yes/no/qualified recommendation based on live AQI data for Portland. Should include the actual AQI number and explain whether it's safe for exercise, accounting for the appropriate health threshold (AQI >100 caution, >150 avoid).",
+      "files": [],
+      "expectations": [
+        "The response includes a specific numerical AQI value for Portland, OR",
+        "The response gives a clear recommendation (safe / use caution / avoid)",
+        "The recommendation references AQI thresholds relevant to physical activity",
+        "The data is from a live source, not a generic seasonal estimate"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Compare air quality readings for downtown Los Angeles from multiple sources and tell me which to trust.",
+      "expected_output": "AQI values from at least 2 sources (e.g., AirNow and PurpleAir), a note about the EPA correction factor applied to PurpleAir raw readings, and a clear conclusion about which source to trust and why.",
+      "files": [],
+      "expectations": [
+        "The response shows AQI or PM2.5 values from at least 2 different sources",
+        "The response mentions the EPA correction factor or corrected PurpleAir values",
+        "The response explains which source to trust for health decisions and why",
+        "AirNow or IQAir is recommended as the authoritative source for health guidance"
+      ]
+    }
+  ]
+}
