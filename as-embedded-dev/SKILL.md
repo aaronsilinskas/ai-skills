@@ -137,6 +137,9 @@ Use narrowly-scoped exceptions only when a concrete embedded/runtime constraint 
 
 When using an exception, still annotate with the best available fallback type and add a brief code comment explaining why a precise type is not possible in that location.
 
+For board-provided attributes and pin objects (for example `board.TX`, `board.RX`) where stubs may be incomplete, prefer leaving diagnostics visible instead of adding inline `# pyright: ignore[...]` comments.
+Only suppress these diagnostics when explicitly requested by the user or required by project policy.
+
 ## State Object Lifecycle
 
 Initialize state once and mutate in place on every subsequent frame. Use a guard to distinguish first-run from update:
