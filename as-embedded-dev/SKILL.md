@@ -125,6 +125,18 @@ except ImportError:
 
 Prefer explicit, simple data structures (`list`, `dict`, plain classes with `__slots__`) over convenience wrappers.
 
+## Type Hint Policy
+
+Type hints are required for all function and method parameters and return values.
+
+Use narrowly-scoped exceptions only when a concrete embedded/runtime constraint makes precise typing impractical, for example:
+
+- Board/runtime-provided objects that have incomplete or incorrect stubs
+- CircuitPython-specific APIs where stub types conflict with known runtime behavior
+- Dynamic callback/plugin-style call sites where strict callable signatures are not representable without harming portability
+
+When using an exception, still annotate with the best available fallback type and add a brief code comment explaining why a precise type is not possible in that location.
+
 ## State Object Lifecycle
 
 Initialize state once and mutate in place on every subsequent frame. Use a guard to distinguish first-run from update:
@@ -160,5 +172,6 @@ class _Data:
 - [ ] Constants and math calls hoisted outside inner loops
 - [ ] State objects initialized once via a guard, mutated in place on subsequent frames
 - [ ] `__slots__` used on long-lived per-instance state objects
+- [ ] All function/method parameters and return types are annotated (except documented edge cases)
 - [ ] All `typing` imports guarded with `try/except ImportError`
 - [ ] No imports from unavailable stdlib modules
