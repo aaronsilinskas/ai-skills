@@ -140,6 +140,23 @@ When using an exception, still annotate with the best available fallback type an
 For board-provided attributes and pin objects (for example `board.TX`, `board.RX`) where stubs may be incomplete, prefer leaving diagnostics visible instead of adding inline `# pyright: ignore[...]` comments.
 Only suppress these diagnostics when explicitly requested by the user or required by project policy.
 
+## Class-Level Constants
+
+Annotate all class-level constants with `Final` to prevent accidental reassignment. Omit the type parameter — Pylance infers it from the assigned value:
+
+```python
+try:
+    from typing import Final
+except ImportError:
+    pass
+
+class MyConfig:
+    MAX_PIXELS: "Final" = 117
+    DEFAULT_BRIGHTNESS: "Final" = 0x33
+```
+
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The annotation must be in a string so it is never evaluated at runtime on CircuitPython.
+
 ## State Object Lifecycle
 
 Initialize state once and mutate in place on every subsequent frame. Use a guard to distinguish first-run from update:
@@ -177,4 +194,5 @@ class _Data:
 - [ ] `__slots__` used on long-lived per-instance state objects
 - [ ] All function/method parameters and return types are annotated (except documented edge cases)
 - [ ] All `typing` imports guarded with `try/except ImportError`
+- [ ] Class-level constants annotated with `"Final"` (string form, no type parameter)
 - [ ] No imports from unavailable stdlib modules
