@@ -105,13 +105,16 @@ Prefer multiply over divide when the denominator is fixed. Avoid `**` (power) in
 
 Minimize and isolate CircuitPython-specific dependencies so the same code can run on MicroPython and other environments. Avoid scattering platform-specific imports or calls throughout modules; contain them at the boundary.
 
-**Guard all `typing` imports:**
+**Guard all `typing` and `collections.abc` imports:**
+
+`Callable` lives in `collections.abc` in modern Python. `Any` and `TypeAlias` remain in `typing`. Both modules are unavailable on CircuitPython, so guard them together:
 
 ```python
 try:
-    from typing import Any, Callable, TypeAlias
+    from collections.abc import Callable
+    from typing import Any, TypeAlias
 except ImportError:
-    pass  # No typing support on CircuitPython
+    pass  # Not available on CircuitPython
 ```
 
 **Module count matters.** Import cost is paid at startup on-device. Keep related logic in the same file rather than splitting into many small modules when startup latency is a concern.
