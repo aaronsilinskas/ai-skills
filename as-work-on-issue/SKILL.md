@@ -85,6 +85,8 @@ git checkout -b issue-<N>-<short-slug>
 Keep changes minimal and focused. If you discover a pre-existing bug while
 working, note it but do not fix it — stay on the assigned issue.
 
+For tests, use `as-test-dev` skill guidelines for naming and structure.
+
 ### Constraints to check in `docs/agents/domain.md`
 
 Always re-read the domain constraints section before writing any code.
@@ -150,8 +152,33 @@ All acceptance criteria from #N are satisfied — see the linked issue.
 Closes #N"
 ```
 
-Once the implementation looks correct and the PR description is complete,
-remove the draft status and request a review:
+### Resolve conflicts with main
+
+Before marking the PR ready, rebase the branch onto the latest main to ensure
+there are no conflicts a reviewer would need to deal with:
+
+```sh
+git fetch origin main
+git rebase origin/main
+```
+
+If the rebase produces conflicts:
+
+1. For each conflicted file, keep **all** of your slice's additions on top of
+   whatever main already has. Do **not** drop code that arrived from other
+   merged PRs.
+2. After resolving each file, stage it with `git add` and continue:
+   ```sh
+   git rebase --continue
+   ```
+3. Run the full test suite and linter again to confirm nothing broke.
+4. Force-push the rebased branch:
+   ```sh
+   git push --force-with-lease
+   ```
+
+Once the rebase is clean and all checks pass, remove the draft status and
+request a review:
 
 ```sh
 gh pr ready
