@@ -3,10 +3,11 @@ name: as-work-on-issue
 description: >
   Implement a GitHub issue end-to-end: fetch the issue, read project context,
   explore code, follow TDD to satisfy all acceptance criteria, validate, commit,
-  and open a PR. Use this skill whenever the user asks to work on a GitHub issue,
-  pick up the next ready-for-agent task, implement an issue from the backlog, or
-  says anything like "work on #N", "implement issue #N", or "start on the next
-  issue".
+  and open a PR. Use this skill whenever the user asks to work on, implement,
+  tackle, fix, or close a GitHub issue — even if they just say "work on #N",
+  "implement #N", "fix issue #N", "close #N", "tackle #N", or "start on the
+  next issue". Also use when the user wants to pick up the next ready-for-agent
+  task, grab something from the backlog, or asks "what should I work on next?".
 argument-hint: "GitHub issue number (e.g. 12) or leave blank to run dispatch.sh first"
 ---
 
@@ -56,18 +57,28 @@ If none of these files exist, look for a `CLAUDE.md`, `CONTEXT.md`, or
 
 ## Step 2 — Explore
 
-Read the acceptance criteria carefully.  Then explore:
+Read the acceptance criteria carefully. Then explore:
 
 - The source modules the issue mentions or that acceptance-criteria reference
 - The existing tests for those modules (look in `tests/` or `**/tests/`)
 - Any helpers or fixtures already in test files that are likely to be reused
 
 The goal is to understand existing patterns well enough to write idiomatic code
-and tests before writing a single line.
+and tests before writing a single line. Before moving on, note the conventions
+you'll follow — naming style, test structure, file organization — so your
+implementation stays consistent with the codebase.
 
 ## Step 3 — Implement (TDD)
 
+Create a feature branch before writing any code:
+
+```sh
+git checkout -b issue-<N>-<short-slug>
+```
+
 1. **Write a failing test first.** Run it. Confirm it fails for the right reason.
+   This proves you understand the expected behavior before touching production
+   code and gives you a tight feedback loop throughout.
 2. **Implement the minimal change** that makes the test pass.
 3. Repeat per acceptance criterion until all are green.
 
@@ -76,28 +87,28 @@ working, note it but do not fix it — stay on the assigned issue.
 
 ### Constraints to check in `docs/agents/domain.md`
 
-Always re-read the domain constraints section before writing any code. For
-Python/CircuitPython projects, common constraints include:
-
-- No `dataclasses`, no generics, no walrus operator
-- Wrap typing imports in `try/except ImportError`
-- `__slots__` on performance-sensitive classes
-- No per-frame heap allocation in hot paths
-- Line length and formatter rules (check `pyproject.toml` or the domain doc)
+Always re-read the domain constraints section before writing any code.
 
 ## Step 4 — Validate
 
-All checks must pass before committing. Run the project's test and lint suite:
+All checks must pass before committing. Run the project's test suite first:
 
 ```sh
 # Python projects (adjust paths to match the project)
 pytest -x -q
 ```
 
-If a pre-commit config exists, run it dry to catch formatter/lint issues:
+Then run the linter. If a pre-commit config exists, use it:
 
 ```sh
 pre-commit run --all-files
+```
+
+Otherwise fall back to running linters directly:
+
+```sh
+ruff check .
+mypy .
 ```
 
 Fix every failure. Do not commit with known failing tests or lint errors.
@@ -119,6 +130,7 @@ Message format:
 
 ```sh
 gh pr create \
+  --draft \
   --base main \
   --title "<Short imperative summary>" \
   --body "## Summary
@@ -136,4 +148,12 @@ All acceptance criteria from #N are satisfied — see the linked issue.
 ## Related
 
 Closes #N"
+```
+
+Once the implementation looks correct and the PR description is complete,
+remove the draft status and request a review:
+
+```sh
+gh pr ready
+gh pr edit --add-reviewer <reviewer>
 ```

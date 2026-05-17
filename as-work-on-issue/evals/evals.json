@@ -1,0 +1,66 @@
+{
+  "skill_name": "as-work-on-issue",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Work on issue #12 in this repo. Implement whatever it asks for.",
+      "expected_output": "Agent fetches issue #12, reads project context files, explores relevant source and test modules, creates a feature branch, writes a failing test, implements the change, runs validation, commits with a closes-#12 message, and opens a draft PR.",
+      "assertions": [
+        {
+          "name": "fetches_issue",
+          "description": "Agent runs gh issue view 12 or equivalent before writing any code"
+        },
+        {
+          "name": "creates_branch",
+          "description": "Agent creates a feature branch (git checkout -b ...) before writing code"
+        },
+        {
+          "name": "writes_test_first",
+          "description": "Agent writes and runs a failing test before implementing the change"
+        },
+        {
+          "name": "opens_draft_pr",
+          "description": "Agent opens a draft PR with gh pr create --draft"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I don't have a specific issue in mind — pick the next ready-for-agent one and implement it.",
+      "expected_output": "Agent runs dispatch.sh (or falls back to gh issue list --label ready-for-agent), identifies the lowest-numbered unblocked issue, then follows the full workflow for that issue.",
+      "assertions": [
+        {
+          "name": "runs_dispatch",
+          "description": "Agent runs dispatch.sh or gh issue list --label ready-for-agent to discover the issue"
+        },
+        {
+          "name": "picks_lowest_number",
+          "description": "Agent selects the lowest-numbered unblocked issue, not a random one"
+        },
+        {
+          "name": "follows_full_workflow",
+          "description": "Agent proceeds through gather-context, explore, implement, validate, commit, and PR steps"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Close issue #7. It's been sitting in our backlog forever.",
+      "expected_output": "Despite the casual phrasing, agent recognizes this as an implementation request, fetches issue #7, and follows the full TDD workflow through to a draft PR.",
+      "assertions": [
+        {
+          "name": "skill_triggers",
+          "description": "Skill is invoked despite 'close issue' phrasing rather than 'work on' or 'implement'"
+        },
+        {
+          "name": "reads_context_files",
+          "description": "Agent reads AGENTS.md, docs/agents/domain.md, or equivalent context files if they exist"
+        },
+        {
+          "name": "stays_focused",
+          "description": "Agent does not fix unrelated bugs or refactor code outside the issue scope"
+        }
+      ]
+    }
+  ]
+}

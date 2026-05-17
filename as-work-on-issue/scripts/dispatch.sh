@@ -9,6 +9,11 @@
 # priority).  The recommended next issue is printed last for easy copying.
 set -eo pipefail
 
+# Require gh, jq, and an active gh session
+command -v gh  >/dev/null 2>&1 || { echo "Error: gh CLI not found. Install from https://cli.github.com/"; exit 1; }
+command -v jq  >/dev/null 2>&1 || { echo "Error: jq not found. Install with: brew install jq"; exit 1; }
+gh auth status >/dev/null 2>&1 || { echo "Error: not authenticated. Run: gh auth login"; exit 1; }
+
 echo "Fetching ready-for-agent open issues..."
 ISSUES=$(gh issue list \
   --label "ready-for-agent" \
@@ -62,15 +67,17 @@ if [ -z "$(echo "$ACTIONABLE" | tr -d '[:space:]')" ]; then
   exit 0
 fi
 
+SORTED=$(echo "$ACTIONABLE" | grep -v '^$' | sort -t'|' -k1,1n)
+
 echo ""
 echo "Actionable issues (unblocked, ascending by issue number):"
 echo ""
 while IFS='|' read -r number title; do
   [ -z "$number" ] && continue
   echo "  #$number — $title"
-done <<< "$ACTIONABLE"
+done <<< "$SORTED"
 
-FIRST=$(echo "$ACTIONABLE" | grep -v '^$' | head -1)
+FIRST=$(echo "$SORTED" | head -1)
 FIRST_NUMBER=${FIRST%%|*}
 FIRST_TITLE=${FIRST#*|}
 
