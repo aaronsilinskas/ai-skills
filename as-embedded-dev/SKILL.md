@@ -101,29 +101,36 @@ def shape(position):
 
 Prefer multiply over divide when the denominator is fixed. Avoid `**` (power) in hot paths unless the exponent is a compile-time constant and the platform handles it efficiently.
 
-## CircuitPython Compatibility
+## CircuitPython and MicroPython Compatibility
+
+This skill targets the **latest stable releases** of CircuitPython and MicroPython. Do not flag features as unavailable unless they are absent from current releases.
 
 Minimize and isolate CircuitPython-specific dependencies so the same code can run on MicroPython and other environments. Avoid scattering platform-specific imports or calls throughout modules; contain them at the boundary.
 
-**Guard all `typing` and `collections.abc` imports:**
+**Built-in generic subscripts are supported:**
 
-`Callable` lives in `collections.abc` in modern Python. `Any` and `TypeAlias` remain in `typing`. Both modules are unavailable on CircuitPython, so guard them together:
+`list[X]`, `dict[K, V]`, `tuple[X, ...]`, and `X | Y` union syntax work at runtime in latest releases. Use them freely in annotations — no string quoting or `try/except` guard needed.
+
+**Guard `typing` and `collections.abc` imports:**
+
+Advanced `typing` constructs and `collections.abc` abstractions are still absent or incomplete. Guard any imports from these modules:
 
 ```python
 try:
     from collections.abc import Callable
     from typing import Any, TypeAlias
 except ImportError:
-    pass  # Not available on CircuitPython
+    pass  # Not available on all embedded runtimes
 ```
 
 **Module count matters.** Import cost is paid at startup on-device. Keep related logic in the same file rather than splitting into many small modules when startup latency is a concern.
 
-**Unavailable on CircuitPython / MicroPython:**
+**Still unavailable on latest CircuitPython / MicroPython:**
 
-- `collections.defaultdict`, `functools`, `itertools`
 - `dataclasses`
-- Type annotations at runtime (use `try/except` guards)
+- `collections.defaultdict`, `functools`, `itertools`
+- `typing.TypeVar`, `typing.TypeAlias`, `typing.Protocol`, `typing.Generic`
+- `collections.abc` (most abstractions including `Callable`)
 - Large standard library modules
 
 Prefer explicit, simple data structures (`list`, `dict`, plain classes with `__slots__`) over convenience wrappers.
@@ -196,6 +203,6 @@ class _Data:
 - [ ] State objects initialized once via a guard, mutated in place on subsequent frames
 - [ ] `__slots__` used on long-lived per-instance state objects
 - [ ] All function/method parameters and return types are annotated (except documented edge cases)
-- [ ] All `typing` imports guarded with `try/except ImportError`
+- [ ] `typing` and `collections.abc` imports guarded with `try/except ImportError` (advanced constructs — `TypeVar`, `Protocol`, `Callable`, etc. — are still absent from latest releases)
 - [ ] Class-level constants annotated with `"Final"` (string form, no type parameter)
 - [ ] No imports from unavailable stdlib modules
