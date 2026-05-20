@@ -16,6 +16,10 @@ argument-hint: "GitHub issue number (e.g. 12) or leave blank to run dispatch.sh 
 Implement a single GitHub issue from start to merged PR. Stay focused on the
 assigned issue — do not fix unrelated problems or refactor adjacent code.
 
+> **Context isolation:** After identifying the issue number, delegate all
+> implementation to a fresh subagent (Step 0.5) so accumulated conversation
+> history cannot interfere.
+
 ## Step 0 — Find the issue (if no number was given)
 
 If no issue number was provided, run the dispatch script bundled with this
@@ -36,228 +40,69 @@ gh issue list --label "ready-for-agent" --state open --json number,title,body
 Pick the lowest-numbered unblocked one (check each "Blocked by" section for
 still-open issues).
 
-## Step 1 — Gather context
+## Step 0.5 — Dispatch to a fresh subagent
 
-Fetch the full issue:
+Pass all implementation work to a clean subagent so accumulated conversation
+context cannot cause skipped steps or incorrect assumptions. Fill in the
+placeholders and call `runSubagent`:
 
-```sh
-gh issue view <N> --json number,title,body,comments
-```
+- **description**: `"Implement issue #<N>"`
+- **prompt** (substitute `<N>`, `<owner>/<repo>`, `<repo-root>`):
 
-Then read whatever agent context the project provides — look for these files
-and read every one that exists:
+---
 
-- `AGENTS.md` — tool and workflow conventions
-- `docs/agents/domain.md` — module layout, key types, domain vocabulary,
-  coding constraints
-- `docs/agents/backlog.md` — issue conventions, label meanings
+You are implementing GitHub issue #<N> in <owner>/<repo> (local path:
+<repo-root>). Stay focused on #<N> only — do not fix unrelated problems.
 
-If none of these files exist, look for a `CLAUDE.md`, `CONTEXT.md`, or
-`CONTRIBUTING.md` at the repo root instead.
+**1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
+Read: `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
+`CLAUDE.md`/`CONTEXT.md` if those don't exist).
 
-## Step 2 — Explore
+**2. Explore.** Find source modules and tests referenced by the acceptance
+criteria. Note naming and test-structure conventions before writing any code.
+Re-read the constraints section of `docs/agents/domain.md` before implementing.
 
-Read the acceptance criteria carefully. Then explore:
+**3. Implement (TDD).** `git checkout -b issue-<N>-<short-slug>`. Write a
+failing test, confirm it fails for the right reason, implement the minimal
+change, repeat per acceptance criterion. Use `as-test-dev` skill guidelines.
+Do not fix pre-existing bugs.
 
-- The source modules the issue mentions or that acceptance-criteria reference
-- The existing tests for those modules (look in `tests/` or `**/tests/`)
-- Any helpers or fixtures already in test files that are likely to be reused
+**4. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
+(or `ruff check . && ruff format .`). Fix every failure before committing.
 
-The goal is to understand existing patterns well enough to write idiomatic code
-and tests before writing a single line. Before moving on, note the conventions
-you'll follow — naming style, test structure, file organization — so your
-implementation stays consistent with the codebase.
+**5. Commit.** Single focused commit: `<imperative summary> (closes #<N>)`.
+Include bullet notes for key decisions in the commit body.
 
-## Step 3 — Implement (TDD)
+**6. Open a PR.**
+`git push -u origin HEAD`
+`gh pr create --draft --base main --title "<summary>" --body "..."`
 
-Create a feature branch before writing any code:
+PR body sections: `## Summary`, `## Acceptance criteria` (all satisfied — see
+linked issue), `## Key decisions` (non-obvious choices), `## Related` (Closes #<N>).
 
-```sh
-git checkout -b issue-<N>-<short-slug>
-```
+Before marking ready: `git fetch origin main && git rebase origin/main`. If
+conflicts, resolve, stage, `git rebase --continue`, run tests, then
+`git push --force-with-lease`. Then `gh pr ready`.
 
-1. **Write a failing test first.** Run it. Confirm it fails for the right reason.
-   This proves you understand the expected behavior before touching production
-   code and gives you a tight feedback loop throughout.
-2. **Implement the minimal change** that makes the test pass.
-3. Repeat per acceptance criterion until all are green.
-
-Keep changes minimal and focused. If you discover a pre-existing bug while
-working, note it but do not fix it — stay on the assigned issue.
-
-For tests, use `as-test-dev` skill guidelines for naming and structure.
-
-### Constraints to check in `docs/agents/domain.md`
-
-Always re-read the domain constraints section before writing any code.
-
-## Step 4 — Validate
-
-All checks must pass before committing. Run the project's test suite first:
-
-```sh
-# Python projects (adjust paths to match the project)
-pytest -x -q
-```
-
-Then run the linter. If a pre-commit config exists, use it:
-
-```sh
-pre-commit run --all-files
-```
-
-Otherwise fall back to running linters directly:
-
-```sh
-ruff check .
-mypy .
-```
-
-Fix every failure. Do not commit with known failing tests or lint errors.
-
-## Step 5 — Commit
-
-Make a single focused commit that covers only this issue.
-
-Message format:
-
-```
-<Short imperative summary> (closes #N)
-
-- <Key decision or non-obvious choice>
-- <Files changed and why>
-```
-
-## Step 6 — Open a PR
-
-Push the branch first so `gh` knows the remote without prompting:
-
-```sh
-git push -u origin HEAD
-```
-
-Then create the PR:
-
-```sh
-gh pr create \
-  --draft \
-  --base main \
-  --title "<Short imperative summary>" \
-  --body "## Summary
-
-<What was implemented and why.>
-
-## Acceptance criteria
-
-All acceptance criteria from #N are satisfied — see the linked issue.
-
-## Key decisions
-
-<Non-obvious implementation choices.>
-
-## Related
-
-Closes #N"
-```
-
-### Resolve conflicts with main
-
-Before marking the PR ready, rebase the branch onto the latest main to ensure
-there are no conflicts a reviewer would need to deal with:
-
-```sh
-git fetch origin main
-git rebase origin/main
-```
-
-If the rebase produces conflicts:
-
-1. For each conflicted file, keep **all** of your slice's additions on top of
-   whatever main already has. Do **not** drop code that arrived from other
-   merged PRs.
-2. After resolving each file, stage it with `git add` and continue:
-   ```sh
-   git rebase --continue
-   ```
-3. Run the full test suite and linter again to confirm nothing broke.
-4. Force-push the rebased branch:
-   ```sh
-   git push --force-with-lease
-   ```
-
-Once the rebase is clean and all checks pass, remove the draft status and
-request a review:
-
-```sh
-gh pr ready
-gh pr edit --add-reviewer <reviewer>
-```
-
-## Step 7 — Close the parent PRD (if applicable)
-
-**Wait for the PR to merge first.** Confirm you are on `main` with the branch
-deleted before proceeding:
-
-```sh
-git checkout main && git pull
-```
-
-If the PR has not merged yet, stop here and wait for reviewer approval.
-
-Once on `main`, check whether the current issue has a `## Parent` section. If it does, follow this process before considering
-the work done.
-
-### 7a — Fetch the parent
-
-```sh
-gh issue view <parent-N> --json number,title,body,comments
-```
-
-### 7b — Find all child issues
-
-Search for issues whose body contains `## Parent` referencing the parent number:
+**7. After PR merges.** `git checkout main && git pull`. Delete the feature
+branch. If the issue has a `## Parent` section, list sibling issues:
 
 ```sh
 gh issue list --state all --json number,title,state,body \
   | python3 -c "
 import json, sys
-issues = json.load(sys.stdin)
-parent = '#<parent-N>'
-for i in issues:
-    if parent in (i.get('body') or ''):
+for i in json.load(sys.stdin):
+    if '#<parent-N>' in (i.get('body') or ''):
         print(f'#{i[\"number\"]} [{i[\"state\"]}] {i[\"title\"]}')
 "
 ```
 
-### 7c — Verify all children are closed
+If all siblings are closed, verify each parent PRD acceptance criterion against
+the codebase, then close:
+`gh issue close <parent-N> --reason completed --comment "All child issues merged. [x] <criterion> — <evidence>"`
 
-If any child issues are still open, **do not close the parent**. Note which
-children remain and stop.
+Report: files changed, PR URL, key decisions, any open questions.
 
-### 7d — Verify acceptance criteria
+---
 
-Re-read the parent PRD's `## Acceptance criteria` section. For each criterion,
-confirm it is satisfied by the merged code. Check the codebase if needed — do
-not assume.
-
-If any criterion is not met, open a new child issue to cover the gap rather
-than closing the PRD.
-
-### 7e — Close with a summary
-
-Close the parent with a comment that summarises what was verified:
-
-```sh
-gh issue close <parent-N> --reason completed --comment "## Summary
-
-All child issues are merged:
-- #X — <title>
-- #Y — <title>
-
-### Acceptance criteria
-
-- [x] <criterion 1> — <one-line evidence>
-- [x] <criterion 2> — <one-line evidence>
-
-All criteria satisfied."
-```
+After the subagent finishes, relay its outcome to the user and stop.
