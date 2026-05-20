@@ -184,3 +184,72 @@ request a review:
 gh pr ready
 gh pr edit --add-reviewer <reviewer>
 ```
+
+## Step 7 — Close the parent PRD (if applicable)
+
+**Wait for the PR to merge first.** Confirm you are on `main` with the branch
+deleted before proceeding:
+
+```sh
+git checkout main && git pull
+```
+
+If the PR has not merged yet, stop here and wait for reviewer approval.
+
+Once on `main`, check whether the current issue has a `## Parent` section. If it does, follow this process before considering
+the work done.
+
+### 7a — Fetch the parent
+
+```sh
+gh issue view <parent-N> --json number,title,body,comments
+```
+
+### 7b — Find all child issues
+
+Search for issues whose body contains `## Parent` referencing the parent number:
+
+```sh
+gh issue list --state all --json number,title,state,body \
+  | python3 -c "
+import json, sys
+issues = json.load(sys.stdin)
+parent = '#<parent-N>'
+for i in issues:
+    if parent in (i.get('body') or ''):
+        print(f'#{i[\"number\"]} [{i[\"state\"]}] {i[\"title\"]}')
+"
+```
+
+### 7c — Verify all children are closed
+
+If any child issues are still open, **do not close the parent**. Note which
+children remain and stop.
+
+### 7d — Verify acceptance criteria
+
+Re-read the parent PRD's `## Acceptance criteria` section. For each criterion,
+confirm it is satisfied by the merged code. Check the codebase if needed — do
+not assume.
+
+If any criterion is not met, open a new child issue to cover the gap rather
+than closing the PRD.
+
+### 7e — Close with a summary
+
+Close the parent with a comment that summarises what was verified:
+
+```sh
+gh issue close <parent-N> --reason completed --comment "## Summary
+
+All child issues are merged:
+- #X — <title>
+- #Y — <title>
+
+### Acceptance criteria
+
+- [x] <criterion 1> — <one-line evidence>
+- [x] <criterion 2> — <one-line evidence>
+
+All criteria satisfied."
+```
