@@ -130,6 +130,14 @@ Message format:
 
 ## Step 6 — Open a PR
 
+Push the branch first so `gh` knows the remote without prompting:
+
+```sh
+git push -u origin HEAD
+```
+
+Then create the PR:
+
 ```sh
 gh pr create \
   --draft \
