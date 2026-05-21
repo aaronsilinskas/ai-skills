@@ -79,17 +79,15 @@ Address any issues before proceeding.
 Include bullet notes for key decisions in the commit body.
 
 **7. Open a PR.**
+Rebase first: `git fetch origin main && git rebase origin/main`.
+If conflicts, resolve, stage, `git rebase --continue`, then run tests again.
+
+Push and create the PR as ready (not draft):
 `git push -u origin HEAD`
-`gh pr create --draft --base main --title "<summary>" --body "..."`
+`gh pr create --base main --title "<summary>" --body "..."`
 
 PR body sections: `## Summary`, `## Acceptance criteria` (all satisfied — see
 linked issue), `## Key decisions` (non-obvious choices), `## Related` (Closes #<N>).
-
-Rebase before marking ready: `git fetch origin main && git rebase origin/main`.
-If conflicts, resolve, stage, `git rebase --continue`, run tests, then
-`git push --force-with-lease`. If no conflicts, `git push` is sufficient.
-
-Mark the PR ready for review: `gh pr ready`.
 
 **8. After PR merges.** `git checkout main && git pull`. Delete the feature
 branch. If the issue has a `## Parent` section, list sibling issues:
