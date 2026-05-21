@@ -67,10 +67,16 @@ failing test, confirm it fails for the right reason, implement the minimal
 change, repeat per acceptance criterion. Use `as-test-dev` skill guidelines.
 Do not fix pre-existing bugs.
 
-**4. Review.** Use the `as-embedded-dev` skill to review the implementation for
-correctness, memory safety, and hardware constraints. Use the `as-test-dev`
-skill to review the tests for coverage, naming, and behaviour-driven structure.
-Address any issues before proceeding.
+**4. Review.** Invoke two subagents in sequence and fix every issue they raise
+before moving on:
+
+- `runSubagent("as-embedded-dev")` — pass the changed source files and ask it
+  to review for correctness, memory safety, and hardware constraints.
+- `runSubagent("as-test-dev")` — pass the test files and ask it to review for
+  coverage, naming, and behaviour-driven structure.
+
+Do not skip or self-assess; the subagents must run and their findings must be
+resolved.
 
 **5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
 (or `ruff check . && ruff format .`). Fix every failure before committing.
