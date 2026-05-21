@@ -80,9 +80,11 @@ Include bullet notes for key decisions in the commit body.
 PR body sections: `## Summary`, `## Acceptance criteria` (all satisfied — see
 linked issue), `## Key decisions` (non-obvious choices), `## Related` (Closes #<N>).
 
-Before marking ready: `git fetch origin main && git rebase origin/main`. If
-conflicts, resolve, stage, `git rebase --continue`, run tests, then
-`git push --force-with-lease`. Then `gh pr ready`.
+Rebase before marking ready: `git fetch origin main && git rebase origin/main`.
+If conflicts, resolve, stage, `git rebase --continue`, run tests, then
+`git push --force-with-lease`. If no conflicts, `git push` is sufficient.
+
+Mark the PR ready for review: `gh pr ready`.
 
 **7. After PR merges.** `git checkout main && git pull`. Delete the feature
 branch. If the issue has a `## Parent` section, list sibling issues:
