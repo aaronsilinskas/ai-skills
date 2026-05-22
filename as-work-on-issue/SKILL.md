@@ -13,90 +13,73 @@ argument-hint: "GitHub issue number (e.g. 12) or leave blank to run dispatch.sh 
 
 # Work on a GitHub Issue
 
-Implement a single GitHub issue from start to merged PR. Stay focused on the
-assigned issue — do not fix unrelated problems or refactor adjacent code.
+Implement a single GitHub issue from start to merged PR. Stay focused — do not
+fix unrelated problems or refactor adjacent code.
 
-> **Context isolation:** After identifying the issue number, delegate all
-> implementation to a fresh subagent (Step 0.5) so accumulated conversation
-> history cannot interfere.
+> Delegate all implementation to a fresh subagent to avoid context pollution.
 
-## Step 0 — Find the issue (if no number was given)
-
-If no issue number was provided, run the dispatch script bundled with this
-skill to find the next unblocked issue. The script lives at
-`scripts/dispatch.sh` inside the skill directory — run it from the repo root:
+## Step 0 — Find the issue (if no number given)
 
 ```sh
 bash <skill-dir>/scripts/dispatch.sh
 ```
 
-Use the issue number it prints as "Next up". If the script is unavailable, list
-open issues tagged `ready-for-agent`:
+Use the printed "Next up" number. If unavailable:
 
 ```sh
 gh issue list --label "ready-for-agent" --state open --json number,title,body
 ```
 
-Pick the lowest-numbered unblocked one (check each "Blocked by" section for
-still-open issues).
+Pick the lowest-numbered issue with no open "Blocked by" dependencies.
 
 ## Step 0.5 — Dispatch to a fresh subagent
 
-Pass all implementation work to a clean subagent so accumulated conversation
-context cannot cause skipped steps or incorrect assumptions. Fill in the
-placeholders and call `runSubagent`:
-
-- **description**: `"Implement issue #<N>"`
-- **prompt** (substitute `<N>`, `<owner>/<repo>`, `<repo-root>`):
+Call `runSubagent` with description `"Implement issue #<N>"` and this prompt
+(substitute `<N>`, `<owner>/<repo>`, `<repo-root>`):
 
 ---
 
-You are implementing GitHub issue #<N> in <owner>/<repo> (local path:
-<repo-root>). Stay focused on #<N> only — do not fix unrelated problems.
+Implementing GitHub issue #<N> in <owner>/<repo> (local: <repo-root>). Stay
+focused on #<N> only.
 
 **1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
-Read: `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
-`CLAUDE.md`/`CONTEXT.md` if those don't exist).
+Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
+`CLAUDE.md`/`CONTEXT.md`).
 
-**2. Explore.** Find source modules and tests referenced by the acceptance
-criteria. Note naming and test-structure conventions before writing any code.
-Re-read the constraints section of `docs/agents/domain.md` before implementing.
+**2. Explore.** Find source modules and tests for the acceptance criteria. Note
+naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 
-**3. Implement (TDD).** `git checkout -b issue-<N>-<short-slug>`. Write a
-failing test, confirm it fails for the right reason, implement the minimal
-change, repeat per acceptance criterion. Use `as-test-dev` skill guidelines.
+**3. Implement (TDD).** `git checkout -b issue-<N>-<short-slug>`. Load the
+`tdd` skill (`read_file` its SKILL.md from your skills list) and follow it.
 Do not fix pre-existing bugs.
 
-**4. Review.** Invoke two subagents in sequence and fix every issue they raise
-before moving on:
+**4. Review.** Load each skill via `read_file` (paths in your skills list) and
+fix all findings before continuing:
 
-- `runSubagent("as-embedded-dev")` — pass the changed source files and ask it
-  to review for correctness, memory safety, and hardware constraints.
-- `runSubagent("as-test-dev")` — pass the test files and ask it to review for
-  coverage, naming, and behaviour-driven structure.
-
-Do not skip or self-assess; the subagents must run and their findings must be
-resolved.
+- `as-embedded-dev` — review changed source for correctness, memory safety,
+  and hardware constraints.
+- `as-test-dev` — review test files for coverage, naming, and behaviour-driven
+  structure.
 
 **5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
-(or `ruff check . && ruff format .`). Fix every failure before committing.
+(or `ruff check . && ruff format .`). Fix all failures.
 
-**6. Commit.** Single focused commit: `<imperative summary> (closes #<N>)`.
-Include bullet notes for key decisions in the commit body.
+**6. Commit.** Single commit: `<imperative summary> (closes #<N>)` with key
+decisions in the body.
 
-**7. Open a PR.**
-Rebase first: `git fetch origin main && git rebase origin/main`.
-If conflicts, resolve, stage, `git rebase --continue`, then run tests again.
+**7. Open a PR.** Rebase: `git fetch origin main && git rebase origin/main`.
+Resolve conflicts if any, re-run tests, then:
 
-Push and create the PR as ready (not draft):
-`git push -u origin HEAD`
-`gh pr create --base main --title "<summary>" --body "..."`
+```sh
+git push -u origin HEAD
+gh pr create --base main --title "<summary>" --body "..."
+```
 
-PR body sections: `## Summary`, `## Acceptance criteria` (all satisfied — see
-linked issue), `## Key decisions` (non-obvious choices), `## Related` (Closes #<N>).
+PR body: `## Summary`, `## Acceptance criteria` (all satisfied), `## Key
+decisions`, `## Related` (Closes #<N>).
 
-**8. After PR merges.** `git checkout main && git pull`. Delete the feature
-branch. If the issue has a `## Parent` section, list sibling issues:
+**8. After merge.** `git checkout main && git pull`, delete the branch. If the
+issue has a `## Parent`, check siblings:
 
 ```sh
 gh issue list --state all --json number,title,state,body \
@@ -108,12 +91,11 @@ for i in json.load(sys.stdin):
 "
 ```
 
-If all siblings are closed, verify each parent PRD acceptance criterion against
-the codebase, then close:
+If all siblings are closed, close the parent:
 `gh issue close <parent-N> --reason completed --comment "All child issues merged. [x] <criterion> — <evidence>"`
 
-Report: files changed, PR URL, key decisions, any open questions.
+Report: files changed, PR URL, key decisions, open questions.
 
 ---
 
-After the subagent finishes, relay its outcome to the user and stop.
+Relay the subagent's outcome to the user and stop.
