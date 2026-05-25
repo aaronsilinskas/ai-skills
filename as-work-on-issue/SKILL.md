@@ -50,7 +50,9 @@ Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
 naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 
 **3. Implement (TDD).** `git checkout -b issue-<N>-<short-slug>`. Load the
-`tdd` skill (`read_file` its SKILL.md from your skills list) and follow it.
+`tdd` skill (`read_file` its SKILL.md from your skills list) and follow it. If
+not available locally, fetch it from
+`https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd`.
 Do not fix pre-existing bugs.
 
 **4. Review.** Load each skill via `read_file` (paths in your skills list) and
