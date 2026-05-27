@@ -55,13 +55,14 @@ not available locally, fetch it from
 `https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd`.
 Do not fix pre-existing bugs.
 
-**4. Review.** Load each skill via `read_file` (paths in your skills list) and
-fix all findings before continuing:
+**4. Review.** Load each skill via `read_file` (paths in your skills list),
+apply all fixes to the code, and confirm each finding is resolved before
+continuing:
 
 - `as-embedded-dev` — review changed source for correctness, memory safety,
-  and hardware constraints.
+  and hardware constraints. Apply any fixes found.
 - `as-test-dev` — review test files for coverage, naming, and behaviour-driven
-  structure.
+  structure. Apply any fixes found.
 
 **5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
 (or `ruff check . && ruff format .`). Fix all failures.
