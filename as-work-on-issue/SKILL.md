@@ -63,6 +63,11 @@ Working directory: <worktree-path> (a git worktree already checked out on branch
 issue-<N>-<short-slug>). Stay focused on #<N> only. Do NOT run git checkout or
 git worktree commands -- the branch is already set up.
 
+IMPORTANT: Every numbered step below is mandatory. Do not skip, summarize, or
+paraphrase any step. Complete each step fully before moving to the next. Steps
+that say "load a skill and apply all fixes" mean: load the skill, read it
+entirely, apply every finding to the code, and confirm each is resolved.
+
 **1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
 Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
 `CLAUDE.md`/`CONTEXT.md`).
