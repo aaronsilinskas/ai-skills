@@ -32,15 +32,36 @@ gh issue list --label "ready-for-agent" --state open --json number,title,body
 
 Pick the lowest-numbered issue with no open "Blocked by" dependencies.
 
-## Step 0.5 — Dispatch to a fresh subagent
+## Step 0.5 — Set up a git worktree
+
+Before dispatching, create an isolated worktree for the issue branch so parallel
+subagents never conflict on checkouts:
+
+```sh
+cd <repo-root>
+git fetch origin main
+git worktree add ../<repo-name>-issue-<N> -b issue-<N>-<short-slug> origin/main
+```
+
+Pass the worktree path (e.g. `../<repo-name>-issue-<N>`) to the subagent as its
+working directory. After the PR is merged, clean up:
+
+```sh
+git worktree remove ../<repo-name>-issue-<N>
+git branch -d issue-<N>-<short-slug>
+```
+
+## Step 0.6 — Dispatch to a fresh subagent
 
 Call `runSubagent` with description `"Implement issue #<N>"` and this prompt
-(substitute `<N>`, `<owner>/<repo>`, `<repo-root>`):
+(substitute `<N>`, `<owner>/<repo>`, `<repo-root>`, `<worktree-path>`):
 
 ---
 
-Implementing GitHub issue #<N> in <owner>/<repo> (local: <repo-root>). Stay
-focused on #<N> only.
+Implementing GitHub issue #<N> in <owner>/<repo>.
+Working directory: <worktree-path> (a git worktree already checked out on branch
+issue-<N>-<short-slug>). Stay focused on #<N> only. Do NOT run git checkout or
+git worktree commands -- the branch is already set up.
 
 **1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
 Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
@@ -49,7 +70,7 @@ Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
 **2. Explore.** Find source modules and tests for the acceptance criteria. Note
 naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 
-**3. Implement (TDD).** `git checkout -b issue-<N>-<short-slug>`. Load the
+**3. Implement (TDD).** Branch is already checked out in your working directory. Load the
 `tdd` skill (`read_file` its SKILL.md from your skills list) and follow it. If
 not available locally, fetch it from
 `https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd`.
