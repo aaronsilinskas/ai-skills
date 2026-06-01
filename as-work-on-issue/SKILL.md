@@ -54,41 +54,72 @@ git branch -d issue-<N>-<short-slug>
 ## Step 0.6 — Dispatch to a fresh subagent
 
 Call `runSubagent` with description `"Implement issue #<N>"` and this prompt
-(substitute `<N>`, `<owner>/<repo>`, `<worktree-path>`, `<branch-name>`):
+(substitute `<N>`, `<owner>/<repo>`, `<repo-root>`, `<worktree-path>`):
 
 ---
 
-Load the as-work-on-issue skill and follow every step precisely:
+Implementing GitHub issue #<N> in <owner>/<repo>.
+Working directory: <worktree-path> (a git worktree already checked out on branch
+issue-<N>-<short-slug>). Stay focused on #<N> only. Do NOT run git checkout or
+git worktree commands -- the branch is already set up.
+
+**1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
+Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
+`CLAUDE.md`/`CONTEXT.md`).
+
+**2. Explore.** Find source modules and tests for the acceptance criteria. Note
+naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
+
+**3. Implement (TDD).** Branch is already checked out in your working directory. Load the
+`tdd` skill (`read_file` its SKILL.md from your skills list) and follow it. If
+not available locally, fetch it from
+`https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd`.
+Do not fix pre-existing bugs.
+
+**4. Review.** Load each skill via `read_file` (paths in your skills list),
+apply all fixes to the code, and confirm each finding is resolved before
+continuing:
+
+- `as-embedded-dev` — review changed source for correctness, memory safety,
+  and hardware constraints. Apply any fixes found.
+- `as-test-dev` — review test files for coverage, naming, and behaviour-driven
+  structure. Apply any fixes found.
+
+**5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
+(or `ruff check . && ruff format .`). Fix all failures.
+
+**6. Commit.** Single commit: `<imperative summary> (closes #<N>)` with key
+decisions in the body.
+
+**7. Open a PR.** Rebase: `git fetch origin main && git rebase origin/main`.
+Resolve conflicts if any, re-run tests, then:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/aaronsilinskas/ai-skills/main/as-work-on-issue/SKILL.md
+git push -u origin HEAD
+gh pr create --base main --title "<summary>" --body "..."
 ```
 
-Then implement issue #<N> in <owner>/<repo> following that skill exactly.
+PR body: `## Summary`, `## Acceptance criteria` (all satisfied), `## Key
+decisions`, `## Related` (Closes #<N>).
 
-Context for this run:
-- Working directory: <worktree-path> (git worktree already on branch <branch-name>)
-- Do NOT run git checkout or git worktree commands — the branch is already set up
-- Skip Step 0 (no issue to find) and Step 0.5 (worktree already created)
-- Start at Step 0.6 but skip the subagent dispatch — execute the steps directly
+**8. After merge.** `git checkout main && git pull`, delete the branch. If the
+issue has a `## Parent`, check siblings:
 
-Do not summarize, skip, or paraphrase any step. Every step must be fully completed
-before moving to the next.
+```sh
+gh issue list --state all --json number,title,state,body \
+  | python3 -c "
+import json, sys
+for i in json.load(sys.stdin):
+    if '#<parent-N>' in (i.get('body') or ''):
+        print(f'#{i[\"number\"]} [{i[\"state\"]}] {i[\"title\"]}')
+"
+```
+
+If all siblings are closed, close the parent:
+`gh issue close <parent-N> --reason completed --comment "All child issues merged. [x] <criterion> — <evidence>"`
+
+Report: files changed, PR URL, key decisions, open questions.
 
 ---
 
 Relay the subagent's outcome to the user and stop.
-
-## Maintaining this skill (and all as-* skills)
-
-The canonical source for all as-* skills is https://github.com/aaronsilinskas/ai-skills,
-cloned at ~/dev/ai-skills. After patching any as-* skill locally via skill_manage,
-sync and push:
-
-```sh
-cp ~/.hermes/skills/<skill-name>/SKILL.md ~/dev/ai-skills/<skill-name>/SKILL.md
-cd ~/dev/ai-skills
-git add <skill-name>/SKILL.md
-git commit -m "<describe the change>"
-git push
-```
