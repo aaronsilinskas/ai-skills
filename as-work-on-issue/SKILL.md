@@ -93,8 +93,10 @@ continuing:
 **5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
 (or `ruff check . && ruff format .`). Fix all failures.
 
-**6. Commit.** Single commit: `<imperative summary> (closes #<N>)` with key
-decisions in the body.
+**6. Commit.** Commit all changes with a clear message. If this is the initial
+implementation: single commit `<imperative summary> (closes #<N>)` with key
+decisions in the body. If this is a follow-up review/fix pass: a new commit on
+the same branch (do NOT amend or force-push).
 
 **7. Open a PR.** Rebase: `git fetch origin main && git rebase origin/main`.
 Resolve conflicts if any, re-run tests, then:
