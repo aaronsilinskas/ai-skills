@@ -99,7 +99,7 @@ def shape(position):
     return math.sin(freq * position * tau)
 ```
 
-Prefer multiply over divide when the denominator is fixed. Avoid `**` (power) in hot paths unless the exponent is a compile-time constant and the platform handles it efficiently.
+Prefer multiply over divide when the denominator is fixed. In hot paths, always use `x * x` instead of `x ** 2` — the `**` operator has meaningful overhead on embedded devices even with compile-time constant exponents.
 
 ## CircuitPython and MicroPython Compatibility
 
