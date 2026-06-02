@@ -161,11 +161,11 @@ except ImportError:
     pass
 
 class MyConfig:
-    MAX_PIXELS: "Final" = 117
-    DEFAULT_BRIGHTNESS: "Final" = 0x33
+    MAX_PIXELS: Final = 117
+    DEFAULT_BRIGHTNESS: Final = 0x33
 ```
 
-`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The annotation must be in a string so it is never evaluated at runtime on CircuitPython.
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import must be guarded with `try/except ImportError` because `typing` may be absent on some embedded runtimes. The annotation itself must **never** be quoted — CircuitPython skips annotation evaluation entirely, so string-quoting `Final` is unnecessary and makes the code harder to read.
 
 ## State Object Lifecycle
 
@@ -204,5 +204,5 @@ class _Data:
 - [ ] `__slots__` used on long-lived per-instance state objects
 - [ ] All function/method parameters and return types are annotated (except documented edge cases)
 - [ ] `typing` and `collections.abc` imports guarded with `try/except ImportError` (advanced constructs — `TypeVar`, `Protocol`, `Callable`, etc. — are still absent from latest releases)
-- [ ] Class-level constants annotated with `"Final"` (string form, no type parameter)
+- [ ] Class-level constants annotated with `Final` (unquoted, no type parameter; import guarded with `try/except ImportError`)
 - [ ] No imports from unavailable stdlib modules
