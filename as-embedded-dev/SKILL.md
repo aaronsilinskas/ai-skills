@@ -165,7 +165,7 @@ class MyConfig:
     DEFAULT_BRIGHTNESS: Final = 0x33
 ```
 
-`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import must be guarded with `try/except ImportError` because `typing` may be absent on some embedded runtimes. The annotation itself must **never** be quoted — CircuitPython skips annotation evaluation entirely, so string-quoting `Final` is unnecessary and makes the code harder to read.
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import must be guarded with `try/except ImportError` because `typing` may be absent on some embedded runtimes. The annotation itself must **never** be quoted — String-quoting `Final` is unnecessary for CircuitPython.
 
 ## State Object Lifecycle
 
