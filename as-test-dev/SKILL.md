@@ -56,6 +56,23 @@ def test_loop_iterates_16_times():
 | `test_<thing>_returns_<type>` | A type check, not a behavior check | Test the value contract, not the type |
 | `test_<step>_step` | Just echoes code structure | Describe what the step produces |
 
+### The name must match what the test actually does
+
+A name that overstates the test lies about coverage. Check the name against the
+inputs fired and the assertions made — they must agree.
+
+```python
+# Name claims "near zero" — but fires exactly zero
+def test_near_zero_axis_yields_near_zero_progress():
+    fire(x=0.0)
+
+# Fix: rename to the boundary it actually guards
+def test_zero_acceleration_yields_zero_progress():
+    fire(x=0.0)
+```
+
+If the name says "X causes Y", the test must change X and observe Y.
+
 ## Test Structure
 
 ### One behavior per test

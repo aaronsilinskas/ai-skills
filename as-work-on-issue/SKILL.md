@@ -18,7 +18,7 @@ fix unrelated problems or refactor adjacent code.
 
 > Delegate all implementation to a fresh subagent to avoid context pollution.
 
-## Step 0 — Find the issue (if no number given)
+## Step 1 — Find the issue (if no number given)
 
 ```sh
 bash <skill-dir>/scripts/dispatch.sh
@@ -32,7 +32,7 @@ gh issue list --label "ready-for-agent" --state open --json number,title,body
 
 Pick the lowest-numbered issue with no open "Blocked by" dependencies.
 
-## Step 0.5 — Set up a git worktree
+## Step 2 — Set up a git worktree
 
 Before dispatching, create an isolated worktree for the issue branch so parallel
 subagents never conflict on checkouts:
@@ -51,7 +51,7 @@ git worktree remove ../<repo-name>-issue-<N>
 git branch -d issue-<N>-<short-slug>
 ```
 
-## Step 0.6 — Dispatch to a fresh subagent
+## Step 3 — Dispatch to a fresh subagent
 
 Call `runSubagent` with description `"Implement issue #<N>"` and this prompt
 (substitute `<N>`, `<owner>/<repo>`, `<repo-root>`, `<worktree-path>`):
@@ -81,9 +81,10 @@ not available locally, fetch it from
 `https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd`.
 Do not fix pre-existing bugs.
 
-**4. Review.** Load each skill via `read_file` (paths in your skills list),
+**4. Self-review.** Load each skill via `read_file` (paths in your skills list),
 apply all fixes to the code, and confirm each finding is resolved before
-continuing:
+continuing. This is your own first pass — a separate fresh reviewer subagent
+runs after you open the PR, so be thorough but expect a second set of eyes:
 
 - `as-embedded-dev` — review changed source for correctness, memory safety,
   and hardware constraints. Apply any fixes found.
@@ -129,4 +130,51 @@ Report: files changed, PR URL, key decisions, open questions.
 
 ---
 
-Relay the subagent's outcome to the user and stop.
+## Step 4 — Fresh-reviewer pass (separate subagent)
+
+The implementing subagent reviewed its own work in Step 4 — but an author
+reviewing their own tests has a blind spot and tends to rate them "clean."
+After the PR is open, dispatch a **second, fresh** subagent that has never seen
+the implementation. Its only job is to review the diff and push fix commits.
+
+Call `runSubagent` with description `"Review issue #<N> PR"` and this prompt
+(substitute `<N>`, `<worktree-path>`, `<PR-URL>`):
+
+---
+
+Reviewing the open PR for GitHub issue #<N>. Working directory: <worktree-path>
+(a git worktree on branch issue-<N>-<short-slug>; the PR is already open at
+<PR-URL>). You did NOT write this code — review it with fresh eyes. Do NOT run
+git checkout or git worktree commands.
+
+IMPORTANT: Every step is mandatory. Do not skip or paraphrase.
+
+**1. Read the diff.** `git fetch origin main && git diff origin/main...HEAD`.
+Read `AGENTS.md` and `docs/agents/domain.md` for project constraints. Read the
+issue: `gh issue view <N> --json title,body`.
+
+**2. Review.** Load each skill via `read_file` (paths in your skills list), read
+it entirely, and apply EVERY finding to the code — confirm each is resolved:
+
+- `as-embedded-dev` — changed source: correctness, memory safety, hot-path
+  allocation, hardware constraints.
+- `as-test-dev` — test files: coverage, naming, behaviour-driven structure, and
+  in particular that each test's NAME matches the inputs it fires and the
+  assertions it makes (a test named "near zero" must not fire exactly zero).
+
+If you genuinely find nothing to fix after a thorough pass, say so explicitly
+and list what you checked — do not invent trivial changes.
+
+**3. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
+(or `ruff check . && ruff format .`). Fix all failures.
+
+**4. Commit & push.** If you applied fixes, commit them on the same branch (a
+new commit — do NOT amend or force-push) and `git push`. The commit lands on
+the open PR automatically.
+
+**5. Report.** List findings applied (or "none, here is what I checked"),
+files changed, and any open concerns.
+
+---
+
+Relay both subagents' outcomes to the user and stop.
