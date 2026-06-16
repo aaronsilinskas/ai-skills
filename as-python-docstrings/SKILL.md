@@ -16,6 +16,15 @@ argument-hint: "file or symbol to document"
 
 Only add or update docstrings. Do **not** modify, refactor, or restructure any code — even if issues are noticed. Report code-level findings separately but leave the code unchanged.
 
+## A Docstring Is a Last Resort
+
+Before adding or expanding a docstring, ask whether the information belongs in the code or its tests instead. A docstring is the *last* place to convey intent, after naming and tests:
+
+- If a docstring would narrate *what* the code does, the code wants clearer naming, not prose — report that as a code-level finding (you don't change code here) and keep the docstring minimal.
+- If it would document a complex or non-obvious behavior, that behavior should be a named test that asserts it — flag the missing test rather than encoding the behavior only in prose.
+
+Write a docstring only for what naming and tests genuinely cannot carry: a symbol's user-facing purpose, a non-obvious *why*, or a contract the types don't express. Prefer one line. (Authoring guidance: `as-embedded-dev`; test guidance: `as-test-dev`.)
+
 ## Class Docstrings
 
 Open with what the class is **for** and why it matters to the caller — not a description of its internal mechanics.

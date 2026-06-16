@@ -14,6 +14,8 @@ A test that breaks when you refactor internals — but the product behavior didn
 
 Ask before writing any test: **"What user-visible or system-level guarantee does this verify?"**
 
+Tests are also the *preferred home for behavior that would otherwise be explained in a comment or docstring*. If a piece of source code is complex or non-obvious enough that someone wants to narrate it in prose, that behavior should instead be captured as a named test that asserts it — the test documents the contract executably and fails when it regresses. When you review or write a feature, treat each "this handles …" comment in the source as a missing test: name it and assert it (e.g. `test_<thing>_when_<condition>_…`). (Source-side guidance lives in the `as-embedded-dev` skill.)
+
 ## Test Naming
 
 Test names are the primary communication surface. They should read like a statement of guaranteed behavior.
