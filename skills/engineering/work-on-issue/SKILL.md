@@ -67,8 +67,8 @@ IMPORTANT: Every numbered step below is mandatory. Do not skip, summarize, or
 paraphrase any step. Complete each step fully before moving to the next.
 
 **1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
-Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
-`CLAUDE.md`/`CONTEXT.md`).
+Read `AGENTS.md`, `docs/domain.md`, `docs/domain-language.md`,
+`docs/agents/backlog.md` (or `CLAUDE.md`).
 
 **2. Explore.** Find source modules and tests for the acceptance criteria. Note
 naming and test conventions. Re-read constraints in `docs/agents/domain.md`.

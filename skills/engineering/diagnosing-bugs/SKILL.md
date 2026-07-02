@@ -7,7 +7,7 @@ description: Diagnosis loop for hard bugs and performance regressions. Use when 
 
 A discipline for hard bugs. Skip phases only when explicitly justified.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules.
+When exploring the codebase, read `domain-language.md` (if it exists) to get a clear mental model of the relevant modules.
 
 ## Phase 1 — Build a feedback loop
 

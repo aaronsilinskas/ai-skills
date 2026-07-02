@@ -92,7 +92,7 @@ RIGHT (vertical):
 
 ### 1. Planning
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) so test names
+When exploring the codebase, read `domain-language.md` (if it exists) so test names
 and interface vocabulary match the project's domain language.
 
 Before writing any code:
