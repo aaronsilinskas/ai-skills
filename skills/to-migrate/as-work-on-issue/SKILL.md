@@ -51,7 +51,7 @@ git worktree remove ../<repo-name>-issue-<N>
 git branch -d issue-<N>-<short-slug>
 ```
 
-## Step 3 — Dispatch to a fresh subagent
+## Step 3 — Implement in a fresh subagent
 
 Use the Agent tool with description `"Implement issue #<N>"` and this prompt
 (substitute `<N>`, `<owner>/<repo>`, `<repo-root>`, `<worktree-path>`):
@@ -130,10 +130,11 @@ Report: files changed, PR URL, key decisions, open questions.
 
 ---
 
-## Step 4 — Fresh-reviewer pass (separate subagent)
+## Step 4 — Review in a fresh subagent
 
-The implementing subagent reviewed its own work in Step 4 — but an author
-reviewing their own tests has a blind spot and tends to rate them "clean."
+The implementing subagent reviewed its own work in its self-review (Step 3,
+item 4) — but an author reviewing their own tests has a blind spot and tends
+to rate them "clean."
 After the PR is open, dispatch a **second, fresh** subagent that has never seen
 the implementation. Its only job is to review the diff and push fix commits.
 

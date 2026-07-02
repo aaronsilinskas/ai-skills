@@ -50,16 +50,16 @@ written.
 def _build(self, name, options):
     """Construct an Effect for the named effect.
 
-    Splits the name into pack and effect, dispatches scene. names to the
-    scene-local registry and everything else to the pack registry, then
+    Splits the name into pack and effect, dispatches scene-prefixed names to
+    the scene-local registry and everything else to the pack registry, then
     translates registry errors into effect-facing messages, builds the
     receipt, and allocates buffers.
     """
     builder, pack, effect = self._resolve(name)
     ...
 
-# Good — purpose in one line; the mechanics are readable from the named
-# resolver call, and the dispatch/error behavior is pinned by resolver tests
+# Good — a one-line docstring for purpose; the mechanics stay readable from
+# the code, and the dispatch/error behavior is pinned by tests, not narrated
 def _build(self, name, options):
     """Construct an Effect for the named effect."""
     builder, pack, effect = self._resolve(name)

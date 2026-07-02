@@ -37,10 +37,10 @@ paths, and project-level conventions.
 
 ## Guiding Principle
 
-Preserve readability while prioritizing low-overhead execution patterns. Don't
-sacrifice clarity for micro-optimizations that don't demonstrably matter —
-apply performance discipline only where a real constraint exists (e.g. hot
-paths, inner loops, constrained hardware; see the platform reference files).
+Readability is the default. Apply performance discipline only where a real
+constraint demands it (hot paths, inner loops, constrained hardware — see the
+platform reference files); everywhere else, never trade clarity for
+micro-optimizations that don't demonstrably matter.
 
 ## Use the Public API
 
