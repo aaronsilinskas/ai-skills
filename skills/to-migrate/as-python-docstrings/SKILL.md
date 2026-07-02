@@ -23,7 +23,7 @@ Before adding or expanding a docstring, ask whether the information belongs in t
 - If a docstring would narrate *what* the code does, the code wants clearer naming, not prose — report that as a code-level finding (you don't change code here) and keep the docstring minimal.
 - If it would document a complex or non-obvious behavior, that behavior should be a named test that asserts it — flag the missing test rather than encoding the behavior only in prose.
 
-Write a docstring only for what naming and tests genuinely cannot carry: a symbol's user-facing purpose, a non-obvious *why*, or a contract the types don't express. Prefer one line. (Authoring guidance: `as-embedded-dev`; test guidance: `as-test-dev`.)
+Write a docstring only for what naming and tests genuinely cannot carry: a symbol's user-facing purpose, a non-obvious *why*, or a contract the types don't express. Prefer one line. (Authoring guidance: `as-embedded-dev`; test guidance: `bdd`.)
 
 ## Class Docstrings
 

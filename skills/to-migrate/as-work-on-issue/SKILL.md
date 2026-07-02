@@ -2,7 +2,7 @@
 name: as-work-on-issue
 description: >
   Implement a GitHub issue end-to-end: fetch the issue, read project context,
-  explore code, follow TDD to satisfy all acceptance criteria, validate, commit,
+  explore code, follow BDD to satisfy all acceptance criteria, validate, commit,
   and open a PR. Use this skill whenever the user asks to work on, implement,
   tackle, fix, or close a GitHub issue — even if they just say "work on #N",
   "implement #N", "fix issue #N", "close #N", "tackle #N", or "start on the
@@ -53,7 +53,7 @@ git branch -d issue-<N>-<short-slug>
 
 ## Step 3 — Dispatch to a fresh subagent
 
-Call `runSubagent` with description `"Implement issue #<N>"` and this prompt
+Use the Agent tool with description `"Implement issue #<N>"` and this prompt
 (substitute `<N>`, `<owner>/<repo>`, `<repo-root>`, `<worktree-path>`):
 
 ---
@@ -64,9 +64,7 @@ issue-<N>-<short-slug>). Stay focused on #<N> only. Do NOT run git checkout or
 git worktree commands -- the branch is already set up.
 
 IMPORTANT: Every numbered step below is mandatory. Do not skip, summarize, or
-paraphrase any step. Complete each step fully before moving to the next. Steps
-that say "load a skill and apply all fixes" mean: load the skill, read it
-entirely, apply every finding to the code, and confirm each is resolved.
+paraphrase any step. Complete each step fully before moving to the next.
 
 **1. Gather context.** `gh issue view <N> --json number,title,body,comments`.
 Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
@@ -75,21 +73,21 @@ Read `AGENTS.md`, `docs/agents/domain.md`, `docs/agents/backlog.md` (or
 **2. Explore.** Find source modules and tests for the acceptance criteria. Note
 naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 
-**3. Implement (TDD).** Branch is already checked out in your working directory. Load the
-`tdd` skill (`read_file` its SKILL.md from your skills list) and follow it. If
-not available locally, fetch it from
-`https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd`.
-Do not fix pre-existing bugs.
+**3. Implement (BDD).** Branch is already checked out in your working directory.
+Invoke the `bdd` skill via the Skill tool and follow it. Do not fix
+pre-existing bugs.
 
-**4. Self-review.** Load each skill via `read_file` (paths in your skills list),
-apply all fixes to the code, and confirm each finding is resolved before
-continuing. This is your own first pass — a separate fresh reviewer subagent
-runs after you open the PR, so be thorough but expect a second set of eyes:
+**4. Self-review.** Invoke each skill below via the Skill tool, apply all fixes
+to the code, and confirm each finding is resolved before continuing. This is
+your own first pass — a separate fresh reviewer subagent runs after you open
+the PR, so be thorough but expect a second set of eyes:
 
 - `as-embedded-dev` — review changed source for correctness, memory safety,
   and hardware constraints. Apply any fixes found.
-- `as-test-dev` — review test files for coverage, naming, and behaviour-driven
-  structure. Apply any fixes found.
+- `bdd` — review test files against the naming/structure/coverage quality
+  bar. Apply any fixes found.
+- `as-python-docstrings` — review changed symbols for missing, stale, or
+  unnecessary docstrings. Apply any fixes found.
 
 **5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
 (or `ruff check . && ruff format .`). Fix all failures.
@@ -137,7 +135,7 @@ reviewing their own tests has a blind spot and tends to rate them "clean."
 After the PR is open, dispatch a **second, fresh** subagent that has never seen
 the implementation. Its only job is to review the diff and push fix commits.
 
-Call `runSubagent` with description `"Review issue #<N> PR"` and this prompt
+Use the Agent tool with description `"Review issue #<N> PR"` and this prompt
 (substitute `<N>`, `<worktree-path>`, `<PR-URL>`):
 
 ---
@@ -153,14 +151,16 @@ IMPORTANT: Every step is mandatory. Do not skip or paraphrase.
 Read `AGENTS.md` and `docs/agents/domain.md` for project constraints. Read the
 issue: `gh issue view <N> --json title,body`.
 
-**2. Review.** Load each skill via `read_file` (paths in your skills list), read
-it entirely, and apply EVERY finding to the code — confirm each is resolved:
+**2. Review.** Invoke each skill below via the Skill tool, read it entirely, and
+apply EVERY finding to the code — confirm each is resolved:
 
 - `as-embedded-dev` — changed source: correctness, memory safety, hot-path
   allocation, hardware constraints.
-- `as-test-dev` — test files: coverage, naming, behaviour-driven structure, and
-  in particular that each test's NAME matches the inputs it fires and the
+- `bdd` — test files: coverage, naming, behaviour-driven structure, and in
+  particular that each test's NAME matches the inputs it fires and the
   assertions it makes (a test named "near zero" must not fire exactly zero).
+- `as-python-docstrings` — changed symbols: missing, stale, or unnecessary
+  docstrings.
 
 If you genuinely find nothing to fix after a thorough pass, say so explicitly
 and list what you checked — do not invent trivial changes.
