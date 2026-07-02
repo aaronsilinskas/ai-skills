@@ -86,8 +86,9 @@ the PR, so be thorough but expect a second set of eyes:
   and hardware constraints. Apply any fixes found.
 - `bdd` — review test files against the naming/structure/coverage quality
   bar. Apply any fixes found.
-- `as-python-docstrings` — review changed symbols for missing, stale, or
-  unnecessary docstrings. Apply any fixes found.
+- `comments` — review changed code and docstrings for comment discipline
+  (naming → test → comment) and correct docstring formatting. Apply any
+  fixes found.
 
 **5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
 (or `ruff check . && ruff format .`). Fix all failures.
@@ -159,8 +160,8 @@ apply EVERY finding to the code — confirm each is resolved:
 - `bdd` — test files: coverage, naming, behaviour-driven structure, and in
   particular that each test's NAME matches the inputs it fires and the
   assertions it makes (a test named "near zero" must not fire exactly zero).
-- `as-python-docstrings` — changed symbols: missing, stale, or unnecessary
-  docstrings.
+- `comments` — changed code and docstrings: comment discipline and docstring
+  formatting.
 
 If you genuinely find nothing to fix after a thorough pass, say so explicitly
 and list what you checked — do not invent trivial changes.

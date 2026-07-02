@@ -23,34 +23,10 @@ Preserve readability while prioritizing low-overhead execution patterns. Don't s
 
 ## Readable Code Over Explanatory Comments
 
-Comment blocks and docstrings that narrate *what the code does* are a smell, not a deliverable. Do not add them. Convey intent in this order of preference:
-
-1. **Naming.** A well-named function, variable, or extracted helper says what a comment would have said — and can't drift out of sync with the code. If you feel the urge to write a comment explaining a block, that block usually wants a name (extract it) or a clearer one.
-2. **A test.** Behavior complex or non-obvious enough that you'd want to document it belongs in a *named test that asserts it*. An executable test documents the contract, proves it holds, and fails when it regresses — prose does none of these. "This handles the empty case by …" → write `test_<thing>_when_empty_…`. (See the `bdd` skill.)
-3. **A docstring or comment — last resort only.** Reach for prose *only* when naming and tests genuinely cannot convey something: a non-obvious *why* (a workaround, a hardware quirk, a deliberate deviation), an external contract, or an ordering/units constraint the types don't express. When you do write one, keep it to the minimum — a one-line docstring stating purpose is usually enough.
-
-Never write a comment or docstring that restates what the code already says. If a reviewer can delete the comment and lose no information, it should not have been written. (Docstring formatting specifics live in the `as-python-docstrings` skill.)
-
-```python
-# Bad — a comment block narrating mechanics that the code already shows
-def _build(self, name, options):
-    """Construct an Effect for the named effect.
-
-    Splits the name into pack and effect, dispatches scene. names to the
-    scene-local registry and everything else to the pack registry, then
-    translates registry errors into effect-facing messages, builds the
-    receipt, and allocates buffers.
-    """
-    builder, pack, effect = self._resolve(name)
-    ...
-
-# Good — purpose in one line; the mechanics are readable from the named
-# resolver call, and the dispatch/error behavior is pinned by resolver tests
-def _build(self, name, options):
-    """Construct an Effect for the named effect."""
-    builder, pack, effect = self._resolver.resolve(name)
-    ...
-```
+Comment discipline — the "naming → test → comment" ordering, and never writing
+prose that restates what the code already says — is covered by the `comments`
+skill; apply it to all changed source, with Python docstring formatting from
+its `python-docstrings.md` reference.
 
 ## Hot Path Definition
 
@@ -227,9 +203,7 @@ class _Data:
 
 ## Checklist
 
-- [ ] No comment block or docstring narrates *what* the code does — intent is carried by naming, with behavior pinned by tests
-- [ ] Any prose that remains explains a non-obvious *why* (or external/ordering/units contract) that naming and tests cannot convey
-- [ ] No comment or docstring merely restates the code
+- [ ] Comment discipline applied per the `comments` skill (naming carries intent, prose only for non-obvious *why*, nothing restates the code)
 - [ ] No list/dict/set allocation inside hot-path loops
 - [ ] No comprehensions in hot paths — plain `for` loops only
 - [ ] No exceptions used for control flow
