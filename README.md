@@ -6,38 +6,41 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 ## Skills
 
+**Invoked by** — *You* means the skill only runs when you type it (e.g. `/to-prd`); *You or model* means the model can also reach for it automatically from its description.
+
 ### Engineering
 
-| Skill | Description |
-| --- | --- |
-| [bdd](skills/engineering/bdd/SKILL.md) | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
-| [code-quality](skills/engineering/code-quality/SKILL.md) | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
-| [codebase-design](skills/engineering/codebase-design/SKILL.md) | Shared vocabulary for designing deep modules — small interfaces, clean seams, testable through the interface. |
-| [comments](skills/engineering/comments/SKILL.md) | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
-| [diagnosing-bugs](skills/engineering/diagnosing-bugs/SKILL.md) | Disciplined diagnosis loop for hard bugs and perf regressions: reproduce → minimise → hypothesise → instrument → fix. |
-| [domain-modeling](skills/engineering/domain-modeling/SKILL.md) | Maintain the domain docs inline — the map (`domain.md`) and the language (`domain-language.md`). |
-| [grill-with-docs](skills/engineering/grill-with-docs/SKILL.md) | A grilling interview that also keeps the domain docs current as decisions crystallise. |
-| [improve-codebase-architecture](skills/engineering/improve-codebase-architecture/SKILL.md) | Scan for deepening opportunities, present a visual HTML report, then grill the one you pick. |
-| [prototype](skills/engineering/prototype/SKILL.md) | Build a throwaway prototype to answer a design question — a terminal state model, or several UI variations. |
-| [resolving-merge-conflicts](skills/engineering/resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge/rebase conflict, preserving both intents. |
-| [to-issues](skills/engineering/to-issues/SKILL.md) | Break a plan or PRD into independently-grabbable issues via tracer-bullet vertical slices. |
-| [to-prd](skills/engineering/to-prd/SKILL.md) | Synthesize the conversation into a PRD — local first, grilled, then published to the issue tracker. |
-| [work-on-issue](skills/engineering/work-on-issue/SKILL.md) | Implement a GitHub issue end-to-end: fetch → explore → BDD → validate → open a PR. |
+| Skill | Invoked by | Description |
+| --- | --- | --- |
+| [bdd](skills/engineering/bdd/SKILL.md) | You or model | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
+| [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
+| [codebase-design](skills/engineering/codebase-design/SKILL.md) | You or model | Shared vocabulary for designing deep modules — small interfaces, clean seams, testable through the interface. |
+| [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
+| [diagnosing-bugs](skills/engineering/diagnosing-bugs/SKILL.md) | You or model | Disciplined diagnosis loop for hard bugs and perf regressions: reproduce → minimise → hypothesise → instrument → fix. |
+| [domain-modeling](skills/engineering/domain-modeling/SKILL.md) | You or model | Maintain the domain docs inline — the map (`domain.md`) and the language (`domain-language.md`). |
+| [grill-with-docs](skills/engineering/grill-with-docs/SKILL.md) | You | A grilling interview that also keeps the domain docs current as decisions crystallise. |
+| [improve-codebase-architecture](skills/engineering/improve-codebase-architecture/SKILL.md) | You | Scan for deepening opportunities, present a visual HTML report, then grill the one you pick. |
+| [prototype](skills/engineering/prototype/SKILL.md) | You or model | Build a throwaway prototype to answer a design question — a terminal state model, or several UI variations. |
+| [resolving-merge-conflicts](skills/engineering/resolving-merge-conflicts/SKILL.md) | You or model | Resolve an in-progress git merge/rebase conflict, preserving both intents. |
+| [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a PRD. |
+| [to-issues](skills/engineering/to-issues/SKILL.md) | You | Break a plan or PRD into independently-grabbable issues via tracer-bullet vertical slices. |
+| [to-prd](skills/engineering/to-prd/SKILL.md) | You | Synthesize the conversation into a PRD — local first, grilled, then published to the issue tracker. |
+| [triage](skills/engineering/triage/SKILL.md) | You | Move issues and external PRs through a state machine of triage roles — categorise, verify, and write agent-ready briefs. |
+| [work-on-issue](skills/engineering/work-on-issue/SKILL.md) | You or model | Implement a GitHub issue end-to-end: fetch → explore → BDD → validate → open a PR. |
 
 ### Productivity
 
-| Skill | Description |
-| --- | --- |
-| [grilling](skills/productivity/grilling/SKILL.md) | Interview relentlessly to stress-test a plan or design, one question at a time. |
-| [grill-me](skills/productivity/grill-me/SKILL.md) | Plain user-invoked entry point to a grilling session. |
+| Skill | Invoked by | Description |
+| --- | --- | --- |
+| [grilling](skills/productivity/grilling/SKILL.md) | You or model | Interview relentlessly to stress-test a plan or design, one question at a time. |
+| [grill-me](skills/productivity/grill-me/SKILL.md) | You | Plain user-invoked entry point to a grilling session. |
+| [handoff](skills/productivity/handoff/SKILL.md) | You | Compact the current conversation into a handoff document so a fresh agent can continue the work. |
 
 ### Misc
 
-| Skill | Description |
-| --- | --- |
-| [air-quality-data](skills/misc/air-quality-data/SKILL.md) | Fetch and compare air quality data (AQI, PM2.5/PM10) via EPA AirNow, PurpleAir, IQAir, and OpenAQ. |
-
-Skills under [`skills/to-migrate/`](skills/to-migrate/) are still being reviewed and adapted, and aren't ready for use.
+| Skill | Invoked by | Description |
+| --- | --- | --- |
+| [air-quality-data](skills/misc/air-quality-data/SKILL.md) | You or model | Fetch and compare air quality data (AQI, PM2.5/PM10) via EPA AirNow, PurpleAir, IQAir, and OpenAQ. |
 
 ## What's changed from Matt's skills
 
