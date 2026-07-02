@@ -1,65 +1,27 @@
----
-name: as-embedded-dev
-description: "Write, review, or optimize Python code for CircuitPython and MicroPython constrained runtimes. Use this skill whenever writing or reviewing Python that runs on microcontrollers, LED strips, or embedded hardware — even if the user doesn't say 'CircuitPython' explicitly. Always use for animation loops, per-frame update logic, per-pixel sampling, hot paths, or any code where GC pauses, memory allocations, or CPU limits matter. Also use when the user asks whether a Python pattern is safe, efficient, or compatible with constrained hardware."
-argument-hint: "file or function to review or implement"
----
+# Embedded Python (CircuitPython / MicroPython)
 
-# Embedded Python Development
+Platform-specific rules for Python that runs on microcontrollers, LED strips,
+or other constrained hardware — where GC pauses, memory allocations, or CPU
+limits matter. Load this alongside the `code-quality` skill whenever writing or
+reviewing CircuitPython/MicroPython code, animation loops, per-frame update
+logic, per-pixel sampling, or any hot path — even if the user doesn't say
+"CircuitPython" explicitly.
 
-## When to Use
-
-- Implementing or reviewing code that runs on CircuitPython or MicroPython
-- Writing time-sensitive or tight loops where GC pauses would cause visible stutter
-- Auditing code for memory allocations, object creation, or patterns that are unsafe on constrained hardware
-- Deciding whether a Python pattern is safe to use in a hot path
-
-## Project-Specific Rules
-
-Before applying any guidance from this skill, check the project root for an `AGENTS.md` file. If one exists, look for a section named `## Embedded Runtime Constraints`. Treat all content under that heading as additional project-specific rules that extend or override the general guidance below — in particular, any listed hot paths and project-level conventions.
-
-## Guiding Principle
-
-Preserve readability while prioritizing low-overhead execution patterns. Don't sacrifice clarity for micro-optimizations on cold paths — apply performance discipline only where it demonstrably matters (hot paths and inner loops).
-
-## Readable Code Over Explanatory Comments
-
-Comment blocks and docstrings that narrate *what the code does* are a smell, not a deliverable. Do not add them. Convey intent in this order of preference:
-
-1. **Naming.** A well-named function, variable, or extracted helper says what a comment would have said — and can't drift out of sync with the code. If you feel the urge to write a comment explaining a block, that block usually wants a name (extract it) or a clearer one.
-2. **A test.** Behavior complex or non-obvious enough that you'd want to document it belongs in a *named test that asserts it*. An executable test documents the contract, proves it holds, and fails when it regresses — prose does none of these. "This handles the empty case by …" → write `test_<thing>_when_empty_…`. (See the `as-test-dev` skill.)
-3. **A docstring or comment — last resort only.** Reach for prose *only* when naming and tests genuinely cannot convey something: a non-obvious *why* (a workaround, a hardware quirk, a deliberate deviation), an external contract, or an ordering/units constraint the types don't express. When you do write one, keep it to the minimum — a one-line docstring stating purpose is usually enough.
-
-Never write a comment or docstring that restates what the code already says. If a reviewer can delete the comment and lose no information, it should not have been written. (Docstring formatting specifics live in the `as-python-docstrings` skill.)
-
-```python
-# Bad — a comment block narrating mechanics that the code already shows
-def _build(self, name, options):
-    """Construct an Effect for the named effect.
-
-    Splits the name into pack and effect, dispatches scene. names to the
-    scene-local registry and everything else to the pack registry, then
-    translates registry errors into effect-facing messages, builds the
-    receipt, and allocates buffers.
-    """
-    builder, pack, effect = self._resolve(name)
-    ...
-
-# Good — purpose in one line; the mechanics are readable from the named
-# resolver call, and the dispatch/error behavior is pinned by resolver tests
-def _build(self, name, options):
-    """Construct an Effect for the named effect."""
-    builder, pack, effect = self._resolver.resolve(name)
-    ...
-```
+The general quality bar (readability, public-API discipline, type coverage)
+lives in the `code-quality` skill; this file adds the embedded constraints on
+top and, where they conflict, they win.
 
 ## Hot Path Definition
 
-A hot path is any code that executes many times per second in a tight loop — where even small per-iteration costs compound into GC pressure or visible stutter. Common examples include:
+A hot path is any code that executes many times per second in a tight loop —
+where even small per-iteration costs compound into GC pressure or visible
+stutter. Common examples include:
 
 - Animation update loops that run every frame (e.g., 30-60 times per second)
 - Per-pixel sampling functions that run for every pixel on every frame
 
-Everything else (construction, one-time initialization) is a cold path and can use normal Python patterns freely.
+Everything else (construction, one-time initialization) is a cold path and can
+use normal Python patterns freely.
 
 ## Memory Rules (Hot Paths)
 
@@ -134,7 +96,7 @@ Prefer multiply over divide when the denominator is fixed. In hot paths, always 
 
 ## CircuitPython and MicroPython Compatibility
 
-This skill targets the **latest stable releases** of CircuitPython and MicroPython. Do not flag features as unavailable unless they are absent from current releases.
+This reference targets the **latest stable releases** of CircuitPython and MicroPython. Do not flag features as unavailable unless they are absent from current releases.
 
 Minimize and isolate CircuitPython-specific dependencies so the same code can run on MicroPython and other environments. Avoid scattering platform-specific imports or calls throughout modules; contain them at the boundary.
 
@@ -166,11 +128,11 @@ except ImportError:
 
 Prefer explicit, simple data structures (`list`, `dict`, plain classes with `__slots__`) over convenience wrappers.
 
-## Type Hint Policy
+## Type Hint Exceptions
 
-Type hints are required for all function and method parameters and return values.
-
-Use narrowly-scoped exceptions only when a concrete embedded/runtime constraint makes precise typing impractical, for example:
+The `code-quality` skill requires type hints on all parameters and returns.
+On embedded targets, use narrowly-scoped exceptions when a concrete runtime
+constraint makes precise typing impractical, for example:
 
 - Board/runtime-provided objects that have incomplete or incorrect stubs
 - CircuitPython-specific APIs where stub types conflict with known runtime behavior
@@ -227,16 +189,12 @@ class _Data:
 
 ## Checklist
 
-- [ ] No comment block or docstring narrates *what* the code does — intent is carried by naming, with behavior pinned by tests
-- [ ] Any prose that remains explains a non-obvious *why* (or external/ordering/units contract) that naming and tests cannot convey
-- [ ] No comment or docstring merely restates the code
 - [ ] No list/dict/set allocation inside hot-path loops
 - [ ] No comprehensions in hot paths — plain `for` loops only
 - [ ] No exceptions used for control flow
 - [ ] Constants and math calls hoisted outside inner loops
 - [ ] State objects initialized once via a guard, mutated in place on subsequent frames
 - [ ] `__slots__` used on long-lived per-instance state objects
-- [ ] All function/method parameters and return types are annotated (except documented edge cases)
 - [ ] `typing` and `collections.abc` imports guarded with `try/except ImportError` (advanced constructs — `TypeVar`, `Protocol`, `Callable`, etc. — are still absent from latest releases)
 - [ ] Class-level constants annotated with `Final` (unquoted, no type parameter; import guarded with `try/except ImportError`)
 - [ ] No imports from unavailable stdlib modules

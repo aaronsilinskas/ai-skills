@@ -1,12 +1,12 @@
 #!/bin/bash
 # dispatch.sh — Find the next unblocked ready-for-agent issue to work on.
 #
-# Usage: bash scripts/dispatch.sh
+# Usage: bash <skill-dir>/scripts/dispatch.sh
 #
 # Fetches all open issues labelled "ready-for-agent", filters out any whose
 # "Blocked by" section references an issue that is still open, and prints the
 # actionable list in ascending issue-number order (lowest = oldest = highest
-# priority).  The recommended next issue is printed last for easy copying.
+# priority).  The recommended next issue is printed last as the "Next up" pick.
 set -eo pipefail
 
 # Require gh, jq, and an active gh session
@@ -85,6 +85,3 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Next up: #$FIRST_NUMBER — $FIRST_TITLE"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Open Copilot agent mode, then run the 'work-on-issue' prompt with:"
-echo "  Issue number: $FIRST_NUMBER"
