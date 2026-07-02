@@ -1,12 +1,12 @@
 ---
 name: to-prd
-description: Turn the current conversation into a PRD and publish it to the project issue tracker — no interview, just synthesis of what you've already discussed.
+description: Turn the current conversation into a PRD — no interview, just synthesis of what you've already discussed. Produces a local document first for grilling, then publishes to the issue tracker once the design settles.
 disable-model-invocation: true
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
 
-The issue tracker and triage label vocabulary should have been provided to you by the project's agent docs (e.g. `AGENTS.md` and the docs it points to).
+The issue tracker vocabulary (for publishing later) should have been provided to you by the project's agent docs (e.g. `AGENTS.md` and the docs it points to).
 
 ## Process
 
@@ -16,7 +16,7 @@ The issue tracker and triage label vocabulary should have been provided to you b
 
 Check with the user that these seams match their expectations.
 
-3. Write the PRD using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
+3. Write the PRD using the template below as a **local document** (e.g. a markdown file in the repo or a scratch location) — do **not** publish it to the issue tracker yet. The design still needs sharpening.
 
 <prd-template>
 
@@ -73,3 +73,7 @@ A description of the things that are out of scope for this PRD.
 Any further notes about the feature.
 
 </prd-template>
+
+4. Hand off to the `grill-with-docs` skill to challenge the PRD against project context and resolve open questions, updating the local document inline. Loop until no open questions remain.
+
+5. Only then publish the finalized PRD to the project issue tracker and delete the local file. Do **not** apply the `ready-for-agent` label — that belongs on the implementation issues the `to-issues` skill later creates from this PRD, not on the PRD itself.
