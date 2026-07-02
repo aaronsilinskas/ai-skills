@@ -59,7 +59,15 @@ These skills started from Matt Pocock's and were adapted to fit my workflow. The
 
 ## Installation
 
-Clone the repo, then symlink each skill into the Claude Code skills directory:
+The easiest way is the [`skills`](https://github.com/vercel-labs/skills) CLI, which lets you pick which skills to install and which agents (Claude Code, Cursor, etc.) to install them to:
+
+```bash
+npx skills@latest add aaronsilinskas/ai-skills
+```
+
+### Manual install
+
+Alternatively, clone the repo and symlink each skill into the Claude Code skills directory:
 
 ```bash
 git clone https://github.com/aaronsilinskas/ai-skills.git aaronsilinskas-skills
@@ -69,7 +77,7 @@ for skill in aaronsilinskas-skills/skills/{engineering,productivity,misc}/*/; do
 done
 ```
 
-Skills are then available at `~/.claude/skills/<name>/SKILL.md` and can be edited directly in the repo. (The `skills/to-migrate/` set is intentionally excluded until each skill is reviewed.)
+Skills are then available at `~/.claude/skills/<name>/SKILL.md` and can be edited directly in the repo.
 
 ## Conventions
 
