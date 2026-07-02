@@ -396,8 +396,9 @@ principle above is followed correctly. See:
 - [mocking-typescript.md](mocking-typescript.md)
 - [mocking-kotlin.md](mocking-kotlin.md)
 
-(For embedded/hardware-constrained source guidance that pairs with these
-tests, see the `embedded-dev` skill.)
+(For source-side quality guidance that pairs with these tests, see the
+`code-quality` skill and its `embedded-python.md` reference for
+hardware-constrained code.)
 
 ## Checklist Per Cycle
 
