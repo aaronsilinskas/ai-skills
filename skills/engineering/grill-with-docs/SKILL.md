@@ -1,6 +1,7 @@
 ---
 name: grill-with-docs
 description: A relentless interview to sharpen a plan or design, which also keeps the domain docs (map + glossary) up to date as we go.
+argument-hint: "the plan or design to grill (or leave blank to use the conversation)"
 disable-model-invocation: true
 ---
 

@@ -1,10 +1,11 @@
 ---
 name: to-prd
 description: Turn the current conversation into a PRD — no interview, just synthesis of what you've already discussed. Produces a local document first for grilling, then publishes to the issue tracker once the design settles.
+argument-hint: "topic to scope the PRD (or leave blank to use the whole conversation)"
 disable-model-invocation: true
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
+This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know. If the user passed a topic as an argument, use it to scope which part of the conversation to synthesize; otherwise cover the whole discussion.
 
 The issue tracker vocabulary (for publishing later) should have been provided to you by the project's agent docs (e.g. `AGENTS.md` and the docs it points to).
 

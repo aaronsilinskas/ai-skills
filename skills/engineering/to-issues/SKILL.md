@@ -1,6 +1,7 @@
 ---
 name: to-issues
 description: Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices.
+argument-hint: "issue/PRD reference to break down (or leave blank to use the conversation)"
 disable-model-invocation: true
 ---
 

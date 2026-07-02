@@ -138,15 +138,12 @@ Rules:
 
 ### 4. Refactor
 
-After all tests pass, look for [refactor candidates](refactoring.md):
+After all tests pass, scan for [refactor candidates](refactoring.md) —
+duplication, shallow modules, feature envy, and what the new code reveals
+about existing code.
 
-- [ ] Extract duplication
-- [ ] Deepen modules (move complexity behind simple interfaces)
-- [ ] Apply SOLID principles where natural
-- [ ] Consider what new code reveals about existing code
-- [ ] Run tests after each refactor step
-
-**Never refactor while RED.** Get to GREEN first.
+Run the tests after each refactor step, and **never refactor while RED** —
+get to GREEN first.
 
 ## Quality Bar
 

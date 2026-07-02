@@ -1,6 +1,7 @@
 ---
 name: domain-modeling
 description: Build and sharpen a project's domain docs — the map (`domain.md`: modules, key types, constraints) and the language (`domain-language.md`: canonical terms + what to avoid). Use when pinning down terminology, adding a module/type/constraint to the domain map, or when another skill needs to keep the domain docs current.
+argument-hint: "term, module, or constraint to capture (or leave blank to review the domain)"
 ---
 
 # Domain Modeling
