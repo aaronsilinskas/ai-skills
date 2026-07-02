@@ -82,8 +82,8 @@ to the code, and confirm each finding is resolved before continuing. This is
 your own first pass — a separate fresh reviewer subagent runs after you open
 the PR, so be thorough but expect a second set of eyes:
 
-- `code-quality` — review changed source against the general quality bar,
-  loading `embedded-python.md` for hardware/hot-path constraints. Apply any
+- `code-quality` — review changed source against the general quality bar; it
+  loads the matching platform reference (embedded, etc.) as needed. Apply any
   fixes found.
 - `bdd` — review test files against the naming/structure/coverage quality
   bar. Apply any fixes found.
@@ -156,9 +156,9 @@ issue: `gh issue view <N> --json title,body`.
 **2. Review.** Invoke each skill below via the Skill tool, read it entirely, and
 apply EVERY finding to the code — confirm each is resolved:
 
-- `code-quality` — changed source: general quality bar plus
-  `embedded-python.md` for correctness, memory safety, hot-path allocation,
-  and hardware constraints.
+- `code-quality` — changed source: the general quality bar, with the skill
+  loading the matching platform reference for correctness, memory safety,
+  hot-path allocation, and hardware constraints.
 - `bdd` — test files: coverage, naming, behaviour-driven structure, and in
   particular that each test's NAME matches the inputs it fires and the
   assertions it makes (a test named "near zero" must not fire exactly zero).

@@ -397,7 +397,7 @@ principle above is followed correctly. See:
 - [mocking-kotlin.md](mocking-kotlin.md)
 
 (For source-side quality guidance that pairs with these tests, see the
-`code-quality` skill and its `embedded-python.md` reference for
+`code-quality` skill; it loads the matching platform reference for
 hardware-constrained code.)
 
 ## Checklist Per Cycle
