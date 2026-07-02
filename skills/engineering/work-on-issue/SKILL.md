@@ -1,5 +1,5 @@
 ---
-name: as-work-on-issue
+name: work-on-issue
 description: >
   Implement a GitHub issue end-to-end: fetch the issue, read project context,
   explore code, follow BDD to satisfy all acceptance criteria, validate, commit,
