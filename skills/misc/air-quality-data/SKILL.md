@@ -1,6 +1,7 @@
 ---
 name: as-air-quality-data
 description: "Retrieve live air quality data by running scripts from this skill. Use this skill whenever the user wants to fetch, check, or compare air quality data, AQI values, PM2.5, PM10, or pollutant levels for any location — even if they just say 'what's the air quality near me' or 'is it safe to go outside'. Works globally including non-US cities (Tokyo, Seoul, London, Paris, etc.) via OpenAQ government monitors. Also use when combining data across multiple sources or applying correction factors to sensor readings. Runs Python scripts directly against EPA AirNow, PurpleAir, IQAir, and OpenAQ — no API knowledge required."
+argument-hint: "location or query (e.g. 'AQI in Tokyo' or a zip code)"
 ---
 
 # Air Quality Data
@@ -8,6 +9,8 @@ description: "Retrieve live air quality data by running scripts from this skill.
 Fetch live air quality data by running Python scripts from this skill's `scripts/` directory. All scripts output JSON to stdout and read API keys from environment variables.
 
 `<skill-path>` below refers to the directory containing this SKILL.md file.
+
+The per-script usage below is enough for normal fetches. When you need the raw endpoints, query parameters, and response fields — e.g. extending a script, adding a flag, or debugging an unexpected response — read the full API reference for that source: [references/airnow.md](references/airnow.md), [references/purpleair.md](references/purpleair.md), [references/iqair.md](references/iqair.md), [references/openaq.md](references/openaq.md).
 
 ## Setup
 

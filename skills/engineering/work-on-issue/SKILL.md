@@ -91,8 +91,9 @@ the PR, so be thorough but expect a second set of eyes:
   (naming → test → comment) and correct docstring formatting. Apply any
   fixes found.
 
-**5. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
-(or `ruff check . && ruff format .`). Fix all failures.
+**5. Validate.** Run the project's tests and pre-commit checks using the exact
+commands `AGENTS.md` documents for them (fall back to `CLAUDE.md` if that's
+where they live). Fix all failures.
 
 **6. Commit.** Commit all changes with a clear message. If this is the initial
 implementation: single commit `<imperative summary> (closes #<N>)` with key
@@ -169,8 +170,9 @@ apply EVERY finding to the code — confirm each is resolved:
 If you genuinely find nothing to fix after a thorough pass, say so explicitly
 and list what you checked — do not invent trivial changes.
 
-**3. Validate.** `python -m pytest -x -q` then `pre-commit run --all-files`
-(or `ruff check . && ruff format .`). Fix all failures.
+**3. Validate.** Run the project's tests and pre-commit checks using the exact
+commands `AGENTS.md` documents for them (fall back to `CLAUDE.md` if that's
+where they live). Fix all failures.
 
 **4. Commit & push.** If you applied fixes, commit them on the same branch (a
 new commit — do NOT amend or force-push) and `git push`. The commit lands on
