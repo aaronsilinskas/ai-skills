@@ -93,8 +93,7 @@ RIGHT (vertical):
 ### 1. Planning
 
 When exploring the codebase, read `CONTEXT.md` (if it exists) so test names
-and interface vocabulary match the project's domain language, and respect
-ADRs in the area you're touching.
+and interface vocabulary match the project's domain language.
 
 Before writing any code:
 
