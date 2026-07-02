@@ -49,9 +49,13 @@ These skills started from Matt Pocock's and were adapted to fit my workflow. The
 - **`CONTEXT.md` → `domain-language.md`.** "Context" collides with the AI sense of session/window context, and the file is really the project's *domain glossary*. It's now paired with a `domain.md` **map** (module layout, key types, constraints): one file for *meaning*, one for *structure*, with a strict boundary so they stop duplicating and drifting.
 - **Removed ADRs.** Architecture Decision Records were getting created for decisions that easily change, then drifting out of date. Decisions now live in the **GitHub issue** for the work (grilling captures them there); the domain docs are kept current instead.
 - **Merged the test skills into `bdd`.** Matt's `tdd` (the red-green-refactor process) merged with a behavior-driven test-quality bar into one skill, with per-language mocking guidance in reference files.
+- **Dropped the `implement` skill.** It was a thin wrapper that shadowed the preferred `work-on-issue` flow, so it's gone.
 - **Language-agnostic skills + reference files.** `comments` and `code-quality` hold general, language-neutral guidance; language/platform specifics (Python docstrings, CircuitPython rules, etc.) load from reference files only when relevant.
+- **Python-canonical examples.** Matt's code examples are largely TypeScript; the skills here use Python for illustrative examples, with genuinely language-specific bits kept in the per-language reference files.
 - **Claude Code idiom.** Skills invoke each other via the **Skill tool** and dispatch fresh subagents via the **Agent tool**, rather than fetching files or calling `runSubagent`.
 - **`domain-modeling` maintains both domain docs inline** during grilling, rather than allowing domain.md to become stale until manually updated.
+- **`to-prd` is grill-first.** Instead of publishing a PRD to the issue tracker immediately, it produces a local draft, hands off to `grill-with-docs`, and publishes only once the design settles.
+- **Added `to-idea`.** A new skill (not one of Matt's) for capturing a discovery as a lightweight `idea`-labeled issue to revisit later — a stub, distinct from a full PRD.
 
 ## Installation
 
