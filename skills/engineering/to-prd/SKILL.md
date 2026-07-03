@@ -75,6 +75,11 @@ Any further notes about the feature.
 
 </prd-template>
 
-4. Stop here and hand back to the user. The draft still needs sharpening, and `grill-with-docs` is **user-triggered** — do **not** invoke it (or the `grilling` skill) yourself. Tell the user the draft is ready, say where it lives, and ask them to run `grill-with-docs` as the next step. The grilling loop — and any inline updates to the draft and the domain docs — happens under that user-run skill.
+4. Stop here and hand back to the user. Tell them the draft is ready and say where it lives, then ask which they'd like to do next:
 
-5. Publishing is **not** part of this skill's run. It happens at the tail of the user-run `grill-with-docs`, once the design has settled and only after the agent asks the user for the go-ahead. For reference, publishing means: put the finalized PRD in the project issue tracker and delete the local file, and do **not** apply the `ready-for-agent` label — that belongs on the implementation issues the `to-issues` skill later creates from this PRD, not on the PRD itself.
+   - **Publish now, grill later** — publish the draft to the issue tracker as-is; the design can be sharpened later.
+   - **Grill now** — run `grill-with-docs` to sharpen the design before publishing.
+
+   Do **not** pick for them, and do **not** invoke `grill-with-docs` (or the `grilling` skill) yourself — it is **user-triggered**. If they choose to grill now, tell them to run `grill-with-docs` as the next step; the grilling loop, any inline updates to the draft and the domain docs, and the eventual publish all happen under that user-run skill.
+
+5. Only if the user chose **publish now**: publish the draft to the project issue tracker (per the project's backlog docs) and delete the local file. Do **not** apply the `ready-for-agent` label — that belongs on the implementation issues the `to-issues` skill later creates from this PRD, not on the PRD itself. (If they chose to grill now, publishing instead happens at the tail of the user-run `grill-with-docs`, once the design has settled and only after the agent asks for the go-ahead.)
