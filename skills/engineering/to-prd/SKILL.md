@@ -75,6 +75,6 @@ Any further notes about the feature.
 
 </prd-template>
 
-4. Hand off to the `grill-with-docs` skill to challenge the PRD against project context and resolve open questions, updating the local document inline. Loop until no open questions remain.
+4. Stop here and hand back to the user. The draft still needs sharpening, and `grill-with-docs` is **user-triggered** — do **not** invoke it (or the `grilling` skill) yourself. Tell the user the draft is ready, say where it lives, and ask them to run `grill-with-docs` as the next step. The grilling loop — and any inline updates to the draft and the domain docs — happens under that user-run skill.
 
-5. Only then publish the finalized PRD to the project issue tracker and delete the local file. Do **not** apply the `ready-for-agent` label — that belongs on the implementation issues the `to-issues` skill later creates from this PRD, not on the PRD itself.
+5. Publishing is **not** part of this skill's run. It happens at the tail of the user-run `grill-with-docs`, once the design has settled and only after the agent asks the user for the go-ahead. For reference, publishing means: put the finalized PRD in the project issue tracker and delete the local file, and do **not** apply the `ready-for-agent` label — that belongs on the implementation issues the `to-issues` skill later creates from this PRD, not on the PRD itself.
