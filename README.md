@@ -13,6 +13,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | Skill | Invoked by | Description |
 | --- | --- | --- |
 | [bdd](skills/engineering/bdd/SKILL.md) | You or model | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
+| [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it — clears a blocking worktree and rescues local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
 | [codebase-design](skills/engineering/codebase-design/SKILL.md) | You or model | Shared vocabulary for designing deep modules — small interfaces, clean seams, testable through the interface. |
 | [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
