@@ -2,6 +2,7 @@
   "name": "aaronsilinskas-skills",
   "skills": [
     "./skills/engineering/bdd",
+    "./skills/engineering/checkout",
     "./skills/engineering/code-quality",
     "./skills/engineering/codebase-design",
     "./skills/engineering/comments",
