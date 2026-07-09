@@ -1,5 +1,5 @@
 ---
-name: work-on-issue
+name: implement
 description: >
   Implement a GitHub issue end-to-end: fetch the issue, read project context,
   explore code, follow BDD to satisfy all acceptance criteria, validate, commit,
@@ -11,7 +11,7 @@ description: >
 argument-hint: "GitHub issue number (e.g. 12) or leave blank to run dispatch.sh first"
 ---
 
-# Work on a GitHub Issue
+# Implement a GitHub Issue
 
 Implement a single GitHub issue from start to merged PR. Stay focused — do not
 fix unrelated problems or refactor adjacent code.
