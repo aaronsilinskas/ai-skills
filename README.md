@@ -6,7 +6,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 ## Skills
 
-**Invoked by** — *You* means the skill only runs when you type it (e.g. `/to-prd`); *You or model* means the model can also reach for it automatically from its description.
+**Invoked by** — *You* means the skill only runs when you type it (e.g. `/to-spec`); *You or model* means the model can also reach for it automatically from its description.
 
 ### Engineering
 
@@ -15,7 +15,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [bdd](skills/engineering/bdd/SKILL.md) | You or model | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
 | [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it — clears a blocking worktree and rescues local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
-| [code-review](skills/engineering/code-review/SKILL.md) | You or model | Two-axis review of a diff since a fixed point — Standards (conventions, quality bar, whole-diff smells) and Spec (matches the issue/PRD) — run as parallel sub-agents. |
+| [code-review](skills/engineering/code-review/SKILL.md) | You or model | Two-axis review of a diff since a fixed point — Standards (conventions, quality bar, whole-diff smells) and Spec (matches the issue/spec) — run as parallel sub-agents. |
 | [codebase-design](skills/engineering/codebase-design/SKILL.md) | You or model | Shared vocabulary for designing deep modules — small interfaces, clean seams, testable through the interface. |
 | [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
 | [diagnosing-bugs](skills/engineering/diagnosing-bugs/SKILL.md) | You or model | Disciplined diagnosis loop for hard bugs and perf regressions: reproduce → minimise → hypothesise → instrument → fix. |
@@ -26,11 +26,11 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [prototype](skills/engineering/prototype/SKILL.md) | You or model | Build a throwaway prototype to answer a design question — a terminal state model, or several UI variations. |
 | [research](skills/engineering/research/SKILL.md) | You or model | Dispatch a background agent to investigate a question against primary sources and write cited findings to a Markdown file. |
 | [resolving-merge-conflicts](skills/engineering/resolving-merge-conflicts/SKILL.md) | You or model | Resolve an in-progress git merge/rebase conflict, preserving both intents. |
-| [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a PRD. |
-| [to-prd](skills/engineering/to-prd/SKILL.md) | You | Synthesize the conversation into a PRD — local first, grilled, then published to the issue tracker. |
-| [to-tickets](skills/engineering/to-tickets/SKILL.md) | You | Break a plan or PRD into independently-grabbable tickets via tracer-bullet vertical slices, each declaring its blocking edges. |
+| [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a spec. |
+| [to-spec](skills/engineering/to-spec/SKILL.md) | You | Synthesize the conversation into a spec (PRD) — local first, grilled, then published to the issue tracker. |
+| [to-tickets](skills/engineering/to-tickets/SKILL.md) | You | Break a plan or spec into independently-grabbable tickets via tracer-bullet vertical slices, each declaring its blocking edges. |
 | [triage](skills/engineering/triage/SKILL.md) | You | Move issues and external PRs through a state machine of triage roles — categorise, verify, and write agent-ready briefs. |
-| [wayfinder](skills/engineering/wayfinder/SKILL.md) | You | Chart work too big for one session as a shared map of investigation tickets on the tracker, resolved one at a time — upstream of `to-prd`. |
+| [wayfinder](skills/engineering/wayfinder/SKILL.md) | You | Chart work too big for one session as a shared map of investigation tickets on the tracker, resolved one at a time — upstream of `to-spec`. |
 
 ### Productivity
 
@@ -58,10 +58,10 @@ These skills started from Matt Pocock's and were adapted to fit my workflow. The
 - **Python-canonical examples.** Matt's code examples are largely TypeScript; the skills here use Python for illustrative examples, with genuinely language-specific bits kept in the per-language reference files.
 - **Claude Code idiom.** Skills invoke each other via the **Skill tool** and dispatch fresh subagents via the **Agent tool**, rather than fetching files or calling `runSubagent`.
 - **`domain-modeling` maintains both domain docs inline** during grilling, rather than allowing domain.md to become stale until manually updated.
-- **`to-prd` is grill-first.** Instead of publishing a PRD to the issue tracker immediately, it produces a local draft, hands off to `grill-with-docs`, and publishes only once the design settles.
-- **Added `to-idea`.** A new skill (not one of Matt's) for capturing a discovery as a lightweight `idea`-labeled issue to revisit later — a stub, distinct from a full PRD.
+- **`to-prd` → `to-spec`, grill-first.** Adopted Matt's v1.1.0 `to-prd` → `to-spec` rename and the PRD→spec vocabulary (the `prd` label became `spec` too); "spec" is now the document term across the skills. But where Matt publishes immediately, this skill still produces a local draft, hands off to `grill-with-docs`, and publishes only once the design settles.
+- **Added `to-idea`.** A new skill (not one of Matt's) for capturing a discovery as a lightweight `idea`-labeled issue to revisit later — a stub, distinct from a full spec.
 - **`code-review` with refactoring kept at two altitudes.** Adopted Matt's v1.1.0 two-axis `code-review` (Standards + Spec, run as parallel sub-agents), but where he moved refactoring entirely out of the red→green loop into it, `bdd` keeps its *local, under-green* refactor beat and `code-review` owns the *whole-diff* structural smell pass (`code-review/smells.md`). This keeps `bdd` self-contained for standalone use and separates the two genuine refactoring altitudes. The Standards axis also leans on the existing `code-quality`/`bdd` bars rather than restating them.
-- **`wayfinder` as the upstream of `to-prd`.** Adopted Matt's v1.1.0 `wayfinder` (his promoted `decision-mapping`) for charting work too big and foggy for a single session. Slotted explicitly ahead of `to-prd`: when a map's destination is a spec, it hands its settled decisions to `to-prd` to synthesize and publish. Its ticket types reuse existing skills (`research`, `prototype`, `grilling`, `domain-modeling`), and since GitHub lacks native dependency links, blocking/frontier use a GitHub sub-issues + `Blocked by #x` body convention rather than Matt's native-blocking assumption. Following the fork's tracker-agnostic pattern, the skill defers its mechanics and label strings to the project's own agent docs (a shared "Issue relationships" section plus a wayfinder-specific "Wayfinding operations" section in its tracker doc, and its label doc), falling back to a portable default (`wayfinder/github-operations.md`) only when the project defines none.
+- **`wayfinder` as the upstream of `to-spec`.** Adopted Matt's v1.1.0 `wayfinder` (his promoted `decision-mapping`) for charting work too big and foggy for a single session. Slotted explicitly ahead of `to-spec`: when a map's destination is a spec, it hands its settled decisions to `to-spec` to synthesize and publish. Its ticket types reuse existing skills (`research`, `prototype`, `grilling`, `domain-modeling`), and since GitHub lacks native dependency links, blocking/frontier use a GitHub sub-issues + `Blocked by #x` body convention rather than Matt's native-blocking assumption. Following the fork's tracker-agnostic pattern, the skill defers its mechanics and label strings to the project's own agent docs (a shared "Issue relationships" section plus a wayfinder-specific "Wayfinding operations" section in its tracker doc, and its label doc), falling back to a portable default (`wayfinder/github-operations.md`) only when the project defines none.
 - **`to-issues` → `to-tickets`, with Matt's `to-tickets` substance.** Adopted Matt's v1.1.0 rename (a **ticket** is the unit of work — a vertical slice — realized as a GitHub **issue**; the vocabulary now matches `wayfinder`, whose child issues are also tickets). Ported the wide-refactor **expand–contract** sequence (for a mechanical change too broad for any vertical slice), single-context-window slice sizing, and **frontier** framing (work one ticket at a time via `implement`, clearing context between). Blocking and hierarchy defer to the shared **Issue relationships** convention `wayfinder` uses (`Blocked by #n` + sub-issues) instead of a freeform field. Skipped Matt's local-file `tickets.md` mode (this fork is tracker-centric).
 
 ## Installation

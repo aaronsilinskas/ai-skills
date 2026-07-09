@@ -5,7 +5,7 @@ description: >
   along two independent axes — Standards (does the code follow this repo's
   documented conventions, the implementation quality bar, and whole-diff
   structural smell checks?) and Spec (does the code do what the originating
-  issue/PRD asked for?). Runs both as parallel sub-agents and reports them side
+  issue/spec asked for?). Runs both as parallel sub-agents and reports them side
   by side. Use when reviewing a branch, a PR, or work-in-progress changes, or
   when asked to "review since X".
 argument-hint: "fixed point to review since (commit/branch/tag), optionally the spec/issue"
@@ -17,7 +17,7 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 - **Standards** — does the code conform to this repo's conventions, the
   implementation quality bar, and the whole-diff structural smell checks?
-- **Spec** — does the code faithfully implement the originating issue / PRD /
+- **Spec** — does the code faithfully implement the originating issue /
   spec?
 
 Both axes run as **parallel sub-agents** (via the Agent tool) so they don't
@@ -54,7 +54,7 @@ Find the originating spec, in this order:
 1. Issue references in the commit messages (`#123`, `Closes #45`) — fetch with
    `gh issue view <n>`.
 2. A path the user passed as an argument.
-3. A PRD/spec file under `docs/`, `specs/`, or `.scratch/` matching the branch
+3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch
    name or feature.
 4. If nothing is found, ask the user where the spec is. If they say there isn't
    one, the **Spec** sub-agent is skipped and the report notes "no spec

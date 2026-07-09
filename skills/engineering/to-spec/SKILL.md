@@ -1,25 +1,25 @@
 ---
-name: to-prd
-description: Turn the current conversation into a PRD — no interview, just synthesis of what you've already discussed. Produces a local document first for grilling, then publishes to the issue tracker once the design settles.
-argument-hint: "topic to scope the PRD (or leave blank to use the whole conversation)"
+name: to-spec
+description: Turn the current conversation into a spec — no interview, just synthesis of what you've already discussed. Produces a local document first for grilling, then publishes to the issue tracker once the design settles.
+argument-hint: "topic to scope the spec (or leave blank to use the whole conversation)"
 disable-model-invocation: true
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know. If the user passed a topic as an argument, use it to scope which part of the conversation to synthesize; otherwise cover the whole discussion.
+This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Do NOT interview the user — just synthesize what you already know. If the user passed a topic as an argument, use it to scope which part of the conversation to synthesize; otherwise cover the whole discussion.
 
 The issue tracker vocabulary (for publishing later) should have been provided to you by the project's agent docs (e.g. `AGENTS.md` and the docs it points to).
 
 ## Process
 
-1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the PRD.
+1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the spec.
 
 2. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better - the ideal number is one.
 
 Check with the user that these seams match their expectations.
 
-3. Write the PRD using the template below as a **local document** (e.g. a markdown file in the repo or a scratch location) — do **not** publish it to the issue tracker yet. The design still needs sharpening.
+3. Write the spec using the template below as a **local document** (e.g. a markdown file in the repo or a scratch location) — do **not** publish it to the issue tracker yet. The design still needs sharpening.
 
-<prd-template>
+<spec-template>
 
 ## Problem Statement
 
@@ -67,13 +67,13 @@ A list of testing decisions that were made. Include:
 
 ## Out of Scope
 
-A description of the things that are out of scope for this PRD.
+A description of the things that are out of scope for this spec.
 
 ## Further Notes
 
 Any further notes about the feature.
 
-</prd-template>
+</spec-template>
 
 4. Stop here and hand back to the user. Tell them the draft is ready and say where it lives, then ask which they'd like to do next:
 
@@ -82,4 +82,4 @@ Any further notes about the feature.
 
    Do **not** pick for them, and do **not** invoke `grill-with-docs` (or the `grilling` skill) yourself — it is **user-triggered**. If they choose to grill now, tell them to run `grill-with-docs` as the next step; the grilling loop, any inline updates to the draft and the domain docs, and the eventual publish all happen under that user-run skill.
 
-5. Only if the user chose **publish now**: publish the draft to the project issue tracker (per the project's backlog docs), applying the `prd` label to the created issue, and delete the local file. Do **not** apply the `ready-for-agent` label — that belongs on the implementation tickets the `to-tickets` skill later creates from this PRD, not on the PRD itself. (If they chose to grill now, publishing instead happens at the tail of the user-run `grill-with-docs`, once the design has settled and only after the agent asks for the go-ahead.)
+5. Only if the user chose **publish now**: publish the draft to the project issue tracker (per the project's backlog docs), applying the `spec` label to the created issue, and delete the local file. Do **not** apply the `ready-for-agent` label — that belongs on the implementation tickets the `to-tickets` skill later creates from this spec, not on the spec itself. (If they chose to grill now, publishing instead happens at the tail of the user-run `grill-with-docs`, once the design has settled and only after the agent asks for the go-ahead.)

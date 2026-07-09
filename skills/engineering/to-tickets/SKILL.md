@@ -1,7 +1,7 @@
 ---
 name: to-tickets
-description: Break a plan, spec, or PRD into independently-grabbable tickets on the project issue tracker — tracer-bullet vertical slices, each declaring its blocking edges.
-argument-hint: "issue/PRD reference to break down (or leave blank to use the conversation)"
+description: Break a plan or spec into independently-grabbable tickets on the project issue tracker — tracer-bullet vertical slices, each declaring its blocking edges.
+argument-hint: "issue/spec reference to break down (or leave blank to use the conversation)"
 disable-model-invocation: true
 ---
 
