@@ -15,6 +15,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [bdd](skills/engineering/bdd/SKILL.md) | You or model | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
 | [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it — clears a blocking worktree and rescues local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
+| [code-review](skills/engineering/code-review/SKILL.md) | You or model | Two-axis review of a diff since a fixed point — Standards (conventions, quality bar, whole-diff smells) and Spec (matches the issue/PRD) — run as parallel sub-agents. |
 | [codebase-design](skills/engineering/codebase-design/SKILL.md) | You or model | Shared vocabulary for designing deep modules — small interfaces, clean seams, testable through the interface. |
 | [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
 | [diagnosing-bugs](skills/engineering/diagnosing-bugs/SKILL.md) | You or model | Disciplined diagnosis loop for hard bugs and perf regressions: reproduce → minimise → hypothesise → instrument → fix. |
@@ -57,6 +58,7 @@ These skills started from Matt Pocock's and were adapted to fit my workflow. The
 - **`domain-modeling` maintains both domain docs inline** during grilling, rather than allowing domain.md to become stale until manually updated.
 - **`to-prd` is grill-first.** Instead of publishing a PRD to the issue tracker immediately, it produces a local draft, hands off to `grill-with-docs`, and publishes only once the design settles.
 - **Added `to-idea`.** A new skill (not one of Matt's) for capturing a discovery as a lightweight `idea`-labeled issue to revisit later — a stub, distinct from a full PRD.
+- **`code-review` with refactoring kept at two altitudes.** Adopted Matt's v1.1.0 two-axis `code-review` (Standards + Spec, run as parallel sub-agents), but where he moved refactoring entirely out of the red→green loop into it, `bdd` keeps its *local, under-green* refactor beat and `code-review` owns the *whole-diff* structural smell pass (`code-review/smells.md`). This keeps `bdd` self-contained for standalone use and separates the two genuine refactoring altitudes. The Standards axis also leans on the existing `code-quality`/`bdd` bars rather than restating them.
 
 ## Installation
 

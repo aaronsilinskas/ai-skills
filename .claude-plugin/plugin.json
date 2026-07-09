@@ -4,6 +4,7 @@
     "./skills/engineering/bdd",
     "./skills/engineering/checkout",
     "./skills/engineering/code-quality",
+    "./skills/engineering/code-review",
     "./skills/engineering/codebase-design",
     "./skills/engineering/comments",
     "./skills/engineering/diagnosing-bugs",
