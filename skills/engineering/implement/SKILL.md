@@ -77,19 +77,11 @@ naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 Invoke the `bdd` skill via the Skill tool and follow it. Do not fix
 pre-existing bugs.
 
-**4. Self-review.** Invoke each skill below via the Skill tool, apply all fixes
-to the code, and confirm each finding is resolved before continuing. This is
-your own first pass — a separate fresh reviewer subagent runs after you open
-the PR, so be thorough but expect a second set of eyes:
-
-- `code-quality` — review changed source against the general quality bar; it
-  loads the matching platform reference (embedded, etc.) as needed. Apply any
-  fixes found.
-- `bdd` — review test files against the naming/structure/coverage quality
-  bar. Apply any fixes found.
-- `comments` — review changed code and docstrings for comment discipline
-  (naming → test → comment) and correct docstring formatting. Apply any
-  fixes found.
+**4. Self-check (light).** You've been applying `bdd`'s local under-green
+cleanup as you went. Before opening the PR, skim your changed source and tests
+once and fix anything obviously off — a misleading name, dead code, a missing
+docstring. Keep it light: the thorough whole-diff review (Standards + Spec) runs
+via the `code-review` skill after the PR is open (Step 4).
 
 **5. Validate.** Run the project's tests and pre-commit checks using the exact
 commands `AGENTS.md` documents for them (fall back to `CLAUDE.md` if that's
@@ -131,56 +123,27 @@ Report: files changed, PR URL, key decisions, open questions.
 
 ---
 
-## Step 4 — Review in a fresh subagent
+## Step 4 — Review the PR with `code-review`
 
-The implementing subagent reviewed its own work in its self-review (Step 3,
-item 4) — but an author reviewing their own tests has a blind spot and tends
-to rate them "clean."
-After the PR is open, dispatch a **second, fresh** subagent that has never seen
-the implementation. Its only job is to review the diff and push fix commits.
+After the PR is open, invoke the `code-review` skill via the Skill tool to run
+the whole-diff review. `code-review` owns the diff mechanics and spec discovery
+— don't restate them here. Only two things are `implement`-specific:
 
-Use the Agent tool with description `"Review issue #<N> PR"` and this prompt
-(substitute `<N>`, `<worktree-path>`, `<PR-URL>`):
+- **Run it at this (top) level, in the worktree (`<worktree-path>`)** — not
+  inside the implementing subagent, which can't reliably spawn the parallel
+  sub-agents `code-review` uses.
+- **Fixed point: `origin/main`.** `code-review` finds the spec itself from the
+  `closes #<N>` commit.
 
----
+`code-review` **reports** findings; it does not apply them. So once it returns,
+in the worktree:
 
-Reviewing the open PR for GitHub issue #<N>. Working directory: <worktree-path>
-(a git worktree on branch issue-<N>-<short-slug>; the PR is already open at
-<PR-URL>). You did NOT write this code — review it with fresh eyes. Do NOT run
-git checkout or git worktree commands.
+1. Apply every finding.
+2. Re-run the project's tests and pre-commit checks (per `AGENTS.md`, else
+   `CLAUDE.md`); fix all failures.
+3. Commit on the same branch — a new commit, no amend or force-push — and
+   `git push`; it lands on the open PR.
 
-IMPORTANT: Every step is mandatory. Do not skip or paraphrase.
+If `code-review` finds nothing, relay that and what each axis checked.
 
-**1. Read the diff.** `git fetch origin main && git diff origin/main...HEAD`.
-Read `AGENTS.md` and `docs/agents/domain.md` for project constraints. Read the
-issue: `gh issue view <N> --json title,body`.
-
-**2. Review.** Invoke each skill below via the Skill tool, read it entirely, and
-apply EVERY finding to the code — confirm each is resolved:
-
-- `code-quality` — changed source: the general quality bar, with the skill
-  loading the matching platform reference for correctness, memory safety,
-  hot-path allocation, and hardware constraints.
-- `bdd` — test files: coverage, naming, behaviour-driven structure, and in
-  particular that each test's NAME matches the inputs it fires and the
-  assertions it makes (a test named "near zero" must not fire exactly zero).
-- `comments` — changed code and docstrings: comment discipline and docstring
-  formatting.
-
-If you genuinely find nothing to fix after a thorough pass, say so explicitly
-and list what you checked — do not invent trivial changes.
-
-**3. Validate.** Run the project's tests and pre-commit checks using the exact
-commands `AGENTS.md` documents for them (fall back to `CLAUDE.md` if that's
-where they live). Fix all failures.
-
-**4. Commit & push.** If you applied fixes, commit them on the same branch (a
-new commit — do NOT amend or force-push) and `git push`. The commit lands on
-the open PR automatically.
-
-**5. Report.** List findings applied (or "none, here is what I checked"),
-files changed, and any open concerns.
-
----
-
-Relay both subagents' outcomes to the user and stop.
+Relay the implementation and review outcomes to the user and stop.
