@@ -29,6 +29,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [to-issues](skills/engineering/to-issues/SKILL.md) | You | Break a plan or PRD into independently-grabbable issues via tracer-bullet vertical slices. |
 | [to-prd](skills/engineering/to-prd/SKILL.md) | You | Synthesize the conversation into a PRD — local first, grilled, then published to the issue tracker. |
 | [triage](skills/engineering/triage/SKILL.md) | You | Move issues and external PRs through a state machine of triage roles — categorise, verify, and write agent-ready briefs. |
+| [wayfinder](skills/engineering/wayfinder/SKILL.md) | You | Chart work too big for one session as a shared map of investigation tickets on the tracker, resolved one at a time — upstream of `to-prd`. |
 | [work-on-issue](skills/engineering/work-on-issue/SKILL.md) | You or model | Implement a GitHub issue end-to-end: fetch → explore → BDD → validate → open a PR. |
 
 ### Productivity
@@ -60,6 +61,7 @@ These skills started from Matt Pocock's and were adapted to fit my workflow. The
 - **`to-prd` is grill-first.** Instead of publishing a PRD to the issue tracker immediately, it produces a local draft, hands off to `grill-with-docs`, and publishes only once the design settles.
 - **Added `to-idea`.** A new skill (not one of Matt's) for capturing a discovery as a lightweight `idea`-labeled issue to revisit later — a stub, distinct from a full PRD.
 - **`code-review` with refactoring kept at two altitudes.** Adopted Matt's v1.1.0 two-axis `code-review` (Standards + Spec, run as parallel sub-agents), but where he moved refactoring entirely out of the red→green loop into it, `bdd` keeps its *local, under-green* refactor beat and `code-review` owns the *whole-diff* structural smell pass (`code-review/smells.md`). This keeps `bdd` self-contained for standalone use and separates the two genuine refactoring altitudes. The Standards axis also leans on the existing `code-quality`/`bdd` bars rather than restating them.
+- **`wayfinder` as the upstream of `to-prd`.** Adopted Matt's v1.1.0 `wayfinder` (his promoted `decision-mapping`) for charting work too big and foggy for a single session. Slotted explicitly ahead of `to-prd`: when a map's destination is a spec, it hands its settled decisions to `to-prd` to synthesize and publish. Its ticket types reuse existing skills (`research`, `prototype`, `grilling`, `domain-modeling`), and since GitHub lacks native dependency links, blocking/frontier use a GitHub sub-issues + `Blocked by #x` body convention rather than Matt's native-blocking assumption. Following the fork's tracker-agnostic pattern, the skill defers hierarchy/blocking/frontier mechanics and label strings to the project's own agent docs (a "Wayfinding operations" section in its tracker doc + its label doc), falling back to a portable default (`wayfinder/github-operations.md`) only when the project defines none.
 
 ## Installation
 
