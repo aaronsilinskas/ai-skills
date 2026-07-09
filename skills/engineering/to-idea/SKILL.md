@@ -1,13 +1,13 @@
 ---
 name: to-idea
-description: Capture a discovery or new idea as a lightweight GitHub issue labeled "idea" to revisit later — a quick stub, not a fleshed-out PRD. Use when something surfaces mid-work (often during grilling) that's worth not losing but shouldn't derail the current task.
+description: Capture a discovery or new idea as a lightweight GitHub issue labeled "idea" to revisit later — a quick stub, not a fleshed-out spec. Use when something surfaces mid-work (often during grilling) that's worth not losing but shouldn't derail the current task.
 argument-hint: "the idea to capture (or leave blank to pull it from the conversation)"
 disable-model-invocation: true
 ---
 
 # To Idea
 
-Capture a discovery or new idea as a GitHub issue so it isn't lost — without stopping to flesh it out. This is deliberately a **stub, not a PRD**: just enough to remember the idea and why it mattered, so a future session can pick it up.
+Capture a discovery or new idea as a GitHub issue so it isn't lost — without stopping to flesh it out. This is deliberately a **stub, not a spec**: just enough to remember the idea and why it mattered, so a future session can pick it up.
 
 Do **not** interview or grill the idea into shape. Synthesize what's already known, publish, and return to the original work.
 
@@ -23,6 +23,6 @@ The issue tracker and label vocabulary should have been provided to you by the p
 
 3. **Report** the issue URL and return to what you were doing.
 
-## Not a PRD
+## Not a spec
 
-The `idea` label keeps these distinct from PRDs and ready-for-agent work. An idea is a placeholder to look into later; fleshing it out happens *when you revisit it*, not now — that's when it graduates through `to-prd` (or a grilling session) into a real PRD and implementation issues.
+The `idea` label keeps these distinct from specs and ready-for-agent work. An idea is a placeholder to look into later; fleshing it out happens *when you revisit it*, not now — that's when it graduates through `to-spec` (or a grilling session) into a real spec and implementation tickets.

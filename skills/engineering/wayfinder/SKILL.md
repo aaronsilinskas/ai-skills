@@ -9,7 +9,7 @@ A loose idea has arrived — too big for one agent session, and wrapped in fog: 
 
 The destination varies per effort, and naming it is the first act of charting — it shapes every ticket. It might be a spec to hand off and iterate on, a decision to lock before planning starts, or a change made in place like a data-structure migration. The map is domain-agnostic — engineering work, course content, whatever fits the shape.
 
-When the destination is **a spec**, wayfinder is the upstream front end to `to-prd`: it charts the foggy investigation that produces enough decided context to *write* the spec, then hands off. See [Work through the map](#work-through-the-map).
+When the destination is **a spec**, wayfinder is the upstream front end to `to-spec`: it charts the foggy investigation that produces enough decided context to *write* the spec, then hands off. See [Work through the map](#work-through-the-map).
 
 ## Plan, don't do
 
@@ -112,7 +112,7 @@ Two modes. Either way, **never resolve more than one ticket per session.**
 User invokes with a loose idea.
 
 1. **Name the destination.** Invoke the `grilling` and `domain-modeling` skills (Skill tool) to pin down what this map is finding its way to — the spec, decision, or change. The destination fixes the scope, so it's settled first.
-2. **Map the frontier.** Grill again, **breadth-first** this time: fan out across the whole space rather than deep on any one thread, surfacing the open decisions and the first steps takeable now. **If this surfaces no fog** — the way to the destination is already clear, the whole journey small enough for one session — you don't need a map. Stop and ask the user how they'd like to proceed (for a spec destination, that's usually straight to `to-prd`).
+2. **Map the frontier.** Grill again, **breadth-first** this time: fan out across the whole space rather than deep on any one thread, surfacing the open decisions and the first steps takeable now. **If this surfaces no fog** — the way to the destination is already clear, the whole journey small enough for one session — you don't need a map. Stop and ask the user how they'd like to proceed (for a spec destination, that's usually straight to `to-spec`).
 3. **Create the map** (label `wayfinder:map`): Destination and Notes filled in, Decisions-so-far empty, the fog sketched into **Not yet specified**.
 4. **Create the tickets you can specify now** as child issues of the map — then wire blocking edges in a **second pass** (issues need ids before they can reference each other). Wiring sorts them into the frontier and the blocked; everything you can't yet specify stays in the fog — the **Not yet specified** section.
 5. Stop — charting the map is one session's work; do not also resolve tickets.
@@ -127,6 +127,6 @@ User invokes with a map (URL or number). A ticket is **optional** — without on
 4. Record the resolution: post the answer as a **resolution comment**, **close** the issue, and **append a context pointer** to the map's Decisions-so-far.
 5. Add newly-surfaced tickets (create-then-wire); graduate any fog the answer has made specifiable, clearing each graduated patch from **Not yet specified** so it lives only as its new ticket. If the answer reveals a ticket — this one or another — sits beyond the destination, **rule it out of scope** rather than resolving it on the route. If the decision invalidates other parts of the map, update or delete those tickets.
 
-**Reaching the destination.** When the frontier empties and the way is clear, the map is done. If the destination was **a spec**, hand off to the `to-prd` skill (Skill tool) — feed it the map's **Decisions so far** and the closed tickets as the already-synthesized context, so it grills and publishes from a settled foundation rather than a cold conversation. For a decision or an in-place change, the map's Decisions-so-far *is* the deliverable.
+**Reaching the destination.** When the frontier empties and the way is clear, the map is done. If the destination was **a spec**, hand off to the `to-spec` skill (Skill tool) — feed it the map's **Decisions so far** and the closed tickets as the already-synthesized context, so it grills and publishes from a settled foundation rather than a cold conversation. For a decision or an in-place change, the map's Decisions-so-far *is* the deliverable.
 
 The user may run unblocked tickets in parallel, so expect other sessions to be editing the tracker concurrently.
