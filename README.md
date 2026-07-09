@@ -23,6 +23,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [grill-with-docs](skills/engineering/grill-with-docs/SKILL.md) | You | A grilling interview that also keeps the domain docs current as decisions crystallise. |
 | [improve-codebase-architecture](skills/engineering/improve-codebase-architecture/SKILL.md) | You | Scan for deepening opportunities, present a visual HTML report, then grill the one you pick. |
 | [prototype](skills/engineering/prototype/SKILL.md) | You or model | Build a throwaway prototype to answer a design question — a terminal state model, or several UI variations. |
+| [research](skills/engineering/research/SKILL.md) | You or model | Dispatch a background agent to investigate a question against primary sources and write cited findings to a Markdown file. |
 | [resolving-merge-conflicts](skills/engineering/resolving-merge-conflicts/SKILL.md) | You or model | Resolve an in-progress git merge/rebase conflict, preserving both intents. |
 | [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a PRD. |
 | [to-issues](skills/engineering/to-issues/SKILL.md) | You | Break a plan or PRD into independently-grabbable issues via tracer-bullet vertical slices. |
