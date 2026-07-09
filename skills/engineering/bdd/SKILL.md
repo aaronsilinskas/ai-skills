@@ -88,6 +88,23 @@ RIGHT (vertical):
   ...
 ```
 
+## Seams — where tests go
+
+A **seam** is the public boundary you test at — the interface where you
+observe behavior without reaching inside. Tests live at seams, never against
+internals; reaching around a seam to verify through some other means (see
+*Avoid testing private internals*) is coupling to implementation by another
+name.
+
+**Test only at pre-agreed seams.** Before writing any test, write down the
+seams under test and confirm them with the user — no test is written at an
+unconfirmed seam. You can't test everything, and agreeing the seams up front
+is how testing effort lands on critical paths and complex logic instead of
+every edge case. Prefer existing seams to new ones, and the highest seam that
+still observes the behavior; the fewer seams across the codebase, the better.
+
+Ask: **"What's the public interface, and which seams should we test?"**
+
 ## Process
 
 ### 1. Planning
@@ -98,16 +115,14 @@ and interface vocabulary match the project's domain language.
 Before writing any code:
 
 - [ ] Confirm with the user what interface changes are needed
-- [ ] Confirm with the user which behaviors to test (prioritize)
+- [ ] Write down the seams under test and confirm them (see *Seams*) — no
+      test at an unconfirmed seam
+- [ ] Confirm with the user which behaviors to test at those seams (prioritize)
 - [ ] Identify opportunities for deep modules (small interface, deep
       implementation) — run the `codebase-design` skill for vocabulary and
       testability checks
 - [ ] List the behaviors to test (not implementation steps)
 - [ ] Get user approval on the plan
-
-**You can't test everything.** Confirm with the user exactly which behaviors
-matter most. Focus effort on critical paths and complex logic, not every
-possible edge case.
 
 ### 2. Tracer Bullet
 
@@ -399,6 +414,7 @@ hardware-constrained code.)
 ## Checklist Per Cycle
 
 ```
+[ ] Test exercises a pre-agreed seam, not an internal
 [ ] Test describes behavior, not implementation
 [ ] Test uses public interface only
 [ ] Test would survive internal refactor
