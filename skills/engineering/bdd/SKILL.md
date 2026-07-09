@@ -160,6 +160,11 @@ about existing code.
 Run the tests after each refactor step, and **never refactor while RED** —
 get to GREEN first.
 
+This is the *local, under-green* cleanup — small refactors done with the tests
+fresh and green. Structural smells that only surface across the whole change
+(shotgun surgery, divergent change, speculative generality) are a different
+altitude: leave those to the `code-review` skill once the change is complete.
+
 ## Quality Bar
 
 Everything below applies whether you just wrote the test (Process, above) or
