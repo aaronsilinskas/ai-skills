@@ -25,7 +25,7 @@ The map is a single issue on this repo's issue tracker, labelled `wayfinder:map`
 
 The map is an **index**, not a store. It lists the decisions made and points at the tickets that hold their detail; a decision lives in exactly one place — its ticket — so the map never restates it, only gists it and links.
 
-**Where the map, its child tickets, blocking, and frontier queries physically live is tracker-specific.** The issue tracker and label vocabulary should have been provided by the project's agent docs (e.g. `AGENTS.md` and the tracker/label docs it points to). Consult the tracker doc's **Wayfinding operations** section for how *this* repo expresses hierarchy, blocking, and the frontier; if it has none, fall back to the portable default in [github-operations.md](github-operations.md). `wayfinder:map` and `wayfinder:<type>` are canonical role names — the actual label strings come from the project's label doc.
+**Where the map, its child tickets, blocking, and frontier queries physically live is tracker-specific.** The issue tracker and label vocabulary should have been provided by the project's agent docs (e.g. `AGENTS.md` and the tracker/label docs it points to). Consult the tracker doc's **Issue relationships** section for how *this* repo expresses hierarchy and blocking, and its **Wayfinding operations** section for the map and frontier; if it has neither, fall back to the portable default in [github-operations.md](github-operations.md). `wayfinder:map` and `wayfinder:<type>` are canonical role names — the actual label strings come from the project's label doc.
 
 ### The map body
 
