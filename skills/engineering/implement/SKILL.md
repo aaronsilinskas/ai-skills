@@ -44,12 +44,8 @@ git worktree add ../<repo-name>-issue-<N> -b issue-<N>-<short-slug> origin/main
 ```
 
 Pass the worktree path (e.g. `../<repo-name>-issue-<N>`) to the subagent as its
-working directory. After the PR is merged, clean up:
-
-```sh
-git worktree remove ../<repo-name>-issue-<N>
-git branch -d issue-<N>-<short-slug>
-```
+working directory. Post-merge cleanup of the worktree and branch happens in
+Step 5.
 
 ## Step 3 — Implement in a fresh subagent
 
@@ -103,22 +99,6 @@ gh pr create --base main --title "<summary>" --body "..."
 PR body: `## Summary`, `## Acceptance criteria` (all satisfied), `## Key
 decisions`, `## Related` (Closes #<N>).
 
-**8. After merge.** `git checkout main && git pull`, delete the branch. If the
-issue has a `## Parent`, check siblings:
-
-```sh
-gh issue list --state all --json number,title,state,body \
-  | python3 -c "
-import json, sys
-for i in json.load(sys.stdin):
-    if '#<parent-N>' in (i.get('body') or ''):
-        print(f'#{i[\"number\"]} [{i[\"state\"]}] {i[\"title\"]}')
-"
-```
-
-If all siblings are closed, close the parent:
-`gh issue close <parent-N> --reason completed --comment "All child issues merged. [x] <criterion> — <evidence>"`
-
 Report: files changed, PR URL, key decisions, open questions.
 
 ---
@@ -147,3 +127,29 @@ in the worktree:
 If `code-review` finds nothing, relay that and what each axis checked.
 
 Relay the implementation and review outcomes to the user and stop.
+
+## Step 5 — After merge
+
+Run this only once the PR is merged. Clean up the worktree, branch, and local
+`main`:
+
+```sh
+git worktree remove ../<repo-name>-issue-<N>
+git checkout main && git pull
+git branch -d issue-<N>-<short-slug>
+```
+
+Then, if the issue has a `## Parent`, check its siblings:
+
+```sh
+gh issue list --state all --json number,title,state,body \
+  | python3 -c "
+import json, sys
+for i in json.load(sys.stdin):
+    if '#<parent-N>' in (i.get('body') or ''):
+        print(f'#{i[\"number\"]} [{i[\"state\"]}] {i[\"title\"]}')
+"
+```
+
+If all siblings are closed, close the parent:
+`gh issue close <parent-N> --reason completed --comment "All child issues merged. [x] <criterion> — <evidence>"`
