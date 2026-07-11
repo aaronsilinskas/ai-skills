@@ -73,22 +73,29 @@ naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 Invoke the `bdd` skill via the Skill tool and follow it. Do not fix
 pre-existing bugs.
 
-**4. Self-check (light).** You've been applying `bdd`'s local under-green
+**4. Reconcile the domain docs.** If your changes added, moved, renamed, or
+removed a module, key type, or project constraint — or coined or sharpened a
+term — invoke the `domain-modeling` skill via the Skill tool and update
+`docs/domain.md` and/or `docs/domain-language.md` to match what you built. The
+map describes as-built code, so it must reflect this change in the same pass. If
+nothing structural or terminological changed, skip this step.
+
+**5. Self-check (light).** You've been applying `bdd`'s local under-green
 cleanup as you went. Before opening the PR, skim your changed source and tests
 once and fix anything obviously off — a misleading name, dead code, a missing
 docstring. Keep it light: the thorough whole-diff review (Standards + Spec) runs
 via the `code-review` skill after the PR is open (Step 4).
 
-**5. Validate.** Run the project's tests and pre-commit checks using the exact
+**6. Validate.** Run the project's tests and pre-commit checks using the exact
 commands `AGENTS.md` documents for them (fall back to `CLAUDE.md` if that's
 where they live). Fix all failures.
 
-**6. Commit.** Commit all changes with a clear message. If this is the initial
+**7. Commit.** Commit all changes with a clear message. If this is the initial
 implementation: single commit `<imperative summary> (closes #<N>)` with key
 decisions in the body. If this is a follow-up review/fix pass: a new commit on
 the same branch (do NOT amend or force-push).
 
-**7. Open a PR.** Rebase: `git fetch origin main && git rebase origin/main`.
+**8. Open a PR.** Rebase: `git fetch origin main && git rebase origin/main`.
 Resolve conflicts if any, re-run tests, then:
 
 ```sh
