@@ -31,6 +31,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [to-tickets](skills/engineering/to-tickets/SKILL.md) | You | Break a plan or spec into independently-grabbable tickets via tracer-bullet vertical slices, each declaring its blocking edges. |
 | [triage](skills/engineering/triage/SKILL.md) | You | Move issues and external PRs through a state machine of triage roles — categorise, verify, and write agent-ready briefs. |
 | [wayfinder](skills/engineering/wayfinder/SKILL.md) | You | Chart work too big for one session as a shared map of investigation tickets on the tracker, resolved one at a time — upstream of `to-spec`. |
+| [wizard](skills/engineering/wizard/SKILL.md) | You or model | Generate an interactive bash wizard that walks a human through manual setup an agent can't do — dashboards, credentials, CI secrets; bundles a fixed-UX `template.sh`. |
 
 ### Productivity
 
@@ -66,6 +67,7 @@ These skills started from Matt Pocock's and were adapted to fit my workflow. For
 - **Added `wait-what`.** Newly adopted from Matt's skills — a one-word corrective the user fires when a message didn't land, re-pitching in ASD-STE100 Simplified Technical English. Its glossary reference swaps Matt's `CONTEXT.md` for this fork's `domain-language.md`.
 - **Added `to-questionnaire`.** Newly adopted from Matt's skills — turns a decision the user can't answer alone into a Markdown questionnaire for the person who can, grilling the user about the send rather than the subject. Ported as-is.
 - **`to-issues` → `to-tickets`, with Matt's `to-tickets` substance.** Adopted Matt's v1.1.0 rename (a **ticket** is the unit of work — a vertical slice — realized as a GitHub **issue**; the vocabulary now matches `wayfinder`, whose child issues are also tickets). Ported the wide-refactor **expand–contract** sequence (for a mechanical change too broad for any vertical slice), single-context-window slice sizing, and **frontier** framing (work one ticket at a time via `implement`, clearing context between). Blocking and hierarchy defer to the shared **Issue relationships** convention `wayfinder` uses (`Blocked by #n` + sub-issues) instead of a freeform field. Skipped Matt's local-file `tickets.md` mode (this fork is tracker-centric).
+- **Added `wizard`, the fork's first bundled executable.** Newly adopted from Matt's skills — generates an interactive bash wizard that walks a human through manual setup an agent can't do itself (provisioning, credentials, CI secrets, unfamiliar dashboards). Ported unchanged, and it's the first skill here to carry a bundled asset: a fixed-UX `template.sh` library (progress stages, confirmation gates, hidden secret entry, idempotent `.env` upserts, `gh secret`/`gh variable` writes) that the generated wizard builds on and never hand-edits. Matt's `agents/`/`openai.yaml` were dropped, following the fork's harness-neutral pattern.
 
 ## Installation
 
