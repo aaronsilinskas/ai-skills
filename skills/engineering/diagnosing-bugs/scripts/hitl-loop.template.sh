@@ -11,6 +11,12 @@
 #   capture VAR "<question>"      → show question, read response into VAR
 #
 # At the end, captured values are printed as KEY=VALUE for the agent to parse.
+#
+# NOTE: `capture` echoes whatever the user types back to the terminal (and
+# prints it again in the KEY=VALUE summary), where the agent reads it — so it
+# is where a secret would leak. Use `capture` for observations (error text,
+# yes/no, timings), never for credentials. Leave signing in / entering
+# passwords to the user as a `step`, which waits silently and captures nothing.
 
 set -euo pipefail
 
