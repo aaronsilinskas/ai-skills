@@ -4,10 +4,30 @@ description: Interview the user relentlessly about a plan or design. Use when th
 argument-hint: "the plan or design to grill (or leave blank to use the conversation)"
 ---
 
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+Interview me relentlessly about every aspect of this until we reach a shared understanding. If nothing was handed to you, grill what we've been discussing in the conversation.
 
-Ask the questions one at a time, waiting for feedback on each question before continuing. Asking multiple questions at once is bewildering.
+Map the decision as a tree: some questions can't be settled until earlier ones are. The **frontier** is every question whose prerequisites are already answered. Work the frontier in rounds rather than one question at a time — asking one-by-one when several are independent is needlessly slow.
 
-If a *fact* can be found by exploring the codebase, look it up rather than asking me. The *decisions*, though, are mine — put each one to me and wait for my answer.
+## Each round
 
-Do not enact the plan until I confirm we have reached a shared understanding.
+1. **Compute the frontier** — every open question whose prerequisites are now settled.
+2. **Ask the whole frontier at once**, as one numbered round. Each question uses this fixed shape:
+
+   ```
+   ❓ **Q1** - **<short title>**: <the question, with any choices>
+   ➡️ <your recommended answer>
+   ```
+
+   Number the questions `Q1`, `Q2`, … within the round. Always give a recommended answer on its own `➡️` line — never ask without recommending.
+3. **Wait for my answers** to the round before moving on.
+4. **Recompute the frontier** from what I answered — new questions may open up, others may fall away.
+
+Repeat until the frontier is empty. That's when we're done.
+
+## Facts vs. decisions
+
+A *fact* is something the environment can answer — how the code works today, what a file contains, what a tool already does. Don't ask me these. Dispatch them to a background sub-agent and keep going; only a question that depends on a running exploration waits for it. Fold the answer in when it lands.
+
+A *decision* is mine. Put each one to me and wait — never decide it for me, even when you have a recommendation.
+
+Do not act on it until I confirm we've reached a shared understanding.
