@@ -1,7 +1,7 @@
 ---
 name: improve-codebase-architecture
 description: Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick.
-argument-hint: "area or subsystem to focus on (or leave blank to scan the whole codebase)"
+argument-hint: "area or subsystem to focus on (or leave blank to auto-scope from recent activity)"
 disable-model-invocation: true
 ---
 
@@ -20,7 +20,13 @@ This skill is _informed_ by the project's domain model and built on a shared des
 
 Read the project's domain glossary (`domain-language.md`) first.
 
-Then use the Agent tool with `subagent_type=Explore` to walk the codebase. If the user named a focus area or subsystem as an argument, scope the walk to that region (and the seams where it meets the rest of the system); otherwise walk the whole codebase. Don't follow rigid heuristics — explore organically and note where you experience friction:
+**Decide where to look before you scan (YAGNI).** Don't scan the whole codebase by reflex:
+
+- If the user named a focus area or subsystem as an argument, take it and the seams where it meets the rest of the system.
+- Otherwise, read roughly the last ~20 commits (`git log --oneline`) and bias exploration toward the codebase's hot spots — the files and areas that keep coming up.
+- If the recent changes are scattered with no clear hot spot, widen the net.
+
+Then spawn a sub-agent to walk that scope. Don't follow rigid heuristics — explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?
 - Where are modules **shallow** — interface nearly as complex as the implementation?
