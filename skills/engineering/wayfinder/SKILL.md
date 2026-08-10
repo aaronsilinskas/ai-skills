@@ -1,11 +1,11 @@
 ---
 name: wayfinder
-description: Plan a huge chunk of work — more than one agent session can hold — as a shared map of investigation tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear.
+description: Plan a huge chunk of work — more than one agent session can hold — as a shared map of decision tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear.
 disable-model-invocation: true
 argument-hint: "a loose idea to chart, or a map (URL/number) to work through"
 ---
 
-A loose idea has arrived — too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** on the repo's issue tracker, then works its tickets one at a time until the route is clear.
+A loose idea has arrived — too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** on the repo's issue tracker, then works its **decision tickets** — questions whose resolution is a decision, not slices of a build to execute — one at a time until the route is clear. Plain **ticket** is the everyday word for one hereafter.
 
 The destination varies per effort, and naming it is the first act of charting — it shapes every ticket. It might be a spec to hand off and iterate on, a decision to lock before planning starts, or a change made in place like a data-structure migration. The map is domain-agnostic — engineering work, course content, whatever fits the shape.
 
@@ -77,7 +77,7 @@ The answer isn't part of the body — it's recorded on resolution (see [Work thr
 
 Every ticket is either **HITL** — human in the loop, worked *with* a human who speaks for themselves — or **AFK**, driven by the agent alone. A HITL ticket only resolves through that live exchange; the agent never stands in for the human's side of it (a grilling agent that answers its own questions has broken this).
 
-- **Research** (AFK): Reading documentation, third-party APIs, or local resources like knowledge bases. Runs the `research` skill (Skill tool), which dispatches a background agent and links its markdown summary as an asset. Use when knowledge outside the current working directory is required.
+- **Research** (AFK): Reading documentation, third-party APIs, or local resources like knowledge bases. Runs the `research` skill, which dispatches a sub-agent and links its Markdown summary as an asset. Use when knowledge outside the current working directory is required. Because it's AFK, charting can burn research tickets down in parallel — see [Chart the map](#chart-the-map).
 - **Prototype** (HITL): Raise the fidelity of the discussion by making a cheap, rough, concrete artifact to react to — an outline, a rough take, a stub, or UI/logic code via the `prototype` skill. Links the prototype as an asset. Use when "how should it look" or "how should it behave" is the key question.
 - **Grilling** (HITL): Conversation via the `grilling` and `domain-modeling` skills, a round of questions at a time. The default case.
 - **Task** (HITL or AFK): Manual work that must happen before a *decision* can be made — nothing to decide, prototype, or research, but the discussion is blocked until it's done. Signing up for a service so its API can be judged, provisioning access, moving data so its shape can be seen. This is the one type that *does* rather than decides — and it earns its place by unblocking a decision, not by delivering the destination. The agent drives it alone where it can (AFK); otherwise it hands the human a precise checklist (HITL). Resolved when the work is done; the answer records what was done and any resulting facts (credentials location, new URLs, row counts) later tickets depend on.
@@ -105,17 +105,18 @@ Ruling something out of scope is a scoping act, not a step on the route. When a 
 
 ## Invocation
 
-Two modes. Either way, **never resolve more than one ticket per session.**
+Two modes. Either way, **never resolve more than one ticket per session** — with one exception: charting may resolve `research`-role tickets in parallel, since they're AFK (see [Chart the map](#chart-the-map)).
 
 ### Chart the map
 
 User invokes with a loose idea.
 
-1. **Name the destination.** Invoke the `grilling` and `domain-modeling` skills (Skill tool) to pin down what this map is finding its way to — the spec, decision, or change. The destination fixes the scope, so it's settled first.
+1. **Name the destination.** Invoke the `grilling` and `domain-modeling` skills to pin down what this map is finding its way to — the spec, decision, or change. The destination fixes the scope, so it's settled first.
 2. **Map the frontier.** Grill again, **breadth-first** this time: fan out across the whole space rather than deep on any one thread, surfacing the open decisions and the first steps takeable now. **If this surfaces no fog** — the way to the destination is already clear, the whole journey small enough for one session — you don't need a map. Stop and ask the user how they'd like to proceed (for a spec destination, that's usually straight to `to-spec`).
 3. **Create the map** (label `wayfinder:map`): Destination and Notes filled in, Decisions-so-far empty, the fog sketched into **Not yet specified**.
 4. **Create the tickets you can specify now** as child issues of the map — then wire blocking edges in a **second pass** (issues need ids before they can reference each other). Wiring sorts them into the frontier and the blocked; everything you can't yet specify stays in the fog — the **Not yet specified** section.
-5. Stop — charting the map is one session's work; do not also resolve tickets.
+5. **Burn the research tickets down in parallel.** For each `research`-role ticket, invoke the `research` skill to resolve it while charting continues — the one exception to one-ticket-per-session, and it holds only because research is AFK. Capture routes through the `research` skill and an **in-repo Markdown asset** — never a `research/<name>` branch. Link that Markdown summary from the ticket as an asset with a **context pointer**, then record the resolution as any worked ticket would: a resolution comment, close the issue, and append a pointer to the map's Decisions-so-far.
+6. Stop — charting the map is one session's work; beyond the research burndown, do not resolve tickets.
 
 ### Work through the map
 
@@ -127,6 +128,6 @@ User invokes with a map (URL or number). A ticket is **optional** — without on
 4. Record the resolution: post the answer as a **resolution comment**, **close** the issue, and **append a context pointer** to the map's Decisions-so-far.
 5. Add newly-surfaced tickets (create-then-wire); graduate any fog the answer has made specifiable, clearing each graduated patch from **Not yet specified** so it lives only as its new ticket. If the answer reveals a ticket — this one or another — sits beyond the destination, **rule it out of scope** rather than resolving it on the route. If the decision invalidates other parts of the map, update or delete those tickets.
 
-**Reaching the destination.** When the frontier empties and the way is clear, the map is done. If the destination was **a spec**, hand off to the `to-spec` skill (Skill tool) — feed it the map's **Decisions so far** and the closed tickets as the already-synthesized context, so it grills and publishes from a settled foundation rather than a cold conversation. For a decision or an in-place change, the map's Decisions-so-far *is* the deliverable.
+**Reaching the destination.** When the frontier empties and the way is clear, the map is done. If the destination was **a spec**, hand off to the `to-spec` skill — feed it the map's **Decisions so far** and the closed tickets as the already-synthesized context, so it grills and publishes from a settled foundation rather than a cold conversation. For a decision or an in-place change, the map's Decisions-so-far *is* the deliverable.
 
 The user may run unblocked tickets in parallel, so expect other sessions to be editing the tracker concurrently.
