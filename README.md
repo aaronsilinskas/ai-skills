@@ -94,3 +94,13 @@ Skills are then available at `~/.claude/skills/<name>/SKILL.md` and can be edite
 ## Conventions
 
 Skills follow the [agentskills.io specification](https://agentskills.io/specification) and [best practices](https://agentskills.io/skill-creation/best-practices). Use the Anthropic [skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill when creating or updating any skill here.
+
+## Consistency check
+
+After adding, removing, or editing a skill, run the consistency guard:
+
+```bash
+bash scripts/check.sh
+```
+
+It verifies the repo stays agent-agnostic, that every skill directory is wired into both `.claude-plugin/plugin.json` and a README bucket table (with no orphans either way), and that the bundled `wizard/template.sh` still lints. It exits non-zero if anything is off.
