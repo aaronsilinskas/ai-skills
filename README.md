@@ -36,7 +36,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [grilling](skills/productivity/grilling/SKILL.md) | You or model | Interview relentlessly to stress-test a plan or design, one question at a time. |
+| [grilling](skills/productivity/grilling/SKILL.md) | You or model | Interview relentlessly to stress-test a plan or design, round by round along a recomputed frontier. |
 | [grill-me](skills/productivity/grill-me/SKILL.md) | You | Plain user-invoked entry point to a grilling session. |
 | [handoff](skills/productivity/handoff/SKILL.md) | You | Compact the current conversation into a handoff document so a fresh agent can continue the work. |
 
