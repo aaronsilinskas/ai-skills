@@ -1,6 +1,6 @@
 # Logic Prototype
 
-A tiny interactive terminal app that lets the user drive a state model by hand. Use this when the question is about **business logic, state transitions, or data shape** — the kind of thing that looks reasonable on paper but only feels wrong once you push it through real cases.
+A single self-contained HTML file that lets the user drive a state model by hand. Use this when the question is about **business logic, state transitions, or data shape** — the kind of thing that looks reasonable on paper but only feels wrong once you push it through real cases.
 
 ## When this is the right shape
 
@@ -11,69 +11,72 @@ A tiny interactive terminal app that lets the user drive a state model by hand. 
 
 If the question is "what should this look like" — wrong branch. Use [UI.md](UI.md).
 
+## The artifact
+
+**One HTML file — plain HTML, CSS, and JS, no build step and no server.** The user double-clicks it and it opens in a browser. Everything lives inline in that one file. This is deliberately the whole thing: no `package.json`, no bundler, no dev server, nothing to install. It's the easiest artifact in the world to share and to run.
+
+The file has three parts:
+
+1. A **labelled state panel** that renders the full current state after every action.
+2. **Always-available free-play buttons** — one per action — so the user can poke at the model in any order.
+3. **Tabbed guided walkthroughs** — named scenarios, each with an ordered sequence of buttons, that reset to a known state and step through a case worth examining.
+
+Behind all three sits a **pure reducer** in a `<script>` module — the one part worth keeping.
+
 ## Process
 
 ### 1. State the question
 
-Before writing code, write down what state model and what question you're prototyping. One paragraph, in the prototype's README or a comment at the top of the file. A logic prototype that answers the wrong question is pure waste — make the question explicit so it can be checked later, whether the user is watching now or returning to it AFK.
+Before writing code, write down what state model and what question you're prototyping. One paragraph, as a comment at the top of the `<script>` or visible on the page. A logic prototype that answers the wrong question is pure waste — make the question explicit so it can be checked later, whether the user is watching now or returning to it AFK.
 
-### 2. Pick the language
+### 2. Isolate the logic in a pure reducer
 
-Use whatever the host project uses. If the project has no obvious runtime (e.g. a docs repo), ask.
+Put the actual logic — the bit that's answering the question — behind a small, pure interface that could be lifted out and dropped into the real codebase later. Everything else in the file (the state panel, the buttons, the tabs) is throwaway; the reducer shouldn't be.
 
-Match the project's existing conventions for tooling — don't add a new package manager or runtime just for the prototype.
+Write it as a pure reducer with the shape `(state, action) => state`: given the current state and an action, it returns the next state. No I/O, no DOM, no `console.log` for control flow — just data in, data out. The UI dispatches actions to it and re-renders from whatever it returns; nothing flows the other direction.
 
-### 3. Isolate the logic in a portable module
+```js
+// pure — this is the bit that outlives the prototype
+function reduce(state, action) {
+  switch (action.type) {
+    case 'addUser':   return { ...state, users: [...state.users, action.user] };
+    case 'tickClock': return { ...state, now: state.now + 1 };
+    default:          return state;
+  }
+}
+```
 
-Put the actual logic — the bit that's answering the question — behind a small, pure interface that could be lifted out and dropped into the real codebase later. The TUI around it is throwaway; the logic module shouldn't be.
+Keep the reducer honest about this contract even when the underlying model is a state machine or a set of transformations — the `(state, action) => state` shape is what makes it liftable. This is what makes the prototype useful past its own lifetime: once the question's been answered, the validated reducer lifts into the real module and the HTML shell gets thrown away.
 
-The right shape depends on the question:
+**Python-canonical exception.** This repo's convention is that logic is canonical in Python. The logic prototype is the one place that doesn't hold: the artifact is intrinsically JS, because it has to run in a browser with zero setup. So when the host codebase is Python, lifting the reducer means **translating** it — porting the `(state, action) => state` function to idiomatic Python (a `reduce(state, action) -> state` function, or a match statement over action types) — not literally moving the JS. The prototype validated the *shape and behaviour*; the real code re-expresses it in the host language.
 
-- **A pure reducer** — `reduce(state, action) -> state`. Good when actions are discrete events and state is a single value.
-- **A state machine** — explicit states and transitions. Good when "which actions are even legal right now" is part of the question.
-- **A small set of pure functions** over a plain data type. Good when there's no implicit current state — just transformations.
-- **A class or module with a clear method surface** when the logic genuinely owns ongoing internal state.
+### 3. Build the labelled state panel
 
-Pick whichever shape best fits the question being asked, *not* whichever is easiest to wire to a TUI. Keep it pure: no I/O, no terminal code, no `print` for control flow. The TUI imports it and calls into it; nothing flows the other direction.
+Render the full current state into a fixed panel, updated after every action. Pretty-print it diff-friendly — one field per line, or formatted JSON in a `<pre>`. Label it clearly ("Current state") and give field names or section headers visual weight (bold, a heading) with less important context (timestamps, IDs, derived values) dimmed. The user should be able to glance at the panel and see exactly what each action changed.
 
-This is what makes the prototype useful past its own lifetime. When the question's been answered, the validated reducer / machine / function set can be lifted into the real module — the TUI shell gets deleted.
+### 4. Add always-available free-play buttons
 
-### 4. Build the smallest TUI that exposes the state
+One button per action the reducer understands, laid out plainly and enabled at all times. Clicking a button dispatches that action through the reducer and re-renders the state panel. This is the sandbox: the user pokes the model in whatever order they like, chasing the "wait, that shouldn't be possible" moments. If an action needs a parameter, a small input next to the button is fine — keep it minimal.
 
-Build it as a **lightweight TUI** — on every tick, clear the screen (`print("\033[2J\033[H")` / `console.clear()` / equivalent) and re-render the whole frame. The user should always see one stable view, not an ever-growing scrollback.
+### 5. Add tabbed guided walkthroughs
 
-Each frame has two parts, in this order:
+Alongside free play, offer **named scenarios as tabs**. Each tab is one walkthrough worth stepping through — the edge cases that motivated the prototype ("X then Y then Z", "double-submit", "clock tick mid-flow"). Selecting a tab **resets state to a known starting point** for that scenario, and lays out an **ordered sequence of buttons** underneath. The user clicks them in order and watches the state panel evolve, one deliberate step at a time.
 
-1. **Current state**, pretty-printed and diff-friendly (one field per line, or formatted JSON). Use **bold** for field names or section headers and **dim** for less important context (timestamps, IDs, derived values). Native ANSI escape codes are fine — `\x1b[1m` bold, `\x1b[2m` dim, `\x1b[0m` reset. No need to pull in a styling library unless one is already in the project.
-2. **Keyboard shortcuts**, listed at the bottom: `[a] add user  [d] delete user  [t] tick clock  [q] quit`. Bold the key, dim the description, or vice-versa — whatever reads cleanly.
-
-Behaviour:
-
-1. **Initialise state** — a single in-memory object/struct. Render the first frame on start.
-2. **Read one keystroke (or one line)** at a time, dispatch to a handler that mutates state.
-3. **Re-render** the full frame after every action — don't append, replace.
-4. **Loop until quit.**
-
-The whole frame should fit on one screen.
-
-### 5. Make it runnable in one command
-
-Add a script to the project's existing task runner (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`). The user should run `python -m <prototype-name>` (or `pnpm run <name>`, or equivalent) — never need to remember a path.
-
-If the host project has no task runner, just put the command at the top of the prototype's README.
+Each scenario dispatches the same actions through the same reducer as free play — the walkthrough is just a curated path, not separate logic. Resetting on tab-select is what makes a scenario reproducible: the user can always return to a tab and get the same sequence from the same start.
 
 ### 6. Hand it over
 
-Give the user the run command. They'll drive it themselves; the interesting moments are when they say "wait, that shouldn't be possible" or "huh, I assumed X would be different" — those are the bugs in the _idea_, which is the whole point. If they want new actions added, add them. Prototypes evolve.
+Point the user at the file — "double-click `<name>.html`". They'll drive it themselves; the interesting moments are when they say "wait, that shouldn't be possible" or "huh, I assumed X would be different" — those are the bugs in the _idea_, which is the whole point. If they want new actions or new walkthrough tabs added, add them. Prototypes evolve.
 
 ### 7. Capture the answer
 
-When the prototype has done its job, the answer to the question is the only thing worth keeping. If the user is around, ask what it taught them. If not, leave a `NOTES.md` next to the prototype so the answer can be filled in (or filled in by you, if you've watched the session) before the prototype gets deleted.
+When the prototype has done its job, the answer to the question is the only thing worth keeping. If the user is around, ask what it taught them and fold the validated reducer into the real code (translating to the host language where that's Python). Then commit the HTML file to a throwaway `prototype/<name>` branch and leave a context pointer to it on the issue, so the exploration is recoverable without cluttering `main`. See SKILL.md rule 6 for the full capture flow; defer the issue-pointer mechanics to the project's agent docs.
 
 ## Anti-patterns
 
 - **Don't add tests.** A prototype that needs tests is no longer a prototype.
-- **Don't wire it to the real database.** Use an in-memory store unless the question is specifically about persistence.
+- **Don't add a build step or a server.** The whole value is a single file the user double-clicks. No bundler, no framework, no `npm install`.
+- **Don't wire it to a real database.** State lives in memory unless the question is specifically about persistence.
 - **Don't generalise.** No "what if we wanted to support X later." The prototype answers one question.
-- **Don't blur the logic and the TUI together.** If the reducer / state machine references `print`, prompts, or terminal escape codes, it's no longer portable. Keep the TUI as a thin shell over a pure module.
-- **Don't ship the TUI shell into production.** The shell is optimised for being driven by hand from a terminal. The logic module behind it is the bit worth keeping.
+- **Don't blur the reducer and the UI together.** If the reducer references the DOM, buttons, or rendering, it's no longer liftable. Keep it a pure `(state, action) => state` function that the UI calls into.
+- **Don't ship the HTML shell into production.** The shell is optimised for being poked by hand in a browser. The reducer behind it — translated to the host language where needed — is the bit worth keeping.
