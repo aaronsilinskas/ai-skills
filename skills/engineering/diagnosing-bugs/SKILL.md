@@ -10,6 +10,15 @@ A discipline for hard bugs. Skip phases only when explicitly justified.
 
 When exploring the codebase, read `domain-language.md` (if it exists) to get a clear mental model of the relevant modules.
 
+## Redact
+
+Diagnosis surfaces secrets — tokens, keys, passwords, connection strings, session cookies. Redaction is the **first move** on every command, output, and captured artifact you show, not a cleanup pass afterward. Once a secret is on screen it is leaked; there is no taking it back.
+
+- **Write `<REDACTED>` in place of each secret.** Every command you show, every output you paste, every artifact you quote — swap the actual credential for `<REDACTED>` before it appears.
+- **Build loops against env vars.** Reference `$API_TOKEN`, not the literal value, so the credential stays in the environment rather than in the command you show or the log you paste. A loop the user runs reads the secret from their environment; what you show never contains it.
+- **Quote only the signal-carrying lines** of a captured artifact — the lines that bear on the bug. Do not paste whole logs, HAR files, or dumps; each extra line is another chance to leak, and the signal is clearer without the noise.
+- **Ask the user if the redacted output isn't enough to diagnose.** If a secret's actual value is genuinely load-bearing for the diagnosis, do not paste it — describe what you need and let the user inspect it on their side.
+
 ## Phase 1 — Build a feedback loop
 
 **This is the skill.** Everything else is mechanical. If you have a **tight** pass/fail signal for the bug — one that goes red on _this_ bug — you will find the cause; bisection, hypothesis-testing, and instrumentation all just consume it. If you don't have one, no amount of staring at code will save you.
@@ -47,11 +56,11 @@ The goal is not a clean repro but a **higher reproduction rate**. Loop the trigg
 
 ### When you genuinely cannot build a loop
 
-Stop and say so explicitly. List what you tried. Ask the user for: (a) access to whatever environment reproduces it, (b) a captured artifact (HAR file, log dump, core dump, screen recording with timestamps), or (c) permission to add temporary production instrumentation. Do **not** proceed to hypothesise without a loop.
+Stop and say so explicitly. List what you tried. Ask the user for: (a) access to whatever environment reproduces it, (b) a **redacted** captured artifact (HAR file, log dump, core dump, screen recording with timestamps) — secrets swapped for `<REDACTED>`, only the signal-carrying lines, per `## Redact` — or (c) permission to add temporary production instrumentation. Do **not** proceed to hypothesise without a loop.
 
 ### Completion criterion — a tight loop that goes red
 
-Phase 1 is done when the loop is **tight** and **red-capable**: you can name **one command** — a script path, a test invocation, a curl — that you have **already run at least once** (paste the invocation and its output), and that is:
+Phase 1 is done when the loop is **tight** and **red-capable**: you can name **one command** — a script path, a test invocation, a curl — that you have **already run at least once** (paste the invocation and its output, **redacted** per `## Redact`), and that is:
 
 - [ ] **Red-capable** — it drives the actual bug code path and asserts the **user's exact symptom**, so it can go red on this bug and green once fixed. Not "runs without erroring" — it must be able to _catch this specific bug_.
 - [ ] **Deterministic** — same verdict every run (flaky bugs: a pinned, high reproduction rate, per above).
