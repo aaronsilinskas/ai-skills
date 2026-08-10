@@ -1,7 +1,7 @@
 ---
 name: improve-codebase-architecture
 description: Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick.
-argument-hint: "area or subsystem to focus on (or leave blank to scan the whole codebase)"
+argument-hint: "area or subsystem to focus on (or leave blank to auto-scope from recent activity)"
 disable-model-invocation: true
 ---
 
