@@ -26,7 +26,7 @@ Repeat until the frontier is empty. That's when we're done.
 
 ## Facts vs. decisions
 
-A *fact* is something the environment can answer — how the code works today, what a file contains, what a tool already does. Don't ask me these. Dispatch them to a background sub-agent and keep going; only a question that depends on a running exploration waits for it. Fold the answer in when it lands.
+A *fact* is something the environment can answer — how something already works, what a file or resource contains, what a tool already does. Don't ask me these. Dispatch them to a background sub-agent and keep going; only a question that depends on a running exploration waits for it. Fold the answer in when it lands.
 
 A *decision* is mine. Put each one to me and wait — never decide it for me, even when you have a recommendation.
 
