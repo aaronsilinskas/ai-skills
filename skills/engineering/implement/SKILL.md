@@ -49,7 +49,7 @@ Step 5.
 
 ## Step 3 — Implement in a fresh subagent
 
-Use the Agent tool with description `"Implement issue #<N>"` and this prompt
+Dispatch a sub-agent with description `"Implement issue #<N>"` and this prompt
 (substitute `<N>`, `<owner>/<repo>`, `<repo-root>`, `<worktree-path>`):
 
 ---
@@ -70,12 +70,12 @@ Read `AGENTS.md`, `docs/domain.md`, `docs/domain-language.md`,
 naming and test conventions. Re-read constraints in `docs/agents/domain.md`.
 
 **3. Implement (BDD).** Branch is already checked out in your working directory.
-Invoke the `bdd` skill via the Skill tool and follow it. Do not fix
+Invoke the `bdd` skill and follow it. Do not fix
 pre-existing bugs.
 
 **4. Reconcile the domain docs.** If your changes added, moved, renamed, or
 removed a module, key type, or project constraint — or coined or sharpened a
-term — invoke the `domain-modeling` skill via the Skill tool and update
+term — invoke the `domain-modeling` skill and update
 `docs/domain.md` and/or `docs/domain-language.md` to match what you built. The
 map describes as-built code, so it must reflect this change in the same pass. If
 nothing structural or terminological changed, skip this step.
@@ -112,7 +112,7 @@ Report: files changed, PR URL, key decisions, open questions.
 
 ## Step 4 — Review the PR with `code-review`
 
-After the PR is open, invoke the `code-review` skill via the Skill tool to run
+After the PR is open, invoke the `code-review` skill to run
 the whole-diff review. `code-review` owns the diff mechanics and spec discovery
 — don't restate them here. Only two things are `implement`-specific:
 

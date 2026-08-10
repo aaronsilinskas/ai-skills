@@ -4,8 +4,8 @@ description: Investigate a question against high-trust primary sources and captu
 argument-hint: "the question or topic to research"
 ---
 
-Dispatch a **background agent** (the Agent tool, `general-purpose`, run in the
-background) to do the research, so you keep working while it reads.
+Dispatch a **background agent** (a sub-agent run in the background) to do the
+research, so you keep working while it reads.
 
 Its job:
 

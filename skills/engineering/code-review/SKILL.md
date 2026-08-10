@@ -20,7 +20,7 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 - **Spec** — does the code faithfully implement the originating issue /
   spec?
 
-Both axes run as **parallel sub-agents** (via the Agent tool) so they don't
+Both axes run as **parallel sub-agents** so they don't
 pollute each other's context; this skill then aggregates their findings.
 
 This is the **whole-diff** review altitude. The cheap, local cleanup done
@@ -68,7 +68,7 @@ The Standards axis draws on three sources, in precedence order:
    they point to (coding conventions, constraints, runtime/hardware limits).
    These win on any conflict.
 2. **The quality-bar skills** — the `code-quality` skill for source and the
-   `bdd` skill for tests. The Standards sub-agent invokes them (Skill tool) and
+   `bdd` skill for tests. The Standards sub-agent invokes them and
    applies their bars.
 3. **The whole-diff smell baseline** — [smells.md](smells.md), a fixed set of
    Fowler smells that applies even when a repo documents nothing.
@@ -79,8 +79,7 @@ never a hard violation — and skip anything tooling already enforces.
 
 ### 4. Spawn both sub-agents in parallel
 
-Send a single message with two `Agent` tool calls. Use `general-purpose` for
-both.
+Dispatch the two sub-agents together so they run in parallel.
 
 **Standards sub-agent** — include:
 

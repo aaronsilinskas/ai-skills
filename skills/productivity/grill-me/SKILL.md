@@ -5,4 +5,4 @@ argument-hint: "the plan or design to grill (or leave blank to use the conversat
 disable-model-invocation: true
 ---
 
-Invoke the `grilling` skill via the Skill tool.
+Invoke the `grilling` skill.
