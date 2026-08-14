@@ -39,9 +39,15 @@ Git refuses to check out a branch that's already checked out in another worktree
 
 `git worktree remove` already cleans up its administrative files. Only reach for `git worktree prune` if a worktree directory was deleted by hand out-of-band, leaving stale entries behind.
 
-## 5. Check out and orient for validation
+## 5. Check out, update, and orient for validation
 
 Switch the project directory to the target: `git switch <branch>` (or `git checkout <branch>`; for a branch that only exists on a remote, this sets up tracking automatically).
+
+**Then pull the latest of the branch** so you validate what's actually on the remote, not a stale local copy — this is what makes `/checkout main` bring in new upstream commits instead of leaving you on an old local `main`. Use `git pull --ff-only`: it fast-forwards the branch to its upstream and refuses — rather than creating a merge commit — when the two have diverged. Handle what it reports:
+
+- **Fast-forwarded, or already up to date:** good — continue.
+- **No upstream configured** (a purely local branch, or a fresh remote-only checkout where tracking isn't set yet): there's nothing to pull. Note it and move on.
+- **Diverged** (`fatal: Not possible to fast-forward, aborting`): the local branch has commits the remote doesn't. Don't force it. Show the user how they differ (`git log --oneline ..@{u}` for what's on the remote, `@{u}..` for local-only commits) and let them decide whether to rebase, merge, or keep the local version.
 
 Then set the user up to validate and iterate — the whole point of pulling it here:
 
