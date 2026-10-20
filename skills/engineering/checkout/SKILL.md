@@ -44,7 +44,7 @@ Switch the project directory to the target: `git switch <branch>` (or `git check
 
 **Then pull the latest of the branch** so you validate what's actually on the remote, not a stale local copy. This is what makes `/checkout main` bring in new upstream commits instead of leaving you on an old local `main`. Use `git pull --ff-only`: it fast-forwards the branch to its upstream, and when the two have diverged it refuses instead of creating a merge commit. Handle what it reports:
 
-- **Fast-forwarded, or already up to date:** good. Continue.
+- **Fast-forwarded, or already up to date:** continue.
 - **No upstream configured** (a purely local branch, or a fresh remote-only checkout where tracking isn't set yet): there's nothing to pull. Note it and move on.
 - **Diverged** (`fatal: Not possible to fast-forward, aborting`): the local branch has commits the remote doesn't. Don't force it. Show the user how they differ (`git log --oneline ..@{u}` for what's on the remote, `@{u}..` for local-only commits) and let them decide whether to rebase, merge, or keep the local version.
 

@@ -8,9 +8,9 @@ Usage:
 Accepted formats
 ----------------
 PurpleAir:  {"sensor_index": N, "history": [{time_stamp, pm2.5_cf_1_corrected, ...}]}
-             or a bare list of those dicts
+            or a bare list of those dicts
 OpenAQ:     {"sensor_id": N, "daily_values": {"YYYY-MM-DD": float, ...}}
-             (produced by fetch_openaq.py history)
+            (produced by fetch_openaq.py history)
 
 Output per file:
   - Worst month (shown first)
