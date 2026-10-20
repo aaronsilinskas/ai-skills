@@ -18,7 +18,7 @@
 | `CC-components` | https://code.claude.com/docs/en/plugins/components | fetched 2026-10-20 |
 | `AURA` | `/Users/AaronH/dev/aura/aura-prototype` `AGENTS.md`, `CLAUDE.md`, `docs/agents/*` | working tree, read-only |
 
-I did not install anything. Every `VS` claim comes from reading the code. Claims about Claude Code behaviour are tagged **[documented]**, meaning a docs page states it, or **[inferred]**, meaning I derived it and no docs page states it.
+I did not install anything. Every `VS` claim comes from reading the code. The follow-up ticket #42 later tested the collision cases with project-scoped installs; §1.3 and §2 mark those results **[verified, #42]**. Claims about Claude Code behaviour are tagged **[documented]**, meaning a docs page states it, or **[inferred]**, meaning I derived it and no docs page states it.
 
 ---
 
@@ -89,12 +89,13 @@ I did not install anything. Every `VS` claim comes from reading the code. Claims
 | Item | Path | Source |
 |---|---|---|
 | Canonical copy | `<project>/.agents/skills/<name>/` | `getCanonicalSkillsDir` in `VS/src/installer.ts` |
-| Claude Code entry | `<project>/.claude/skills/<name>`, a symlink to the canonical copy (`--copy` copies instead) | `agents['claude-code'].skillsDir = '.claude/skills'`, `createProjectSkillsDirByDefault: true` (`VS/src/agents.ts:155-164`) |
+| Claude Code entry | `<project>/.claude/skills/<name>`, a symlink to the canonical copy (`--copy` copies instead). With `-a claude-code` as the **only** target, the skill is copied straight into `.claude/skills/<name>` and no `.agents/` dir is created **[verified, #42]** | `agents['claude-code'].skillsDir = '.claude/skills'`, `createProjectSkillsDirByDefault: true` (`VS/src/agents.ts:155-164`) |
 | "Universal" agents (Codex, Cline, Cursor, …) | read `.agents/skills/` directly | `VS/docs/agents.md` |
 | Lock | `<project>/skills-lock.json`: `source`, `sourceUrl`, `ref`, `skillPath`, `computedHash` | `VS/src/local-lock.ts` |
 
 - The scope prompt describes Project as "Install in current directory (committed with your project)" (`VS/src/add.ts:836-850`).
 - In Claude Code these load as **project** skills (`.claude/skills/`) **[documented location, CC-skills]**.
+- **Observed in #42** (`npx skills` 1.5.18, run as `npx -y skills`): a default `-y` install inside Claude Code auto-detected 8 agents and produced `.agents/skills/tdd` with a `.claude/skills/tdd` symlink. So did `-a claude-code codex`. Only `-a claude-code` alone copied the files in directly.
 
 **Global scope (`-g`)**
 
@@ -134,6 +135,7 @@ I did not install anything. Every `VS` claim comes from reading the code. Claims
 - **Overlay consequence:**
   - Install the fork after upstream, and each shared name now points at the fork, on disk and in the lock. `update` then pulls those names from the fork.
   - Re-running `npx skills add mattpocock/skills`, which upstream tells users to do to pick up new skills, and selecting a shared name silently restores upstream's copy. The `overwrites:` line is the only signal.
+  - **[verified, #42]** I installed `tdd` both ways round with `-a claude-code`. The last install owned `.claude/skills/tdd` and the single `skills-lock.json` entry. Only one `tdd` was listed, and a typed `/tdd` and `Skill("tdd")` both reached it.
 
 ### 2.2 Claude Code
 
@@ -141,9 +143,9 @@ I did not install anything. Every `VS` claim comes from reading the code. Claims
 |---|---|---|
 | Same name in personal (`~/.claude/skills`) and project (`.claude/skills`) | "Enterprise over personal, and personal over project." Only one runs for `/name`. | **[documented]** CC-skills "Resolve skills that share a name" |
 | Plugin skill vs local skill of the same name | "Both load, because plugin skills are namespaced as `/plugin-name:skill-name`." | **[documented]** |
-| Bare `/name` when a plugin and a local skill share it | Plugin bare name works "unless another command already uses that name". A local skill holds `/name`, and the plugin copy stays reachable as `/mattpocock-skills:name`. | **[documented]** CC-skills "How a skill gets its command name" |
-| Plain-name Skill-tool call (`Call the Skill tool with "grilling"`) from inside a plugin skill | Resolves to the local skill holding the bare name. Docs describe `/name` resolution only, not Skill-tool name resolution. | **[inferred]** |
-| Is the plugin copy still listed and auto-invokable? | Yes, as `mattpocock-skills:<name>` with its own description ("Both load"). For description-triggered invocation, or when the caller's wording is loose, the model may choose either entry. | listed **[documented]**; selection behaviour **[inferred]** |
+| Bare `/name` when a plugin and a local skill share it | Plugin bare name works "unless another command already uses that name". A local skill holds `/name`, and the plugin copy stays reachable as `/mattpocock-skills:name`. | **[documented]** CC-skills "How a skill gets its command name"; **[verified, #42]** for a typed `/tdd` |
+| Plain-name Skill-tool call (`Call the Skill tool with "grilling"`) from inside a plugin skill | Resolves to the local skill holding the bare name. Docs describe `/name` resolution only, not Skill-tool name resolution. | **[verified, #42]**: with the plugin enabled at project scope and a local `.claude/skills/tdd`, a top-level `Skill("tdd")` call loaded the local copy (Claude Code 2.1.299). I did not run a call made from inside a plugin skill, but it uses the same plain name. |
+| Is the plugin copy still listed and auto-invokable? | Yes, as `mattpocock-skills:<name>` with its own description ("Both load"). For description-triggered invocation, or when the caller's wording is loose, the model may choose either entry. | listed **[documented]**, and **[verified, #42]**: both `tdd` and `mattpocock-skills:tdd` were listed, and `/mattpocock-skills:tdd` loaded the plugin copy; selection behaviour **[inferred]** |
 | Two plugins shipping the same skill name | Each is namespaced under its own plugin name. Docs don't say which one wins the bare name. | namespacing **[documented]**; bare-name winner undocumented |
 | Two plugins with the same **manifest** name | One loads, by origin order: managed > `--plugin-dir` > marketplace > skills-dir. | **[documented]** CC-loading "Name conflicts" |
 | Disable one plugin skill | `skillOverrides` can't: "Plugin skills are not affected by `skillOverrides`. Manage those through `/plugin` instead." `/plugin` enables or disables whole plugins. | **[documented]** CC-skills |
