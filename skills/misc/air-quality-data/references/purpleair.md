@@ -47,7 +47,7 @@ GET /v1/sensors
 X-API-Key: {READ key}
 
 Query params:
-  fields          required — comma-separated
+  fields          required; comma-separated
   location_type   0=outside, 1=inside
   read_keys       comma-separated, for private sensors
   show_only       comma-separated sensor_index list
@@ -96,8 +96,8 @@ Rate limit: 1000ms
 ### Environmental
 | Field | Type | Description |
 |-------|------|-------------|
-| `humidity` | int | % — inside sensor housing, not ambient |
-| `temperature` | int | °F — inside sensor housing, not ambient |
+| `humidity` | int | %, measured inside the sensor housing (not ambient) |
+| `temperature` | int | °F, measured inside the sensor housing (not ambient) |
 | `pressure` | float | Millibars |
 | `voc` | float | VOC in Bosch IAQ units (EXPERIMENTAL) |
 | `ozone1` | float | Ozone PPB (only ~12 sensors have this) |
@@ -107,9 +107,9 @@ Rate limit: 1000ms
 |-------|-------------|
 | `pm2.5` | Auto-selects ATM (outdoor) or CF=1 (indoor); avg A+B, excludes downgraded |
 | `pm2.5_a` / `pm2.5_b` | Channel A / B individually |
-| `pm2.5_atm` | Atmospheric variant — for outdoor sensors |
+| `pm2.5_atm` | Atmospheric variant, for outdoor sensors |
 | `pm2.5_atm_a` / `pm2.5_atm_b` | Channel A/B ATM |
-| `pm2.5_cf_1` | CF=1 variant — for indoor sensors |
+| `pm2.5_cf_1` | CF=1 variant, for indoor sensors |
 | `pm2.5_alt` | Alt variant from particle counts; often closer to FEM monitors |
 | `pm2.5_10minute` | 10-min running average |
 | `pm2.5_30minute` | 30-min running average |
@@ -162,8 +162,8 @@ sensors = [
 ## Channel Flags
 
 `channel_state` and `channel_flags` indicate sensor health:
-- `Normal` — both channels operating
-- `A-Downgraded` / `B-Downgraded` — one channel excluded from averages
-- `A+B-Downgraded` — avoid using this sensor's data
+- `Normal`: both channels operating
+- `A-Downgraded` / `B-Downgraded`: one channel excluded from averages
+- `A+B-Downgraded`: avoid using this sensor's data
 
 Only use sensors where `confidence >= 80` for reliable readings.

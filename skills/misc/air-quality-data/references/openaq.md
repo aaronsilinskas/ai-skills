@@ -4,8 +4,8 @@
 **Registration:** https://openaq.org/register
 **Auth:** send the key in an `X-API-Key` request header (not a query param).
 **Supported regions:** Global. Aggregates official government/regulatory monitors
-worldwide — especially valuable where PurpleAir is sparse (Japan, Korea, most of
-Europe).
+worldwide. It is especially valuable where PurpleAir is sparse (Japan, Korea, most
+of Europe).
 
 PM2.5 is parameter ID **2** (stable in v3). `scripts/fetch_openaq.py` filters
 `/locations` sensors to this ID.
@@ -55,7 +55,7 @@ Walk `page=1,2,…` until `len(collected) >= found` or a page comes back empty.
 | `provider.name` | string | Operating network/provider |
 | `coordinates.latitude` / `.longitude` | float | Station position |
 | `distance` | float | Metres from the query coordinate |
-| `sensors[].id` | int | **Sensor ID — use this with `/sensors/{id}/measurements`** |
+| `sensors[].id` | int | **Sensor ID; use this with `/sensors/{id}/measurements`** |
 | `sensors[].parameter.id` | int | Pollutant ID (`2` = PM2.5) |
 | `sensors[].lastUpdated` | string | ISO timestamp of the latest reading |
 
@@ -68,7 +68,7 @@ Walk `page=1,2,…` until `len(collected) >= found` or a page comes back empty.
 
 ## Notes
 
-- Values are **raw regulatory-grade µg/m³** — no correction factor is needed
+- Values are **raw regulatory-grade µg/m³**, so no correction factor is needed
   (unlike PurpleAir). Directly comparable to AirNow reference monitors.
 - Ingestion lag: some national networks (e.g. Japan's MOE stations) lag 6–8
   months, so the most recent months may be missing.

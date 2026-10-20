@@ -41,7 +41,7 @@ Returns current weather + AQI. Pollutant concentrations require Startup+.
 ```
 GET /nearest_city?key={key}
 ```
-Locates by IP — useful for quick defaults, unreliable in server contexts.
+Locates by IP. Useful for quick defaults, but unreliable in server contexts.
 
 ### Nearest Monitoring Station (Startup+)
 ```
@@ -113,7 +113,7 @@ Returns most polluted cities globally.
 | `s2` | Sulfur dioxide (SO2) | ppb |
 | `co` | Carbon monoxide (CO) | ppm |
 
-CO units may occasionally be µg/m³ instead of ppm — check `units` field in response.
+CO units may occasionally be µg/m³ instead of ppm, so check the `units` field in the response.
 
 ## Return Codes
 
@@ -132,8 +132,8 @@ Always check `status` field in response body:
 
 ## Notes
 
-- Timestamps are UTC ISO 8601 — convert to local time for display.
+- Timestamps are UTC ISO 8601. Convert to local time for display.
 - Stations update approximately once per hour; calls within the same hour return cached data.
-- The `mainus` field tells you which pollutant is driving the overall AQI — useful for health messaging.
+- The `mainus` field tells you which pollutant is driving the overall AQI, which is useful for health messaging.
 - IQAir applies ML-based validation and calibration, making it more reliable than raw sensor networks for regulatory comparison.
-- `nearest_city` by IP is unreliable in cloud/server environments — pass explicit coordinates when possible.
+- `nearest_city` by IP is unreliable in cloud/server environments. Pass explicit coordinates when possible.

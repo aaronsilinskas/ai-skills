@@ -41,7 +41,7 @@ IQAIR_ERRORS = {
     "ip_location_failed": "Could not determine location from IP address",
     "no_nearest_station": "No monitoring station found near the requested location",
     "feature_not_available": "This endpoint is not available on your plan",
-    "too_many_requests": "Too many requests — rate limit exceeded",
+    "too_many_requests": "Too many requests: rate limit exceeded",
     "permission_denied": "Your API key does not have permission for this request",
     "city_not_found": "City not found",
     "state_not_found": "State not found",
