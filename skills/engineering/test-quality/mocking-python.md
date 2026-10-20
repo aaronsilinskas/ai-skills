@@ -42,7 +42,7 @@ def process_payment(order):
 
 Prefer one method per external operation over one generic call with
 conditional branching. Python doesn't have JS's object-of-arrow-functions
-idiom for this — it's usually a class or a small module of named functions:
+idiom for this. It's usually a class or a small module of named functions:
 
 ```python
 class Api:

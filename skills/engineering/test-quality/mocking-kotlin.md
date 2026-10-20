@@ -1,6 +1,6 @@
 # Mocking in Kotlin
 
-> Placeholder — this file was seeded from general MockK knowledge, not yet
+> Placeholder: this file was seeded from general MockK knowledge, not yet
 > from real project experience. Tighten it up with actual gotchas as they
 > come up on Kotlin projects.
 

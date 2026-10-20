@@ -12,10 +12,10 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [bdd](skills/engineering/bdd/SKILL.md) | You or model | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
 | [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it — clears a blocking worktree and rescues local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
 | [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
+| [test-quality](skills/engineering/test-quality/SKILL.md) | You or model | Review and audit tests against a quality bar: test naming, one behavior per test, coverage planning, per-language mocking guides. Pairs with Matt's `tdd`, which owns the loop. |
 | [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a spec. |
 
 ### Misc
@@ -28,8 +28,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 These skills started from Matt Pocock's (currently synced to his v1.2.3) and were adapted to fit my workflow. The current divergences and why:
 
-- **`bdd` replaces `tdd`.** Same red-green process, plus a behavior-driven test-quality bar, a *local, under-green* refactor beat, and per-language mocking guidance in reference files (Python/TypeScript/Kotlin). Matt's `tdd` pushes all refactoring out to `code-review`.
-- **Fork-only skills.** `code-quality`, `comments`, `to-idea`, and `checkout` have no Matt equivalent. `code-quality`/`comments` hold language-neutral guidance, with specifics (Python docstrings, CircuitPython rules, etc.) in reference files; `to-idea` captures a discovery as a lightweight `idea`-labeled stub, distinct from a full spec.
+- **Fork-only skills.** `code-quality`, `comments`, `test-quality`, `to-idea`, and `checkout` have no Matt equivalent. `code-quality`/`comments` hold language-neutral guidance, with specifics (Python docstrings, CircuitPython rules, etc.) in reference files; `to-idea` captures a discovery as a lightweight `idea`-labeled stub, distinct from a full spec; `test-quality` is a test quality bar with per-language mocking guides, run as a review pass alongside Matt's `tdd` loop.
 - **Harness-neutral.** The fork drops the `agents/openai.yaml` files Matt ships with each skill.
 
 ## Installation

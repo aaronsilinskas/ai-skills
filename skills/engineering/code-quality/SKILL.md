@@ -4,7 +4,7 @@ description: >
   Review and guide implementation code against a general quality bar:
   readability, right-sized optimization, public-API discipline, and type
   coverage. Use when writing or reviewing production source (not tests — that's
-  the `bdd` skill; not comments — that's the `comments` skill), when asked
+  the `test-quality` skill; not comments — that's the `comments` skill), when asked
   whether an implementation is clean/safe/well-shaped, or as an implementation
   review pass. Language-agnostic; platform- and language-specific rules load
   from the reference files only when relevant.
@@ -17,7 +17,7 @@ The general quality bar for implementation code. Three neighbouring dimensions
 have their own skills — reach for them rather than duplicating their guidance
 here:
 
-- **Tests** — writing code test-first and the test quality bar: `bdd`
+- **Tests** — the test quality bar: `test-quality`; writing code test-first: `tdd`
 - **Comments & docstrings** — whether and how to document: `comments`
 - **Module shape** — interfaces, seams, deep modules: `codebase-design`
 
@@ -56,7 +56,8 @@ isolate the access to a dedicated helper rather than scattering it.
 
 This is the implementation-side consequence of treating the interface as the
 test surface — see `codebase-design` for the design rationale (deep modules,
-seams), and `bdd` for the testing side (avoid testing private internals).
+seams), and `test-quality` and `tdd` for the testing side (assert through the
+public interface).
 
 ## Comments
 
