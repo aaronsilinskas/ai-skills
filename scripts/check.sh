@@ -11,7 +11,8 @@
 #      once in a README bucket table, and the README lists no skill that
 #      isn't on disk.
 #   3. Script lint — skills/engineering/wizard/template.sh passes `bash -n`
-#      (and shellcheck too, when it is installed on the runner).
+#      (and shellcheck too, when it is installed on the runner). Prints SKIP,
+#      not FAIL, when the template is absent.
 #
 # Run it after editing skills:
 #
@@ -29,6 +30,7 @@ FAILURES=0
 
 pass() { printf 'PASS  %s\n' "$1"; }
 fail() { printf 'FAIL  %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
+skip() { printf 'SKIP  %s\n' "$1"; }
 indent() { sed 's/^/      /'; }
 
 # ── Check 1 — Harness-vocabulary sweep ────────────────────────────────────
@@ -94,27 +96,31 @@ fi
 echo
 echo "== Check 3: script lint (wizard/template.sh) =="
 TEMPLATE="skills/engineering/wizard/template.sh"
-lint_err="$(mktemp)"
-if bash -n "$TEMPLATE" 2>"$lint_err"; then
-  pass "bash -n $TEMPLATE"
+if [[ ! -f "$TEMPLATE" ]]; then
+  skip "$TEMPLATE not present (wizard is not in this repo), nothing to lint"
 else
-  fail "bash -n reported syntax errors in $TEMPLATE:"
-  indent <"$lint_err"
-fi
-
-if command -v shellcheck >/dev/null 2>&1; then
-  # Gate on errors (real breakage), not warnings/style — so this guard doesn't
-  # fail the tree over lint nits in a script owned by another skill.
-  if shellcheck -S error "$TEMPLATE" >"$lint_err" 2>&1; then
-    pass "shellcheck $TEMPLATE"
+  lint_err="$(mktemp)"
+  if bash -n "$TEMPLATE" 2>"$lint_err"; then
+    pass "bash -n $TEMPLATE"
   else
-    fail "shellcheck reported problems in $TEMPLATE:"
+    fail "bash -n reported syntax errors in $TEMPLATE:"
     indent <"$lint_err"
   fi
-else
-  printf 'SKIP  %s\n' "shellcheck not installed on this runner — skipping (not a failure)"
+
+  if command -v shellcheck >/dev/null 2>&1; then
+    # Gate on errors (real breakage), not warnings/style — so this guard doesn't
+    # fail the tree over lint nits in a script owned by another skill.
+    if shellcheck -S error "$TEMPLATE" >"$lint_err" 2>&1; then
+      pass "shellcheck $TEMPLATE"
+    else
+      fail "shellcheck reported problems in $TEMPLATE:"
+      indent <"$lint_err"
+    fi
+  else
+    skip "shellcheck not installed on this runner — skipping (not a failure)"
+  fi
+  rm -f "$lint_err"
 fi
-rm -f "$lint_err"
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo
