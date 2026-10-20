@@ -3,7 +3,7 @@
 The *local, under-green* cleanup done inside the red→green→refactor loop, with
 the tests fresh and green. This is the cheap subset; the whole-diff structural
 smell pass (shotgun surgery, divergent change, speculative generality) lives in
-the `code-review` skill (`code-review/smells.md`).
+the `code-review` skill.
 
 After a TDD cycle, look for:
 
