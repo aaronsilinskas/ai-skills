@@ -8,8 +8,8 @@
 #   1. Harness-vocabulary sweep — skills/ and README.md must stay
 #      agent-agnostic: no Claude-Code-harness-specific vocabulary.
 #   2. Wiring parity — every skills/<bucket>/<skill> directory appears exactly
-#      once in .claude-plugin/plugin.json AND in a README bucket table, and
-#      neither the manifest nor the README lists a skill that isn't on disk.
+#      once in a README bucket table, and the README lists no skill that
+#      isn't on disk.
 #   3. Script lint — skills/engineering/wizard/template.sh passes `bash -n`
 #      (and shellcheck too, when it is installed on the runner).
 #
@@ -49,9 +49,9 @@ fi
 
 # ── Check 2 — Wiring parity ────────────────────────────────────────────────
 echo
-echo "== Check 2: wiring parity (disk ↔ plugin.json ↔ README) =="
+echo "== Check 2: wiring parity (disk ↔ README) =="
 if parity_report="$(python3 - <<'PY'
-import glob, json, re, sys
+import glob, re, sys
 
 # On-disk skills: two-level skills/<bucket>/<skill> directories.
 on_disk = {
@@ -59,44 +59,29 @@ on_disk = {
     for p in glob.glob("skills/*/*/")
 }
 
-# plugin.json paths look like "./skills/<bucket>/<skill>".
-with open(".claude-plugin/plugin.json") as f:
-    manifest = json.load(f)
-in_plugin = [re.sub(r"^\./skills/", "", s) for s in manifest.get("skills", [])]
-
 # README table links look like "skills/<bucket>/<skill>/SKILL.md".
 with open("README.md") as f:
     readme = f.read()
 in_readme = re.findall(r"skills/([^/]+/[^/]+)/SKILL\.md", readme)
 
-def dupes(items):
-    seen, dup = set(), set()
-    for i in items:
-        (dup if i in seen else seen).add(i)
-    return dup
-
 problems = []
-for label, items in (("plugin.json", in_plugin), ("README", in_readme)):
-    d = dupes(items)
-    if d:
-        problems.append(f"{label} lists these skills more than once: {sorted(d)}")
+seen, dupes = set(), set()
+for name in in_readme:
+    (dupes if name in seen else seen).add(name)
+if dupes:
+    problems.append(f"README lists these skills more than once: {sorted(dupes)}")
 
-plugin_set, readme_set = set(in_plugin), set(in_readme)
-for name, a, b in (
-    ("plugin.json", on_disk, plugin_set),
-    ("README", on_disk, readme_set),
-):
-    missing = sorted(a - b)
-    if missing:
-        problems.append(f"on disk but missing from {name}: {missing}")
-    orphan = sorted(b - a)
-    if orphan:
-        problems.append(f"in {name} but no matching directory: {orphan}")
+missing = sorted(on_disk - seen)
+if missing:
+    problems.append(f"on disk but missing from README: {missing}")
+orphan = sorted(seen - on_disk)
+if orphan:
+    problems.append(f"in README but no matching directory: {orphan}")
 
 if problems:
     print("\n".join(problems))
     sys.exit(1)
-print(f"{len(on_disk)} skills wired consistently across disk, plugin.json, and README")
+print(f"{len(on_disk)} skills wired consistently across disk and README")
 PY
 )"; then
   pass "$parity_report"

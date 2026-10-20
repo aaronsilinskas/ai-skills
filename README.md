@@ -99,4 +99,4 @@ After adding, removing, or editing a skill, run the consistency guard:
 bash scripts/check.sh
 ```
 
-It verifies the repo stays agent-agnostic, that every skill directory is wired into both `.claude-plugin/plugin.json` and a README bucket table (with no orphans either way), and that the bundled `wizard/template.sh` still lints. It exits non-zero if anything is off.
+It verifies the repo stays agent-agnostic, that every skill directory is listed in a README bucket table (with no orphans either way), and that the bundled `wizard/template.sh` still lints. It exits non-zero if anything is off.
