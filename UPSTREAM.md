@@ -21,7 +21,8 @@ A sync records Matt's `main` sha at that moment, not the release tag.
 
    It is report-only. It never edits this file and always exits 0. Pass a ref (`bash scripts/upstream-check.sh v1.3.1`) to compare from somewhere other than the recorded sha.
 2. Work through the checklist below. These are the judgement calls the script can't make.
-3. Update the sha and date above.
+3. Refresh the copies of Matt's skills installed under `.claude/skills/` with `npx skills update`, which reinstalls each one that changed from the source recorded in `skills-lock.json`. `scripts/check.sh` reads those copies to know which upstream skills are user-invoked, so they must match the new sha. Then run `bash scripts/check.sh`.
+4. Update the sha and date above, and commit them with the refreshed `.claude/skills/` and `skills-lock.json`.
 
 ## Checklist
 
