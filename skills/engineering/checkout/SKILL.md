@@ -53,4 +53,4 @@ Then set the user up to validate and iterate, which is the whole point of pullin
 
 - Show recent commits (`git log --oneline -10`) and how the branch sits relative to its base/remote (ahead/behind).
 - Point out anything that needs doing before running: uninstalled dependencies, migrations, a stale lockfile.
-- Suggest the next move, such as running the project's checks or driving the app (e.g. `/verify`), but let the user take it from here.
+- Suggest the next move, such as running the project's checks or driving the app, but let the user take it from here.

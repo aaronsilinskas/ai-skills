@@ -6,7 +6,8 @@
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
 #   1. Conventions, adopted from Matt Pocock's skills (decided in #44):
-#      a. No em-dash (U+2014) in any git-tracked file.
+#      a. No em-dash (U+2014) in any git-tracked file outside .claude/skills/,
+#         which holds Matt's installed copies that this repo doesn't own.
 #      b. Every skills/<bucket>/<skill>/SKILL.md has a `description:` that
 #         parses as a YAML scalar (quote it when it contains ": ").
 #      c. Every skill has agents/openai.yaml, and its
@@ -49,13 +50,13 @@ echo "== Check 1: conventions =="
 EM_DASH="$(printf '\342\200\224')"
 # git grep exits 0 on a match, 1 on no match, >1 on an actual error. Keep
 # those apart so a broken tree can't masquerade as a clean sweep.
-hits="$(git grep -n -F "$EM_DASH")"
+hits="$(git grep -n -F "$EM_DASH" -- . ':!.claude/skills/')"
 grep_status=$?
 if [[ $grep_status -eq 0 ]]; then
   fail "em-dash (U+2014) in git-tracked files; rewrite each sentence by hand:"
   printf '%s\n' "$hits" | indent
 elif [[ $grep_status -eq 1 ]]; then
-  pass "no em-dash in any git-tracked file"
+  pass "no em-dash in any git-tracked file outside .claude/skills/"
 else
   fail "git grep failed (exit $grep_status), could not complete the em-dash sweep"
 fi
