@@ -1,6 +1,7 @@
 ---
 name: to-idea
 description: Park a discovery or new idea as a short issue to revisit later, without derailing the current task. A quick stub, not a fleshed-out spec.
+argument-hint: "the idea to capture (or leave blank to pull it from the conversation)"
 disable-model-invocation: true
 ---
 

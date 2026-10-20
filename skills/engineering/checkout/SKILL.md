@@ -1,6 +1,7 @@
 ---
 name: checkout
 description: Check out a branch in the project directory to validate and iterate on it, cleaning up a blocking worktree and rescuing local changes first.
+argument-hint: "branch to check out (or leave blank to pick from worktrees / recent branches)"
 disable-model-invocation: true
 ---
 
