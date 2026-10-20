@@ -1,0 +1,3 @@
+interface:
+  display_name: "Air Quality Data"
+  short_description: "Fetch and compare live air quality data"

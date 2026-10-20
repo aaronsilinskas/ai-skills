@@ -7,10 +7,10 @@ Usage:
 
 Accepted formats
 ----------------
-PurpleAir  — {"sensor_index": N, "history": [{time_stamp, pm2.5_cf_1_corrected, ...}]}
-             or a bare list of those dicts
-OpenAQ     — {"sensor_id": N, "daily_values": {"YYYY-MM-DD": float, ...}}
-             (produced by fetch_openaq.py history)
+PurpleAir:  {"sensor_index": N, "history": [{time_stamp, pm2.5_cf_1_corrected, ...}]}
+            or a bare list of those dicts
+OpenAQ:     {"sensor_id": N, "daily_values": {"YYYY-MM-DD": float, ...}}
+            (produced by fetch_openaq.py history)
 
 Output per file:
   - Worst month (shown first)
@@ -85,7 +85,7 @@ def analyze(path: Path) -> None:
     print(f"  {label}")
     print(f"{'='*60}")
     print(
-        f"  Worst month: {worst_month[0]} — avg {worst_month[1]:.1f} µg/m³, max {worst_month[2]:.1f} µg/m³\n"
+        f"  Worst month: {worst_month[0]} (avg {worst_month[1]:.1f} µg/m³, max {worst_month[2]:.1f} µg/m³)\n"
     )
     print(f"  {'Month':<12}  {'Avg PM2.5':>10}  {'Max PM2.5':>10}")
     print(f"  {'-'*12}  {'-'*10}  {'-'*10}")

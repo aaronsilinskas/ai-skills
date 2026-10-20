@@ -1,6 +1,6 @@
 ---
 name: as-air-quality-data
-description: "Retrieve live air quality data by running scripts from this skill. Use this skill whenever the user wants to fetch, check, or compare air quality data, AQI values, PM2.5, PM10, or pollutant levels for any location — even if they just say 'what's the air quality near me' or 'is it safe to go outside'. Works globally including non-US cities (Tokyo, Seoul, London, Paris, etc.) via OpenAQ government monitors. Also use when combining data across multiple sources or applying correction factors to sensor readings. Runs Python scripts directly against EPA AirNow, PurpleAir, IQAir, and OpenAQ — no API knowledge required."
+description: "Retrieve live air quality data by running scripts from this skill. Use this skill whenever the user wants to fetch, check, or compare air quality data, AQI values, PM2.5, PM10, or pollutant levels for any location, even if they just say 'what's the air quality near me' or 'is it safe to go outside'. Works globally including non-US cities (Tokyo, Seoul, London, Paris, etc.) via OpenAQ government monitors. Also use when combining data across multiple sources or applying correction factors to sensor readings. Runs Python scripts directly against EPA AirNow, PurpleAir, IQAir, and OpenAQ, with no API knowledge required."
 argument-hint: "location or query (e.g. 'AQI in Tokyo' or a zip code)"
 ---
 
@@ -10,7 +10,7 @@ Fetch live air quality data by running Python scripts from this skill's `scripts
 
 `<skill-path>` below refers to the directory containing this SKILL.md file.
 
-The per-script usage below is enough for normal fetches. When you need the raw endpoints, query parameters, and response fields — e.g. extending a script, adding a flag, or debugging an unexpected response — read the full API reference for that source: [references/airnow.md](references/airnow.md), [references/purpleair.md](references/purpleair.md), [references/iqair.md](references/iqair.md), [references/openaq.md](references/openaq.md).
+The per-script usage below is enough for normal fetches. When you need the raw endpoints, query parameters, and response fields (e.g. to extend a script, add a flag, or debug an unexpected response), read the full API reference for that source: [references/airnow.md](references/airnow.md), [references/purpleair.md](references/purpleair.md), [references/iqair.md](references/iqair.md), [references/openaq.md](references/openaq.md).
 
 ## Setup
 
@@ -71,7 +71,7 @@ python <skill-path>/scripts/fetch_airnow.py --zip 94103 --mode historical --date
 python <skill-path>/scripts/fetch_airnow.py --zip 94103 --distance 50
 ```
 
-**Output:** Array of observations, one per pollutant. Multiple entries are normal — each has `ParameterName`, `AQI`, and `Category.Name`. The entry with the highest `AQI` is the overall air quality.
+**Output:** Array of observations, one per pollutant. Multiple entries are normal, and each has `ParameterName`, `AQI`, and `Category.Name`. The entry with the highest `AQI` is the overall air quality.
 
 **AQI scale:** Good (0–50) · Moderate (51–100) · Unhealthy for Sensitive Groups (101–150) · Unhealthy (151–200) · Very Unhealthy (201–300) · Hazardous (301+)
 
@@ -94,7 +94,7 @@ python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345
 # Historical data for a sensor (last 24 hours, hourly averages)
 python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --hours 24
 
-# Historical data for a date range (daily averages — one API call)
+# Historical data for a date range (daily averages, one API call)
 python <skill-path>/scripts/fetch_purpleair.py --sensor-index 12345 --history --start-date 2025-01-01 --end-date 2025-12-31 --average 1440
 
 # Last 7 days at 6-hour averages
@@ -131,7 +131,7 @@ python <skill-path>/scripts/fetch_iqair.py --list-cities --state California --co
 
 ## fetch_openaq.py
 
-Query OpenAQ for official government PM2.5 monitors worldwide. Especially useful for countries with sparse PurpleAir coverage — Japan, Korea, and most of Europe report regulatory-grade data through OpenAQ. Data has a 6–8 month ingestion lag in some countries (MOE stations in Japan, for example), so recent months may be missing.
+Query OpenAQ for official government PM2.5 monitors worldwide. Especially useful for countries with sparse PurpleAir coverage: Japan, Korea, and most of Europe report regulatory-grade data through OpenAQ. Data has a 6–8 month ingestion lag in some countries (MOE stations in Japan, for example), so recent months may be missing.
 
 Two subcommands: **`sensors`** to discover monitors near a location, and **`history`** to fetch all available measurements for a single sensor.
 
@@ -162,7 +162,7 @@ python <skill-path>/scripts/fetch_openaq.py history --sensor-id 6515867 --page-l
 
 **history output:** `{sensor_id, date_from, date_to, raw_measurements, daily_values}` where `daily_values` is a dict of `{"YYYY-MM-DD": avg_pm25_float}`. Add `--stats` for a full summary including monthly averages, day-count breakdowns, and worst-5 days.
 
-**Note on data:** OpenAQ returns raw, uncorrected PM2.5 from regulatory instruments (these are already accurate — no correction factor needed). `isMonitor: true` locations are government stations; the `--all` flag also includes lower-quality community sensors.
+**Note on data:** OpenAQ returns raw, uncorrected PM2.5 from regulatory instruments (these are already accurate, so no correction factor is needed). `isMonitor: true` locations are government stations; the `--all` flag also includes lower-quality community sensors.
 
 **Typical workflow for a new city:**
 
@@ -194,7 +194,7 @@ python <skill-path>/scripts/analyze_history.py /tmp/sensors_*.json
 - PurpleAir: `{"sensor_index": N, "history": [{time_stamp, pm2.5_cf_1_corrected, ...}]}` or bare list
 - OpenAQ: `{"sensor_id": N, "daily_values": {"YYYY-MM-DD": float}}` (from `fetch_openaq.py history`)
 
-Note: use `fetch_openaq.py history --stats` if you just need a quick summary for a single OpenAQ sensor — it computes stats inline without a separate file.
+Note: use `fetch_openaq.py history --stats` if you just need a quick summary for a single OpenAQ sensor. It computes stats inline without a separate file.
 
 **Output per file:** worst month (shown first), monthly avg/max table, annual mean, Good/Moderate/USG+ day counts, 5 worst days.
 
@@ -219,9 +219,9 @@ python <skill-path>/scripts/analyze_history.py tokyo_sensor.json
 
 ## Presenting results
 
-**For current conditions:** Lead with the AQI number and category — e.g., "AQI 52 — Moderate". Follow with the dominant pollutant and a one-sentence health takeaway.
+**For current conditions:** Lead with the AQI number and category, e.g. "AQI 52 (Moderate)". Follow with the dominant pollutant and a one-sentence health takeaway.
 
-**For historical data:** Always open your response by calling out the single worst month — e.g., "Worst month: June 2025 — avg 11.9 µg/m³" — before showing any table. This gives the user the key takeaway immediately. Then show the full monthly breakdown:
+**For historical data:** Always open your response by calling out the single worst month, e.g. "Worst month: June 2025 (avg 11.9 µg/m³)", before showing any table. This gives the user the key takeaway immediately. Then show the full monthly breakdown:
 
 ```
 Month       Avg PM2.5   Max PM2.5
@@ -234,8 +234,8 @@ Feb 2025    9.7 µg/m³   31.4 µg/m³
 
 ## Comparing results across sources
 
-- **AirNow and IQAir** both use the official US EPA AQI scale — values are directly comparable.
+- **AirNow and IQAir** both use the official US EPA AQI scale, so their values are directly comparable.
 - **PurpleAir** `pm25_corrected` is converted to AQI-equivalent and comparable after correction.
-- **OpenAQ** returns raw PM2.5 µg/m³ from government regulatory instruments — no correction needed. Values are directly comparable to AirNow reference monitors.
-- If sources disagree by more than ~30 AQI points, trust AirNow, IQAir, or OpenAQ — they use validated instruments. PurpleAir is best used for spatial density (finding the worst microzone) rather than absolute values.
+- **OpenAQ** returns raw PM2.5 µg/m³ from government regulatory instruments, so no correction is needed. Values are directly comparable to AirNow reference monitors.
+- If sources disagree by more than ~30 AQI points, trust AirNow, IQAir, or OpenAQ, because they use validated instruments. PurpleAir is best used for spatial density (finding the worst microzone) rather than absolute values.
 - Timestamps: IQAir uses UTC ISO 8601; AirNow uses local time with a timezone label.

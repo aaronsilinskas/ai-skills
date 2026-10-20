@@ -90,7 +90,7 @@ GET /data/
 GET /mapcolor/today/gisDec/PM25/   (PM2.5 contour, today)
 GET /mapcolor/today/gisDec/Ozone/  (Ozone contour, today)
 ```
-KML format — use with GIS tools or Google Maps.
+KML format, for use with GIS tools or Google Maps.
 
 ## Response Fields
 
@@ -110,7 +110,7 @@ KML format — use with GIS tools or Google Maps.
 
 ## Notes
 
-- Multiple records returned (one per pollutant) — when displaying a single AQI, take the highest.
+- Multiple records are returned, one per pollutant. When displaying a single AQI, take the highest.
 - `AQI: -1` means data not available for that hour/location.
 - Data is refreshed approximately every hour.
 - AirNow data is **not validated** and should not be used for regulatory decisions. For validated data, use EPA AQS (Air Quality System).
