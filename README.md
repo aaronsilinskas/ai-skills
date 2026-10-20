@@ -12,7 +12,6 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [bdd](skills/engineering/bdd/SKILL.md) | You or model | Behavior-driven testing: red-green-refactor by vertical slices, held to a naming/structure/coverage quality bar. |
 | [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it — clears a blocking worktree and rescues local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
 | [code-review](skills/engineering/code-review/SKILL.md) | You or model | Two-axis review of a diff since a fixed point — Standards (conventions, quality bar, whole-diff smells) and Spec (matches the issue/spec) — run as parallel sub-agents. |
@@ -26,6 +25,7 @@ A personal collection of [Agent Skills](https://agentskills.io/) — reusable in
 | [prototype](skills/engineering/prototype/SKILL.md) | You or model | Build a throwaway prototype to answer a design question — a terminal state model, or several UI variations. |
 | [research](skills/engineering/research/SKILL.md) | You or model | Dispatch a background agent to investigate a question against primary sources and write cited findings to a Markdown file. |
 | [resolving-merge-conflicts](skills/engineering/resolving-merge-conflicts/SKILL.md) | You or model | Resolve an in-progress git merge/rebase conflict, preserving both intents. |
+| [test-quality](skills/engineering/test-quality/SKILL.md) | You or model | Review and audit tests against a quality bar: test naming, one behavior per test, coverage planning, per-language mocking guides. Pairs with Matt's `tdd`, which owns the loop. |
 | [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a spec. |
 | [to-spec](skills/engineering/to-spec/SKILL.md) | You | Synthesize the conversation into a spec (PRD) — local first, grilled, then published to the issue tracker. |
 | [to-tickets](skills/engineering/to-tickets/SKILL.md) | You | Break a plan or spec into independently-grabbable tickets via tracer-bullet vertical slices, each declaring its blocking edges. |
@@ -55,8 +55,7 @@ These skills started from Matt Pocock's (currently synced to his v1.2.3) and wer
 
 - **`CONTEXT.md` → `domain.md` + `domain-language.md`.** Matt keeps a single `CONTEXT.md` glossary. This fork splits it into a domain **map** (`domain.md`: module layout, key types, constraints) and a domain **glossary** (`domain-language.md`), with a strict boundary so they stop duplicating and drifting. `domain-modeling` maintains both inline during grilling. (This also drives the one-line difference in `wait-what`'s glossary reference.)
 - **Removed ADRs.** Matt records Architecture Decision Records (`.agents/adr/`). Here decisions live in the **GitHub issue** for the work (grilling captures them there), and the domain docs are kept current instead — no separate records to drift.
-- **`bdd` replaces `tdd`.** Same red-green process, plus a behavior-driven test-quality bar, a *local, under-green* refactor beat, and per-language mocking guidance in reference files (Python/TypeScript/Kotlin). Matt's `tdd` pushes all refactoring out to `code-review`.
-- **Fork-only skills.** `code-quality`, `comments`, `to-idea`, and `checkout` have no Matt equivalent. `code-quality`/`comments` hold language-neutral guidance, with specifics (Python docstrings, CircuitPython rules, etc.) in reference files; `to-idea` captures a discovery as a lightweight `idea`-labeled stub, distinct from a full spec.
+- **Fork-only skills.** `code-quality`, `comments`, `test-quality`, `to-idea`, and `checkout` have no Matt equivalent. `code-quality`/`comments` hold language-neutral guidance, with specifics (Python docstrings, CircuitPython rules, etc.) in reference files; `to-idea` captures a discovery as a lightweight `idea`-labeled stub, distinct from a full spec; `test-quality` is a test quality bar with per-language mocking guides, run as a review pass alongside Matt's `tdd` loop.
 - **`implement` is end-to-end.** Matt's is a thin wrapper (tdd → code-review → commit). This fork's runs fetch → explore → BDD → validate → open a PR, then applies a whole-diff `code-review` pass (Standards + Spec) back to the branch.
 - **`to-spec` grills first.** Matt synthesizes and publishes immediately without interviewing. This fork produces a local draft, hands off to `grill-with-docs`, and publishes only once the design settles.
 - **`code-review` refactoring split.** Both are two-axis (Standards + Spec, parallel sub-agents). This fork factors the structural smell list into `code-review/smells.md` and keeps `bdd`'s local refactor beat separate from `code-review`'s whole-diff smell pass, rather than routing all refactoring into `code-review`.

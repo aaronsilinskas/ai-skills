@@ -5,7 +5,7 @@
 `jest.mock(...)` calls are hoisted above imports by Babel/ts-jest, before any
 local variables are initialized. Referencing a plain local variable inside
 the factory throws `ReferenceError: Cannot access '...' before
-initialization` — Jest only exempts variable names prefixed with `mock`.
+initialization`. Jest only exempts variable names prefixed with `mock`.
 Reach for `jest.doMock` (not hoisted) if you need a factory that closes over
 an arbitrary local.
 

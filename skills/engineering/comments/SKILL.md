@@ -34,7 +34,7 @@ order of preference:
    document it belongs in a _named test that asserts it_. An executable test
    documents the contract, proves it holds, and fails when it regresses — prose
    does none of these. "This handles the empty case by …" → write a test named
-   for that case. (See the `bdd` skill.)
+   for that case. (See the `test-quality` skill.)
 3. **A comment or docstring — last resort only.** Reach for prose _only_ when
    naming and tests genuinely cannot convey something: a non-obvious _why_ (a
    workaround, a hardware quirk, a deliberate deviation), an external contract,
