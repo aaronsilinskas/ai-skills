@@ -77,7 +77,7 @@ Skills follow [Matt's authoring conventions](https://github.com/mattpocock/skill
 
 **One exception:** skill frontmatter keeps `argument-hint` wherever a skill has one, so the slash-command prompt still hints at what to pass. Matt drops it.
 
-Use the Anthropic [skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) skill when creating or updating any skill here.
+Use Matt's `writing-for-agents` skill (installed under `.claude/skills/`) when creating or updating any skill here.
 
 ## Consistency check
 
@@ -89,7 +89,7 @@ bash scripts/check.sh
 
 It runs every check even after a failure, prints a PASS, FAIL or SKIP line for each, and exits non-zero if anything failed. It works from any directory.
 
-1. **Conventions:** no em-dash in any git-tracked file; every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; and no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too).
+1. **Conventions:** no em-dash in any git-tracked file outside `.claude/skills/` (Matt's copies, which this repo doesn't own); every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; and no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too).
 2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table, and the README lists no skill that isn't on disk.
 3. **Script lint:** `skills/engineering/wizard/template.sh` passes `bash -n` (and `shellcheck`, when installed). With no `wizard` skill in this repo, it reports SKIP.
 
