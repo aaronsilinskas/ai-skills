@@ -1,8 +1,8 @@
 # Python Docstrings
 
 Formatting reference for Python docstrings. The decision of *whether* a symbol
-needs a docstring at all, and the "naming → test → comment" ordering, live in
-the `comments` skill; this file covers only *how* to format the ones that
+needs a docstring at all, along with the "naming → test → comment" ordering,
+lives in the `comments` skill; this file covers only *how* to format the ones that
 survive that test.
 
 ## Class Docstrings
@@ -126,8 +126,8 @@ or method, including:
 """Returns None if the buffer is empty."""
 ```
 
-Use Sphinx cross-reference roles instead, such as `` :class:`Name` `` and
-`` :meth:`name` ``, when referencing another class or method by name, so the
+Use the Sphinx cross-reference roles `` :class:`Name` `` and `` :meth:`name` ``
+instead when referencing another class or method by name, so the
 reference resolves to a link in generated docs rather than reading as plain
 text:
 

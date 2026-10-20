@@ -10,10 +10,10 @@ The general quality bar for implementation code. Three neighbouring dimensions
 have their own skills. Reach for them rather than duplicating their guidance
 here:
 
-- **Tests**: the test quality bar is `test-quality`; writing code test-first is
-  `tdd`
-- **Comments & docstrings**: whether and how to document is `comments`
-- **Module shape**: interfaces, seams, and deep modules are `codebase-design`
+- **Tests**: `test-quality` (the test quality bar) and `tdd` (writing code
+  test-first)
+- **Comments & docstrings**: `comments` (whether and how to document)
+- **Module shape**: `codebase-design` (interfaces, seams, deep modules)
 
 This skill covers what's left: the readability and correctness bar for the
 implementation itself.

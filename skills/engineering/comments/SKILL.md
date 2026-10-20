@@ -52,7 +52,7 @@ def _build(self, name, options):
     ...
 
 # Good: a one-line docstring for purpose. The mechanics stay readable from
-# the code, and tests pin the dispatch/error behavior instead of prose.
+# the code, and tests pin the dispatch/error behavior rather than narrating it.
 def _build(self, name, options):
     """Construct an Effect for the named effect."""
     builder, pack, effect = self._resolve(name)
