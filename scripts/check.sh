@@ -30,6 +30,7 @@ FAILURES=0
 
 pass() { printf 'PASS  %s\n' "$1"; }
 fail() { printf 'FAIL  %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
+skip() { printf 'SKIP  %s\n' "$1"; }
 indent() { sed 's/^/      /'; }
 
 # ── Check 1 — Harness-vocabulary sweep ────────────────────────────────────
@@ -96,7 +97,7 @@ echo
 echo "== Check 3: script lint (wizard/template.sh) =="
 TEMPLATE="skills/engineering/wizard/template.sh"
 if [[ ! -f "$TEMPLATE" ]]; then
-  printf 'SKIP  %s\n' "$TEMPLATE not present (wizard is not in this repo), nothing to lint"
+  skip "$TEMPLATE not present (wizard is not in this repo), nothing to lint"
 else
   lint_err="$(mktemp)"
   if bash -n "$TEMPLATE" 2>"$lint_err"; then
@@ -116,7 +117,7 @@ else
       indent <"$lint_err"
     fi
   else
-    printf 'SKIP  %s\n' "shellcheck not installed on this runner — skipping (not a failure)"
+    skip "shellcheck not installed on this runner — skipping (not a failure)"
   fi
   rm -f "$lint_err"
 fi

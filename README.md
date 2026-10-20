@@ -83,4 +83,4 @@ After adding, removing, or editing a skill, run the consistency guard:
 bash scripts/check.sh
 ```
 
-It verifies the repo stays agent-agnostic, that every skill directory is listed in a README bucket table (with no orphans either way), and that the bundled `wizard/template.sh` still lints (it reports SKIP when that template isn't in the repo). It exits non-zero if anything is off.
+It verifies the repo stays agent-agnostic, that every skill directory is listed in a README bucket table (with no orphans either way), and that `wizard/template.sh` lints when it is present (it reports SKIP when it isn't). It exits non-zero if anything is off.
