@@ -60,18 +60,18 @@ else
   fail "git grep failed (exit $grep_status), could not complete the em-dash sweep"
 fi
 
-# Runs one frontmatter convention check, named by $1, over skills/. The
-# Python prints a one-line summary on success, or each problem on failure.
+# The Python prints a one-line summary on success, or each problem on failure.
 # Its output goes to a file, not $(...): bash 3.2 mis-parses the quotes in a
 # heredoc inside command substitution.
-convention() {
+run_convention_check() {
   local report_file status
   report_file="$(mktemp)"
   python3 - "$1" >"$report_file" 2>&1 <<'PY'
 import glob, os, re, sys
+from typing import Optional
 
-def frontmatter(path):
-    """Top-level keys of a SKILL.md frontmatter, continuation lines joined."""
+def frontmatter(path: str) -> dict[str, str]:
+    """Top-level keys of a SKILL.md frontmatter, continuation lines joined by newlines."""
     with open(path) as f:
         lines = f.read().split("\n")
     if lines[0].strip() != "---":
@@ -85,10 +85,10 @@ def frontmatter(path):
             key = m.group(1)
             fields[key] = m.group(2).strip()
         elif key is not None and line.strip():
-            fields[key] += " " + line.strip()
+            fields[key] += "\n" + line.strip()
     return fields
 
-def user_invoked(fields):
+def user_invoked(fields: dict[str, str]) -> bool:
     return fields.get("disable-model-invocation", "").lower() == "true"
 
 DQ_ESCAPE = r'\\(?:[0abt\tnvfre "/\\N_LP]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})'
@@ -96,7 +96,7 @@ DOUBLE_QUOTED = re.compile(r'"(?:[^"\\]|' + DQ_ESCAPE + r')*"\s*(?:#.*)?')
 SINGLE_QUOTED = re.compile(r"'(?:[^']|'')*'\s*(?:#.*)?")
 BLOCK_HEADER = re.compile(r"[|>](?:[-+]?[1-9]?|[1-9][-+])\s*(?:#.*)?")
 
-def yaml_scalar_problem(value):
+def yaml_scalar_problem(value: str) -> Optional[str]:
     """Why `value` isn't a valid YAML scalar, or None if it is.
 
     Stdlib only (no PyYAML on the runner): applies YAML's quoting and
@@ -104,12 +104,15 @@ def yaml_scalar_problem(value):
     """
     if not value:
         return "is empty"
+    if value[0] in "|>":
+        # The lines after a block-scalar header are its content, not syntax.
+        header = value.split("\n", 1)[0]
+        return None if BLOCK_HEADER.fullmatch(header) else "has a malformed block-scalar header"
+    value = value.replace("\n", " ")
     if value[0] == '"':
         return None if DOUBLE_QUOTED.fullmatch(value) else "is a malformed double-quoted string"
     if value[0] == "'":
         return None if SINGLE_QUOTED.fullmatch(value) else "is a malformed single-quoted string"
-    if value[0] in "|>":
-        return None if BLOCK_HEADER.fullmatch(value) else "has a malformed block-scalar header"
     if value[0] in "[]{},#&*!%@`" or (value[0] in "-?:" and value[1:2] in ("", " ")):
         return f"starts with the YAML indicator {value[0]!r} unquoted; quote it"
     if ": " in value or value.endswith(":"):
@@ -188,9 +191,9 @@ PY
   rm -f "$report_file"
 }
 
-convention descriptions "description: frontmatter that doesn't parse as YAML"
-convention openai-yaml "agents/openai.yaml missing or contradicting the frontmatter"
-convention user-calls "user-invoked skill calls another user-invoked skill"
+run_convention_check descriptions "description: frontmatter that doesn't parse as YAML"
+run_convention_check openai-yaml "agents/openai.yaml missing or contradicting the frontmatter"
+run_convention_check user-calls "user-invoked skill calls another user-invoked skill"
 
 # ── Check 2: Wiring parity ─────────────────────────────────────────────────
 echo
