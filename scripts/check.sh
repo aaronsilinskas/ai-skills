@@ -65,16 +65,16 @@ with open("README.md") as f:
 in_readme = re.findall(r"skills/([^/]+/[^/]+)/SKILL\.md", readme)
 
 problems = []
-seen, dupes = set(), set()
+readme_set, dupes = set(), set()
 for name in in_readme:
-    (dupes if name in seen else seen).add(name)
+    (dupes if name in readme_set else readme_set).add(name)
 if dupes:
     problems.append(f"README lists these skills more than once: {sorted(dupes)}")
 
-missing = sorted(on_disk - seen)
+missing = sorted(on_disk - readme_set)
 if missing:
     problems.append(f"on disk but missing from README: {missing}")
-orphan = sorted(seen - on_disk)
+orphan = sorted(readme_set - on_disk)
 if orphan:
     problems.append(f"in README but no matching directory: {orphan}")
 
