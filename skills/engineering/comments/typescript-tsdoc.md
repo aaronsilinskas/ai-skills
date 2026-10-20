@@ -1,6 +1,6 @@
 # TypeScript TSDoc
 
-> Placeholder — seeded from general TSDoc/JSDoc knowledge, not yet from real
+> Placeholder. Seeded from general TSDoc/JSDoc knowledge, not yet from real
 > project experience. Tighten with actual conventions and gotchas as they come
 > up on TypeScript projects.
 
@@ -11,8 +11,8 @@ this file covers only TSDoc formatting.
 
 TypeScript's types already carry parameter and return shapes, so TSDoc leans
 even harder on *why* than Python docstrings do. Do not add `@param {type}` JSDoc
-type annotations — the type annotation is the source of truth; a `@param` tag
-should add meaning the type can't express, or be omitted entirely.
+type annotations, because the type annotation is the source of truth. A
+`@param` tag should add meaning the type can't express, or be omitted entirely.
 
 ```typescript
 /**
@@ -36,5 +36,5 @@ references.
 
 ## Summary-first
 
-The first paragraph is the summary shown in tooling hovers — lead with the
-caller-facing purpose, one sentence, before any `@remarks`/`@example` block.
+The first paragraph is the summary shown in tooling hovers. Lead with the
+caller-facing purpose, in one sentence, before any `@remarks`/`@example` block.

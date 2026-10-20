@@ -1,22 +1,22 @@
 # Python Docstrings
 
 Formatting reference for Python docstrings. The decision of *whether* a symbol
-needs a docstring at all — and the "naming → test → comment" ordering — lives
-in the `comments` skill; this file covers only *how* to format the ones that
+needs a docstring at all, and the "naming → test → comment" ordering, live in
+the `comments` skill; this file covers only *how* to format the ones that
 survive that test.
 
 ## Class Docstrings
 
-Open with what the class is **for** and why it matters to the caller — not a
+Open with what the class is **for** and why it matters to the caller, not a
 description of its internal mechanics.
 
 Follow with technical contracts using concise bullet lists under named
-sections. Name sections after the actual contract being expressed — these vary
-by domain. Examples from an animation library:
+sections. Name sections after the actual contract being expressed, since these
+vary by domain. Examples from an animation library:
 
-- **Update model** — when and how state is mutated
-- **Sampling model** — how values are read or queried
-- **State ownership** — who owns, creates, and disposes of state
+- **Update model**: when and how state is mutated
+- **Sampling model**: how values are read or queried
+- **State ownership**: who owns, creates, and disposes of state
 
 ```python
 class Ripple:
@@ -70,7 +70,7 @@ def validate_band_map(bands: dict[str, range], context: str) -> None:
     """
 ```
 
-**An `Args:` entry documents only its own parameter — never the method's
+**An `Args:` entry documents only its own parameter, never the method's
 broader contract or side effects.** If a note doesn't answer "what is this
 argument, what does it mean, what must it satisfy," it belongs in the summary
 line or a named section instead, not smuggled into the nearest parameter's
@@ -126,20 +126,20 @@ or method, including:
 """Returns None if the buffer is empty."""
 ```
 
-Use Sphinx cross-reference roles instead — `` :class:`Name` `` and
-`` :meth:`name` `` — when referencing another class or method by name, so the
+Use Sphinx cross-reference roles instead, such as `` :class:`Name` `` and
+`` :meth:`name` ``, when referencing another class or method by name, so the
 reference resolves to a link in generated docs rather than reading as plain
 text:
 
 ```python
-# Correct — this is a reference to another type/method, not a value or literal
+# Correct: this is a reference to another type/method, not a value or literal
 """Transmits IR payloads through a :class:`PulseWriter`.
 
 Starting a write calls :meth:`IrTransmitGate.begin_transmit`, then
 :meth:`PulseWriter.write_pulses`.
 """
 
-# Incorrect — loses the cross-reference
+# Incorrect: loses the cross-reference
 """Transmits IR payloads through a ``PulseWriter``."""
 ```
 
