@@ -2,6 +2,7 @@
 
 - **Date:** 2026-10-20
 - **Baseline:** `mattpocock/skills` tag `v1.3.1` (commit `24fe0ef`, 2026-10-04). Delta measured from `v1.2.3` (`6acc160`, 2026-08-06).
+- **Addendum (#59):** for what changed from v1.3.1 to the official marketplace pin `49dd158`, per shared skill, see [Addendum: v1.3.1 → 49dd158](#addendum-v131--49dd158-official-marketplace-pin).
 - **Fork:** `aaronsilinskas/ai-skills` `main` @ `ffa5b37`.
 - **Question (#40):** Between Matt's `v1.2.3` and `v1.3.1`, what changed in each upstream skill, and what does each fork skill currently differ by from `v1.3.1`? Tag every divergence by its source (a README-listed divergence, or untracked), and list upstream-only skills, removed skills, and repo-wide upstream conventions. This is the shared fact base for every divergence ticket.
 
@@ -336,3 +337,99 @@ These items from `scratchpad/inventory.md` do not exist at v1.3.1 and are out of
 - wizard template.sh fixes (`868c4cf`, `49dd158`).
 - `SCOPE.md`, the extra `.out-of-scope/` records, and triage workflows (`f0588cd`, `4d04daa`, `423ed08`).
 - in-progress `chief-of-staff`.
+
+## Addendum: v1.3.1 → 49dd158 (official marketplace pin)
+
+Answers #59: what changed between `v1.3.1` (`24fe0ef`) and `49dd158`, the sha the official `claude-plugins-official` listing pins (see `docs/research/overlay-install-mechanics.md` §1.2), for the skills that have keep/drop tickets. No keep/drop calls here.
+
+**Method.** `git log --no-merges v1.3.1..49dd158 -- <path>`, `git diff v1.3.1 49dd158 -- <path>` and `git show 49dd158:<path>` on the upstream clone. The fork side is the working tree at `59100e7`. Upstream line numbers below are `49dd158:`.
+
+**Shape of the delta**
+- 46 commits, 34 of them non-merge. 80 files changed, 18 under `skills/` (+127/−47) (`git diff --stat v1.3.1 49dd158`).
+- `.claude-plugin/` and `.agents/invocation.md` are byte-identical (`git diff --quiet`). `plugin.json` still says `"1.3.1"`.
+- The user-invoked set (`disable-model-invocation: true`) is identical at both refs, so §1 "Invocation parity" stands.
+- Every item in "Lead-list items dropped" above is inside the pin (all of its shas are in `v1.3.1..49dd158`).
+
+**Shared skills touched:** code-review, diagnosing-bugs, implement, tdd, to-tickets, wayfinder, wizard (`template.sh` only), grilling, handoff.
+**Shared skills not touched** (no file in `git diff --stat`): codebase-design, domain-modeling, grill-with-docs, improve-codebase-architecture, prototype, research, to-spec, triage, grill-me, to-questionnaire, wait-what. One indirect change: triage reads the GitHub tracker template's PR-listing line, which changed (`e0efb6e`, `8e67db2`; see the install doc's addendum).
+**Upstream-only skills touched (out of scope):** ask-matt (`954ee7f`), setup-matt-pocock-skills (install doc's addendum), teach (`ad5400b`), in-progress claude-handoff and the new chief-of-staff.
+
+**Verdict key.** **closer** = the change shrinks an existing divergence. **further** = it widens one, on lines the fork already diverges on. **neutral** = it touches lines the fork shares with upstream, so the fork simply lacks the new text (a new, untracked gap).
+
+### A.1 Per shared skill
+
+**bdd ~ tdd**: **neutral**.
+- Δ: `3f59913` appends to the seam question: "Give each proposed seam a one-line note on what it catches and what it misses." (`skills/engineering/tdd/SKILL.md:24`).
+- Fork: `skills/engineering/bdd/SKILL.md:106` has the same question with no note. That line is not one of the §2 bdd divergences.
+
+**code-review**: **mixed**. The tracker lines move **closer**, the standards and sub-agent lines move **further**.
+- Δ `3da8c01`, setup pointer: "If `docs/agents/issue-tracker.md` is missing" → "If not, tell the user to run `/setup-matt-pocock-skills`" (`code-review/SKILL.md:13`). **closer**: like the fork (`skills/engineering/code-review/SKILL.md:33-34`), upstream no longer names a file. It still points at setup, not the agent docs.
+- Δ `3da8c01`, spec fetch: "via the workflow in `docs/agents/issue-tracker.md`" → "via the workflow in the tracker doc" (`:29`). **closer** in that the path is gone. The fork's own hard-coded `gh issue view <n>` (`skills/engineering/code-review/SKILL.md:54-55`) and its dropped GitLab `!67` are still divergences.
+- Δ `3da8c01`, standards: "Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list." (`:36`). **further**: the fork names three ranked sources (agent docs → `code-quality`/`bdd` → `smells.md`, `skills/engineering/code-review/SKILL.md:63-78`) and has no repo-wide search.
+- Δ `3da8c01`, sub-agents: "Issue both sub-agent calls together, in the foreground, and aggregate the reports they return." (`:60`). **further**: the fork says only "Dispatch the two sub-agents together so they run in parallel" (`skills/engineering/code-review/SKILL.md:82`). Nothing in the fork says foreground.
+
+**diagnosing-bugs**: **neutral**.
+- Δ `f3fc563`: step 2 "Watch it fail." gains "If you forced the red by mutating code or a fixture, `diff` against a pristine copy to prove the mutation landed before you trust it." (`diagnosing-bugs/SKILL.md:125`).
+- Fork: `skills/engineering/diagnosing-bugs/SKILL.md:129` is the bare "Watch it fail." The §2 divergences (Redact, Phase 6, PY, CTX/ADR) are untouched.
+
+**grilling**: **further**.
+- Δ `95249b0` (#706): a new line after the format block: "Word each question so "yes" accepts your recommended answer." (`grilling/SKILL.md:24`).
+- Fork: the body is a first-person rewrite with its own round format (`skills/productivity/grilling/SKILL.md:13-21`), and it has no such rule. This adds to the output-format divergence already listed in §2.
+
+**handoff**: **neutral**.
+- Δ `4f4e943`, trimmed by `0f5e033`: "temporary directory of the user's OS" gains "(`$TMPDIR`, else `/tmp`; `%TEMP%` on Windows)" (`handoff/SKILL.md:8`).
+- Fork: `skills/productivity/handoff/SKILL.md:8` keeps the v1.2.3 wording. The ADR/CTX and suggested-skills differences are unchanged. Still effectively a copy, minus this clause.
+
+**implement**: **closer**, though it is still not a copy.
+- Δ `6d6a5b9`: "If the user passes a ticket reference, fetch it from the issue tracker and state its title before starting. If the reference is ambiguous, ask." (`implement/SKILL.md:9`). The fork already fetches the issue (`skills/engineering/implement/SKILL.md:65`, `gh issue view <N> --json number,title,body,comments`).
+- Δ `e48341a`, tightened by `04320ee`: "Use /tdd" → `Call the Skill tool with "tdd"`, and "use /code-review" → `call the Skill tool with "code-review"` (`:11`, `:15`). Upstream now invokes test-first and review skills as operative calls, as the fork does ("Invoke the `bdd` skill", `:73`; "invoke the `code-review` skill", `:115`). The wording still differs (Skill tool vs bare name, #17).
+- Still user-invoked upstream (`:4`), so the §1 parity exception stands. The end-to-end flow (IMPL) is untouched.
+
+**to-tickets**: **mixed**. Hierarchy moves **closer**, the Blocked-by section moves **further**.
+- Δ `cffab50`, then `9e2abf8`, publish bullet: "native blocking / sub-issue relationship" → "native blocking relationship". It adds "If the source was an existing issue, make each ticket its sub-issue (tracker doc's operation)." (`to-tickets/SKILL.md:63`). **closer**: the fork attaches every ticket under the parent as a sub-issue and keeps hierarchy separate from blocking (`skills/engineering/to-tickets/SKILL.md:63`).
+- Δ `cffab50`/`9e2abf8`, template: "Omit this section when blockers were set as native edges." (`:101`). **further**: the fork always writes `Blocked by #<n>` in the body because "GitHub has no native issue-to-issue blocking" (`skills/engineering/to-tickets/SKILL.md:63,82-84`).
+- Local-file mode is kept upstream (`:62`), so the TKT divergence is unchanged.
+
+**wayfinder**: **mostly neutral**, with one **further**.
+- Δ `8295b8e`, labels: "`wayfinder:` labels are the only labels a map and its tickets carry, never a triage label like `ready-for-agent`" (`wayfinder/SKILL.md:65`). **neutral**: the fork's line (`skills/engineering/wayfinder/SKILL.md:68`) matches the v1.3.1 sentence apart from an em-dash. Not in conflict with WAY's label-doc indirection (`:28`).
+- Δ `8295b8e`, second pass: "Write cross-references in that pass too, with real ids: a placeholder `#<n>` auto-links to an unrelated issue." (`:114`). **neutral**: fork `:117` is the v1.3.1 text.
+- Δ `8295b8e`, research: "Push the branch but open no PR: it is never merged." (`:115`). **further**: upstream doubles down on the throwaway `research/<name>` branch. The fork never uses one and writes an in-repo Markdown asset instead (`skills/engineering/wayfinder/SKILL.md:118`; WAY, #17).
+- Δ `8295b8e`, working a ticket: "Resolve it as the type its `wayfinder:<type>` label names ... Read the label, not just the body: the body never states the type." (`:124`). **neutral**: fork `:127` differs from v1.3.1 only in harness wording.
+
+**wizard**: **neutral** by the key, but the net effect matters.
+- Δ `868c4cf` and `49dd158`, all in `template.sh` (SKILL.md unchanged):
+  - `ask` reads with Readline (`read -e`, `:115`), and `ask`/`ask_secret` fail at EOF.
+  - `.env` values are written single-quoted and decoded on re-read.
+  - The env file is created at mode 0600 (`umask 077`, `:142`) and written through symlinks.
+  - `tput clear` has a fallback.
+  - Every stage is wrapped in `run_wizard() { … }; run_wizard "$@"; exit` (`:197-223`), so a mid-run edit cannot break parsing.
+- Fork: `skills/engineering/wizard/template.sh` and `SKILL.md` are still byte-identical to `v1.2.3:` (`cmp`). Measured against the pin, the fork's diff goes from cosmetic (em-dashes, OAI) to **behavioural**, untracked.
+
+### A.2 Repo-wide conventions at 49dd158 (changes to §3)
+
+| Change | Source (`49dd158:`) | Bears on |
+|---|---|---|
+| The Skill-tool convention text is unchanged. `implement` now follows it, so the "(v1.3.1 `implement` still says `/tdd`, `/code-review`)" exception is gone. `Call the Skill tool` lines in promoted SKILL.md files: 14 in 9 files → 16 in 10 (line count with `git grep -c`) | `.agents/invocation.md` (identical); `skills/engineering/implement/SKILL.md:11,15` | §3 row 2. The check.sh `VOCAB` conflict now covers implement too **[inferred]** |
+| The em-dash rule is unchanged. New upstream lines carry none | `CLAUDE.md:25` | §3 row 1 unchanged |
+| `SCOPE.md` added: the "observed failure" + "fits the philosophy" bar, `misc/` frozen, new skills closed | `SCOPE.md` (`f0588cd`, `4d04daa`) | §3 row 7 ("No `SCOPE.md` at v1.3.1") is v1.3.1-scoped and still true there |
+| `.out-of-scope/` gains `frozen-misc-skills`, `harness-name-collisions`, `lazy-load-writing-for-agents`, `native-question-tool`, `new-skills`, `subagent-recursion`. `mainstream-issue-trackers-only` is rewritten to "GitHub, GitLab and local markdown only", with everything else going through **Other** | `.out-of-scope/*` (`f0588cd`, `4d04daa`, `8267225`) | `subagent-recursion.md`: upstream will not add guards that stop sub-agents re-invoking skills, which the fork's Standards sub-agent does with `code-quality`/`bdd`. `harness-name-collisions.md`: see the install doc's addendum |
+| Upstream's own `CLAUDE.md` gains an `## Agent skills` → `### Triage labels` block and `docs/agents/triage-labels.md` (canonical names, judged against `SCOPE.md`) | `CLAUDE.md:27-31`; `docs/agents/triage-labels.md` (`f0588cd`) | Repo-internal only: upstream now runs its own setup output |
+| `CLAUDE.md`'s install sentence: `marketplace.json` is now the route for "every agent except Claude Code" | `CLAUDE.md:11` (`b0618bc`) | §3 row 6 wording (`marketplace.json`) |
+| 15 new `.changeset/*.md`, one per shipped fix. `docs/` pages "unslopped" (`dfe7549`). Issue forms and triage workflows under `.github/` (`f0588cd`, `423ed08`) | repo root | §3 row 10 (changesets) unchanged in kind |
+
+### A.3 Which existing conclusions change
+
+- **Cross-cutting bullets:**
+  - "Cross-skill calls use bare names … v1.3.1 uses `Call the Skill tool`": the gap is one skill wider at the pin (implement).
+  - "Setup pointers": upstream code-review now uses the same "If not, tell the user to run" form as the other skills, so the fork's agent-docs pointer differs from one uniform upstream pattern.
+- **§2 (c) verdicts:**
+  - **wizard:** "A direct copy" holds against v1.3.1 but not against the pin. It is now behavioural, because of `template.sh`.
+  - **handoff:** still "effectively a copy", minus the temp-dir clause.
+  - code-review, implement, to-tickets, wayfinder, grilling, bdd and diagnosing-bugs stay "not a copy".
+- **§1 roster and parity:** unchanged. No skill was added to or removed from the promoted set, and the modes are identical.
+- **§3:** row 2 loses its implement exception. Rows 7 and 10 gain the items in A.2. No row's "Conflicts with check.sh" answer flips.
+- **§4 item 8 (unverified premise):**
+  - Upstream still uses GitHub native dependencies for blocking.
+  - The pin's GitHub template adds `gh issue create --parent` / `gh issue edit --add-sub-issue` (`gh` 2.94+) (`skills/engineering/setup-matt-pocock-skills/issue-tracker-github.md:10`). That contradicts the fork's "`gh` has no first-class sub-issue command yet" (`skills/engineering/wayfinder/github-operations.md:16-17`).
+  - **[verified]** `gh` 2.102.0 (local, 2026-09-30) lists `issue create --parent` and `issue edit --parent / --add-sub-issue / --remove-sub-issue` in `--help`. The fork's "`gh` has no first-class sub-issue command" line is stale.
+- **§4 items 1-7 and the README claims:** unchanged. None of them touches the files in the delta. The OAI bullet's "only remaining difference" for `wizard` is now false against the pin, but it was v1.2.3-based anyway.

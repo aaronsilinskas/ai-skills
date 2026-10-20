@@ -2,6 +2,7 @@
 
 - **Date:** 2026-10-20
 - **Baseline:** mattpocock/skills tag `v1.3.1` (commit `24fe0ef`)
+- **Addendum (#59):** for setup output and invocation-graph changes at the official marketplace pin `49dd158`, see [Addendum: v1.3.1 → 49dd158](#addendum-v131--49dd158-official-marketplace-pin).
 - **Resolves:** #41 (parent #39)
 - **Question (from #41):** How do Matt's v1.3.1 install paths (Claude Code plugin, `npx skills`, others) deliver his skills **per project**, and what happens when a second source provides a same-named skill under each path? Document the effects of a **global** install too (without performing one). What exactly does `setup-matt-pocock-skills` write into a consuming repo, and which upstream skills invoke which others by name?
 
@@ -278,3 +279,101 @@ An overlay intercepts a call only if it holds the **bare name** (§2). Under the
 **Upstream-only names (no fork counterpart):** ask-matt, implement-spec, pr, retro, setup-matt-pocock-skills, tdd, teach, writing-for-agents. No fork skill names `tdd`, `setup-matt-pocock-skills` or `GLOSSARY.md` (grep of `skills/`).
 
 **Wording:** fork skills say "invoke the `x` skill" and upstream says `Call the Skill tool with "x"`. Both use bare names, so neither targets a namespaced plugin copy on purpose.
+
+---
+
+## Addendum: v1.3.1 → 49dd158 (official marketplace pin)
+
+Answers #59 for this doc: how §3 (setup output) and §4 (invocation graph) differ at `49dd158`, the sha the official listing pins (§1.2). Per-skill content verdicts live in the matching addendum in `docs/research/upstream-delta-v1.3.1.md`. Source key `UP@pin` = `git show 49dd158:<path>`. Commit shas come from `git log --no-merges v1.3.1..49dd158 -- <path>`.
+
+- **Unchanged at the pin:** `.claude-plugin/plugin.json`, `marketplace.json` and `.agents/invocation.md` (`git diff --quiet v1.3.1 49dd158`). Same 27-skill set, version `"1.3.1"`, and the same user-invoked/model-invoked split (identical `disable-model-invocation: true` file sets).
+
+### A.1 `setup-matt-pocock-skills` output (changes to §3)
+
+**Labels created**
+- New: "When Section B ran on GitHub or GitLab, create each configured label the tracker lacks (`gh label create` / `glab label create`)." (`UP@pin/skills/engineering/setup-matt-pocock-skills/SKILL.md:104`, `5b7cade`, which closes #616, #635, #733, #801.)
+- Section B runs only when `triage` is installed (`SKILL.md:102`). So the labels created are the 5 triage roles, under their "Label in our tracker" strings. `wayfinder:map`/`wayfinder:<type>` are still not created **[inferred]**: nothing at the pin asks for them.
+- **The upstream docs lag the skill.** `UP@pin/docs/engineering/setup-matt-pocock-skills.md:67` still answers "It didn't create my triage labels" with "It doesn't … It does not run `gh label create`". The page changed only in `dfe7549` (prose "unslop").
+
+**GitHub tracker template** (`UP@pin/.../issue-tracker-github.md`)
+- **Read an issue:** `gh issue view <number> --comments` plus jq filtering → `gh issue view <number> --json number,title,body,labels,comments` (`:8`, `5b7cade`).
+- **"fetch the relevant ticket":** `Run gh issue view <number> --comments` → "Read it as in **Read an issue** above" (`:35`, `5b7cade`).
+- **New bullet, "Make an issue a sub-issue of a parent":**
+  - `gh issue create --parent <parent>`, or `gh issue edit <parent> --add-sub-issue <child>` (`gh` 2.94+).
+  - Older `gh`: REST `POST …/issues/<parent>/sub_issues -F sub_issue_id=<child-db-id>`.
+  - Fallback: `Part of #<parent>`.
+  - Source: `:10`, `cffab50`, `9e2abf8`. The Wayfinding "Child ticket" line now points at this bullet (`:42`).
+- **External PRs for triage:** `gh pr list … authorAssociation` → `gh api --paginate 'repos/{owner}/{repo}/pulls?state=open' --jq '… select(.author_association | IN("OWNER","MEMBER","COLLABORATOR") | not) …'` (`:24`, `e0efb6e`, `8e67db2`).
+- **Blocking and frontier lines:** unchanged. Native `dependencies/blocked_by` is still canonical, so the §3 "Blocking convention per tracker" table stands.
+
+**GitLab tracker template** (`UP@pin/.../issue-tracker-gitlab.md`)
+- **List and frontier:** `glab issue list -F json` → `-O json` (`:9`, `:44`, `5b7cade`).
+- **Links path:** `projects/:id/issues/:iid/links` → `…/issues/<child-iid>/links` (`:44`).
+- **Read an issue:** still says "Use `-F json`" (`:8`, unchanged). Whether that flag is right for `view` was not checked.
+
+**`triage-labels.md` template**
+- Wording only: "Edit the right-hand column" → "Edit the "Label in our tracker" column" (`:15`, `5b7cade`). The 5-row table is unchanged.
+
+**What it reads, asks and writes**
+- Otherwise unchanged. Same §3 "What it reads/asks/writes" lists, same `CLAUDE.md`-first file rule, no global mode.
+
+**How skills find the config**
+- `code-review` joins the "should have been provided … If not, tell the user to run `/setup-matt-pocock-skills`" group (`UP@pin/skills/engineering/code-review/SKILL.md:13`, `3da8c01`).
+- Its spec fetch now reads "via the workflow in the tracker doc" (`:29`). The §3 "Exception" bullet no longer holds at the pin. No promoted skill at the pin hard-codes `docs/agents/issue-tracker.md` (`git grep` of `skills/{engineering,productivity}/*/SKILL.md` at 49dd158 finds only setup itself).
+- `implement` now reads the tracker ("fetch it from the issue tracker", `UP@pin/skills/engineering/implement/SKILL.md:9`, `6d6a5b9`) but has no setup pointer.
+- `to-tickets` now uses "tracker doc's operation" for sub-issues (`to-tickets/SKILL.md:63`).
+
+**Effect on the aura conflicts table** (rows refer to §3 "Conflicts with aura-prototype's convention")
+
+| # | At `49dd158` |
+|---|---|
+| 2 | No longer triggered by `code-review`. The pin's code-review accepts any provided tracker doc, so aura's `docs/agents/backlog.md` named in `AGENTS.md` should satisfy it **[inferred]**. |
+| 4 | Worse. The pin's `to-tickets` template says to omit `## Blocked by` "when blockers were set as native edges" (`to-tickets/SKILL.md:101`). Upstream-made tickets on GitHub would then carry native edges only, which aura's body-parsing frontier can't see **[inferred]**. |
+| 5 | Upstream prefers `gh issue create --parent` / `--add-sub-issue`, with REST as the fallback. aura uses GraphQL `addSubIssue`. Same result. |
+| 6 | Setup now creates missing triage labels when `triage` is installed. aura already uses the same 5 role names (row 6), so likely nothing is created **[inferred]**. `idea`/`spec`/`grilled`/`wayfinder:*` are still not created. |
+| 1, 3, 7, 8, 9 | Unchanged. |
+
+### A.2 Invocation graph (changes to §4)
+
+**Edges**
+- **implement (user) → tdd, code-review:** prose `/tdd`, `/code-review` → `Call the Skill tool with "tdd"` / `call the Skill tool with "code-review"` (`UP@pin/skills/engineering/implement/SKILL.md:11,15`; `e48341a`, wording tightened in `04320ee`).
+  - Both targets are model-invoked, so the calls are legal under `.agents/invocation.md:22`.
+  - This was the only promoted-skill edge still written as `/x` prose.
+- **No other edge added or removed.**
+  - `wayfinder:124` reworded step 3, but it calls the same skills.
+  - `ask-matt:11` now says to "read that skill's SKILL.md" before asserting what it does. That is a file read, not a Skill-tool call. With an overlay holding the bare name, which copy it reads is undefined **[inferred]**.
+  - handoff's "suggested skills" line is unchanged. teach (`ad5400b`) and the in-progress `chief-of-staff`/`claude-handoff` changes add no edges (grep at 49dd158).
+- **`tdd` → `code-review`** is still prose (`UP@pin/skills/engineering/tdd/SKILL.md:38`), and `tdd` → `codebase-design` is still a Skill-tool call (`:26`).
+
+**Conventions**
+- **Phrasing:** `.agents/invocation.md` is byte-identical. `Call the Skill tool` lines in promoted SKILL.md files: 14 in 9 files → 16 in 10 (`git grep -c`).
+- **`subagent-recursion.md` (new):** skills will not add guards that stop sub-agents re-invoking skills. "The harness should be responsible" (`UP@pin/.out-of-scope/subagent-recursion.md`, `4d04daa`).
+- **`harness-name-collisions.md` (new):** upstream will not rename skills to dodge same-name collisions.
+  - "The way through is namespaced invocation … `/mattpocock-skills:code-review`" (`UP@pin/.out-of-scope/harness-name-collisions.md:11`).
+  - For skills.sh: "rename the folder and the `name:` field in your copy" (`:18`).
+  - This is upstream's stated policy, and it matches §2.2's "both load; bare name to the local skill" model.
+
+**Upstream callers that would reach a same-named overlay** (changes to the §4 table)
+
+| Fork skill | At `49dd158` |
+|---|---|
+| code-review | Callers: implement-spec (Skill tool), **implement (Skill tool, was prose)**, tdd (prose). Two operative callers now, not one. |
+| bdd | Still **none**. But implement's `tdd` call is now operative too, so an overlay that ships something named `tdd` would intercept it from both implement and implement-spec (per §2.2's verified `Skill("tdd")` row) **[inferred]**. |
+| All other rows | Unchanged. |
+
+### A.3 Install routes (non-skill files, bearing on §1)
+
+- **Claude Code command** is now `claude plugin install mattpocock-skills@claude-plugins-official`, with no `--scope`, so it still lands at user scope (§1.2) (`UP@pin/.agents/install-block.md:29`, `b0618bc`).
+- **Repo marketplace is now documented for other agents.** The "Not the install story" section is deleted. `.claude-plugin/marketplace.json` is now the documented route for Codex, Copilot and VS Code (`install-block.md:9`; ADR 0002 "Update, 2026-10-08", `UP@pin/.agents/adr/0002-ship-as-a-claude-code-plugin.md:49-51`).
+  - The §1.1 "not documented to users" bullet is v1.3.1-scoped and still true there.
+  - §1.1's "only after the tag (commit `b0618bc`)" is inside the pin.
+- **Version-gated updates are documented for the non-Claude routes.** "Those routes reinstall only when the `version` in `plugin.json` changes" (`install-block.md:9`). This is stated for the `@mattpocock` routes, not for `claude-plugins-official`. It is consistent with §1.2's **[inferred]** note that a pin move with no version bump may not reach installed Claude Code users, but it does not prove it.
+- **"Pick one" is unchanged:** installing both routes gives every skill twice (`install-block.md:119-121`).
+
+### A.4 Which existing conclusions change
+
+- **§1.2 "Pin mismatch" bullets:** accurate. Attribution, which §1.2 doesn't give: `gh issue create --parent` came from `cffab50`/`9e2abf8`. `5b7cade` changed the read/fetch commands and added label creation.
+- **§3 "Labels created"** and the **code-review "Exception"**: both are superseded at the pin, as each already flags. The new fact is that upstream's own docs page still says labels aren't created (A.1).
+- **§3 aura table:** rows 2, 4, 5 and 6 change as in A.1.
+- **§4 edges table:** only the implement row changes, and it is already annotated. **Overlay-reach table:** the code-review and bdd rows change as in A.2.
+- **§1 and §2 install and collision mechanics:** no conclusion flips. The pin adds upstream's documented collision policy (A.2) and new non-Claude routes (A.3).
