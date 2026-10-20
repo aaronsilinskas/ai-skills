@@ -13,7 +13,7 @@
 
 **Cross-cutting fork divergences.** These are not repeated per skill unless a skill differs:
 - No `agents/openai.yaml` in any fork skill (`find skills -name openai.yaml` returns 0). Every v1.3.1 skill has one. **cosmetic**, OAI.
-- Em-dashes are kept. Fork `skills/` + `README.md` contain 620 `—`. v1.3.1 `skills/engineering` + `skills/productivity` contain 0. **cosmetic**, untracked.
+- Em-dashes are kept. Fork `skills/` + `README.md` contain 620 U+2014. v1.3.1 `skills/engineering` + `skills/productivity` contain 0. **cosmetic**, untracked.
 - Cross-skill calls use bare names ("Invoke/Run the `x` skill"). v1.3.1 uses `Call the Skill tool with "x"`. **cosmetic** (harness wording), untracked (#17).
 - `argument-hint:` frontmatter on most fork skills. It does not exist in v1.3.1. **cosmetic**, untracked.
 - Setup pointers. v1.3.1 says "If not, tell the user to run `/setup-matt-pocock-skills`". The fork says "provided ... by the project's agent docs (e.g. `AGENTS.md` ...)". **behavioural** (different config source), untracked (WAY's idea applied repo-wide).

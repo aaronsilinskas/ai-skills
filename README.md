@@ -1,22 +1,22 @@
 # Agent Skills
 
-A personal collection of [Agent Skills](https://agentskills.io/) — reusable instruction sets that give AI agents domain-specific expertise.
+A personal collection of [Agent Skills](https://agentskills.io/): reusable instruction sets that give AI agents domain-specific expertise.
 
-> **Built on Matt Pocock's work.** Most of the engineering skills here are based on [Matt Pocock's excellent skills](https://github.com/mattpocock/skills). This repo adapts them to my workflow and software development preferences — see [What's changed from Matt's skills](#whats-changed-from-matts-skills) below. Huge thanks to Matt for the foundation!
+> **Built on Matt Pocock's work.** Most of the engineering skills here are based on [Matt Pocock's excellent skills](https://github.com/mattpocock/skills). This repo adapts them to my workflow and software development preferences. See [What's changed from Matt's skills](#whats-changed-from-matts-skills) below. Huge thanks to Matt for the foundation!
 
 ## Skills
 
-**Invoked by** — *You* means the skill only runs when you type it (e.g. `/to-idea`); *You or model* means the model can also reach for it automatically from its description.
+**Invoked by:** *You* means the skill only runs when you type it (e.g. `/to-idea`); *You or model* means the model can also reach for it automatically from its description.
 
 ### Engineering
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it — clears a blocking worktree and rescues local changes first. |
+| [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it, clearing a blocking worktree and rescuing local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
 | [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
 | [test-quality](skills/engineering/test-quality/SKILL.md) | You or model | Review and audit tests against a quality bar: test naming, one behavior per test, coverage planning, per-language mocking guides. Pairs with Matt's `tdd`, which owns the loop. |
-| [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later — a stub, not a spec. |
+| [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later: a stub, not a spec. |
 
 ### Misc
 
@@ -65,4 +65,4 @@ After adding, removing, or editing a skill, run the consistency guard:
 bash scripts/check.sh
 ```
 
-It verifies the repo stays agent-agnostic, that every skill directory is listed in a README bucket table (with no orphans either way), and that `wizard/template.sh` lints when it is present (it reports SKIP when it isn't). It exits non-zero if anything is off.
+It verifies the conventions adopted from Matt's skills: no em-dash in any tracked file, every `description:` parses as YAML, every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`, and no user-invoked skill calls another user-invoked skill through the Skill tool. It also verifies that every skill directory is listed in a README bucket table (with no orphans either way), and that `wizard/template.sh` lints when it is present (it reports SKIP when it isn't). It exits non-zero if anything is off.

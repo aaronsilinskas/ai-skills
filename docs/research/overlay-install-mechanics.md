@@ -250,10 +250,10 @@ What aura has:
 | implement (user) | tdd, code-review | prose `/tdd`, `/code-review` at v1.3.1 (Skill tool in `49dd158`) | `implement/SKILL.md:9,13` |
 | tdd (model) | codebase-design; code-review | Skill tool; prose "see the `code-review` skill" | `tdd/SKILL.md:26,38` |
 | retro (user) | writing-for-agents | Skill tool | `retro/SKILL.md:11` |
-| handoff (user) | generic "suggested skills" section | — | `handoff/SKILL.md:10` |
+| handoff (user) | generic "suggested skills" section |  | `handoff/SKILL.md:10` |
 | code-review, to-spec, to-tickets, triage, wayfinder, implement-spec | `/setup-matt-pocock-skills` | tell the user (user action) | see §3 |
 | ask-matt (user); setup's `domain.md` template | many `/x` labels | router or template prose only | `ask-matt/SKILL.md`; `domain.md:11` |
-| codebase-design, diagnosing-bugs, domain-modeling, pr, prototype, research, wizard, grilling, teach, to-questionnaire, wait-what, writing-for-agents, to-spec, to-tickets, setup | none operative | — | grep of `skills/{engineering,productivity}` at v1.3.1 |
+| codebase-design, diagnosing-bugs, domain-modeling, pr, prototype, research, wizard, grilling, teach, to-questionnaire, wait-what, writing-for-agents, to-spec, to-tickets, setup | none operative |  | grep of `skills/{engineering,productivity}` at v1.3.1 |
 
 ### Upstream callers that would reach a same-named overlay
 
