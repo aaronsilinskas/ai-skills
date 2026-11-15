@@ -1,6 +1,6 @@
 # Agent Skills
 
-An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt Pocock's skills](https://github.com/mattpocock/skills). It adds a few skills that Matt's set doesn't have, and nothing else.
+An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt Pocock's skills](https://github.com/mattpocock/skills). It adds a few skills that Matt's set doesn't have. The repo also hosts one optional Claude Code plugin, listed under [Plugins](#plugins), which the skills don't need.
 
 > **Requires Matt Pocock's skills.** This overlay is not a standalone collection. It assumes Matt's skills are installed in the same project and that his `setup-matt-pocock-skills` has written the project's config (the `## Agent skills` block and `docs/agents/`). Matt's skills do most of the work; huge thanks to Matt for the foundation.
 
@@ -63,6 +63,22 @@ This route has two caveats:
 
 - Only Claude Code gets Matt's skills. The other agents npx installs the overlay for will have the overlay without the skills it depends on.
 - Matt's copies stay listed as `mattpocock-skills:<name>`, beside any same-named skill installed by npx.
+
+## Plugins
+
+Claude Code plugins live under `plugins/`, listed in the marketplace file `.claude-plugin/marketplace.json`. They are separate from the skills: `npx skills` does not install them, and they need nothing from Matt's skills.
+
+| Plugin | Description |
+| --- | --- |
+| [agent-progress](plugins/agent-progress/README.md) | Progress bar above the prompt and a live agents panel (`/agent-progress`) for any subagents: steps, model, context, estimated cost and time. |
+
+Install one at the prompt of a Claude Code terminal session, answering `y` to add the marketplace and then picking a scope:
+
+```
+/plugin install agent-progress --marketplace aaronsilinskas/ai-skills
+```
+
+From a shell, the same is `claude plugin install agent-progress --marketplace aaronsilinskas/ai-skills`. In the desktop app, click + next to the prompt box, then Plugins, Add marketplace with `aaronsilinskas/ai-skills`, then Add plugin.
 
 ## Conventions
 

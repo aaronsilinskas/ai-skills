@@ -1,0 +1,14 @@
+{
+  "name": "ai-skills",
+  "owner": { "name": "aaronsilinskas", "url": "https://github.com/aaronsilinskas" },
+  "metadata": { "description": "Claude Code plugins from aaronsilinskas/ai-skills." },
+  "plugins": [
+    {
+      "name": "agent-progress",
+      "source": "./plugins/agent-progress",
+      "description": "Mod: progress bar above the prompt and a live agents panel for any subagents, with steps, context, estimated cost and time.",
+      "version": "0.1.0",
+      "category": "mod"
+    }
+  ]
+}
