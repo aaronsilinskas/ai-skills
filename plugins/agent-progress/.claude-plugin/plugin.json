@@ -1,0 +1,24 @@
+{
+  "name": "agent-progress",
+  "version": "0.1.0",
+  "description": "Progress bar above the prompt for subagent work, plus a live agents panel (/agent-progress) with model, steps, context, estimated cost and time. Works with any subagents; no workflow skill required.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "autoOpen": {
+      "type": "string",
+      "title": "Open the agents panel by itself",
+      "description": "plan: when the main session reports a plan; any: also when any subagent starts; never: only with /agent-progress or the band's button",
+      "default": "plan",
+      "options": ["plan", "any", "never"]
+    },
+    "stepBrief": {
+      "type": "string",
+      "title": "Ask subagents to report steps",
+      "description": "all: append a one-line request to every subagent's prompt asking it to report its steps with the step tool; none: leave prompts alone (rows then show context fill instead of step progress)",
+      "default": "all",
+      "options": ["all", "none"]
+    }
+  },
+  "author": { "name": "aaronsilinskas" },
+  "license": "MIT"
+}
