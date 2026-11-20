@@ -7,7 +7,7 @@
       "name": "agent-progress",
       "source": "./plugins/agent-progress",
       "description": "Mod: progress bar above the prompt and a live agents panel for any subagents, with steps, context, estimated cost and time.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "mod"
     }
   ]

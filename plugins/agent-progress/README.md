@@ -22,7 +22,7 @@ Set these in `/config`, or under `pluginConfigs` in `~/.claude/settings.json`:
 { "pluginConfigs": { "agent-progress": { "options": { "autoOpen": "any", "stepBrief": "all" } } } }
 ```
 
-- `autoOpen`: `plan` (the default) opens the panel by itself when the main session reports a plan. `any` also opens it when any subagent starts. `never` opens it only when you ask. The panel opens itself at most once per run.
+- `autoOpen`: `plan` (the default) opens the panel by itself when the main session reports a plan. `any` also opens it when any subagent starts. `session` opens it once when each session starts, and not again after you close it. `never` opens it only when you ask. The panel opens itself at most once per run.
 - `stepBrief`: `all` (the default) appends the step-reporting line to every subagent's prompt. `none` leaves prompts alone.
 
 Inspired by [savvy-progress](https://github.com/JohnnyVizz/claude-kit/tree/main/plugins/savvy-progress) (MIT), without the savvy-flow coupling.

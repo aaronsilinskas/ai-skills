@@ -369,7 +369,8 @@ async function settleAutoRun($: EngineInterface, isMainBusy: boolean): Promise<v
 // ---------------------------------------------------------------------------
 
 export const register: Register = (on, options) => {
-  const autoOpenMode = options.autoOpen === 'any' || options.autoOpen === 'never' ? options.autoOpen : 'plan'
+  const autoOpenMode =
+    options.autoOpen === 'any' || options.autoOpen === 'never' || options.autoOpen === 'session' ? options.autoOpen : 'plan'
   const isBriefing = options.stepBrief !== 'none'
   // Whether the main loop is mid-turn; an automatic run finishes once the main
   // turn has ended and no agent is still running. Resets on reload, harmlessly.
@@ -438,6 +439,8 @@ export const register: Register = (on, options) => {
         await update($, now, () => at)
       })()
     })
+    // Once per session: $.state outlives a reload, so a closed pane stays closed.
+    if (autoOpenMode === 'session' && e.isInteractive) await autoOpen($, 'session')
     return started
   })
 

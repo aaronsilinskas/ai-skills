@@ -131,3 +131,25 @@ test('input outside the schema is bounded', async ($, on) => {
   expect(svg).not.toContain('[object')
   await ui.unmount()
 })
+
+const startSession = ($: Engine, on: On) => {
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  on('tool.register', () => ({ value: undefined }) as never)
+  on('command.register', () => ({ value: undefined }) as never)
+  return $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+}
+
+test('autoOpen session opens the panel once when the session starts', { options: { autoOpen: 'session' } }, async ($, on) => {
+  const { opened } = core(on)
+  await startSession($, on)
+  expect(opened).toEqual(['agent-progress'])
+  // A reload runs session.start again; the panel stays as the person left it.
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  expect(opened).toEqual(['agent-progress'])
+})
+
+test('the default autoOpen leaves the panel closed at session start', async ($, on) => {
+  const { opened } = core(on)
+  await startSession($, on)
+  expect(opened).toEqual([])
+})
