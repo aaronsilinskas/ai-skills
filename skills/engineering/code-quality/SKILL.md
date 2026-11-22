@@ -8,7 +8,7 @@ argument-hint: "file or function to review or implement"
 
 The quality bar for implementation code. Tests have `test-quality`, comments have `comments`, and module shape has `codebase-design`.
 
-The project's own standards files, `GLOSSARY.md` and relevant ADRs extend this bar and override it on any conflict, notably on target runtime versions, listed hot paths and naming. Read any you haven't already.
+The project's own standards files (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, `AGENTS.md` or `CLAUDE.md`), `GLOSSARY.md` and the ADRs touching the area extend this bar and override it on any conflict, notably on target runtime versions, listed hot paths and naming. Read any you haven't already.
 
 ## Guiding Principle
 
@@ -30,7 +30,7 @@ The guidance above is general. Load the matching reference file when the target 
 
 ## Checklist
 
-- [ ] The project's standards, glossary and relevant ADRs applied where they override this bar
+- [ ] The project's standards files, glossary and relevant ADRs read and applied
 - [ ] Readability preserved; optimizations confined to where a real constraint demands them
 - [ ] No reaching into another module's private state. Only the public interface is used, or a deliberate interface expansion.
 - [ ] All function/method parameters and return types annotated (except documented, justified edge cases)

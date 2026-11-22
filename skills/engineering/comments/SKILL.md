@@ -16,7 +16,7 @@ A comment or docstring is the _last_ place to convey intent. Reach for prose onl
 
 1. **Naming.** A well-named function, variable, or extracted helper says what a comment would have said, and it can't drift out of sync with the code. If you feel the urge to write a comment explaining a block, that block usually wants a name (extract it) or a clearer one.
 2. **A test.** Behavior complex or non-obvious enough that you'd want to document it belongs in a _named test that asserts it_. An executable test documents the contract, proves it holds, and fails when it regresses. Prose does none of these. "This handles the empty case by …" → write a test named for that case. (See the `test-quality` skill.)
-3. **A comment or docstring, as a last resort only.** Reach for prose _only_ when naming and tests genuinely cannot convey something: a non-obvious _why_ (a workaround, a hardware quirk, a deliberate deviation), an external contract, or an ordering/units constraint the types don't express. Keep it to the minimum. A one-line docstring stating purpose is usually enough.
+3. **A comment or docstring, as a last resort only.** Reach for prose _only_ when naming and tests genuinely cannot convey something: a non-obvious _why_ (a workaround, a hardware quirk, a deliberate deviation), an external contract, or an ordering/units constraint the types don't express. Keep it to the minimum. A one-line docstring stating purpose is usually enough. When an assert or log message can carry the _why_, put it there: the message is the doc.
 
 Never write a comment or docstring that restates what the code already says. If a reviewer can delete it and lose no information, it should not have been written.
 
@@ -40,10 +40,6 @@ def _build(self, name, options):
     builder, pack, effect = self._resolve(name)
     ...
 ```
-
-## What Prose Carries
-
-Prose carries only a _why_, a contract, or a units or ordering constraint the types can't express. When an assert or log message can carry that _why_, put it there: the message is the doc.
 
 Keep one source of truth. Two docstrings describing the same construction, or a comment echoing a test name, drift apart.
 

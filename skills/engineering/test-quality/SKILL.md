@@ -59,7 +59,7 @@ If the name says "X causes Y", the test must change X and observe Y.
 
 ### A named test beats an explanatory comment
 
-Treat each "this handles ..." comment in source as a missing test: name it for the case and assert it (e.g. `test_<thing>_when_<condition>_...`). The `comments` skill holds the reasoning.
+Treat each "this handles ..." comment in source as a missing test: name it for the case and assert it (e.g. `test_<thing>_when_<condition>_...`).
 
 ## Test structure
 
@@ -106,7 +106,7 @@ Internal state is only worth asserting when the product relies on it being obser
 
 Coverage traces back to product guarantees, not code paths. Code that no behavioral test covers is a candidate for removal or refactoring, not for a test that just executes it.
 
-When planning tests before they exist, read [planning-coverage.md](planning-coverage.md).
+When planning tests before they exist, or auditing a suite for coverage gaps, read [planning-coverage.md](planning-coverage.md).
 
 ## What to avoid
 

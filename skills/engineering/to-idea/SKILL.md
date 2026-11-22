@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Capture a discovery or new idea as an issue so it isn't lost, without stopping to flesh it out. This is deliberately a **stub, not a spec**: just enough to remember the idea and why it mattered, so a future session can pick it up.
 
-Synthesize what's already known from the conversation, publish, and return to the original work. Fleshing the idea out happens when it is revisited.
+Synthesize what's already known from the conversation, publish, and return to the original work.
 
 The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
 
@@ -23,4 +23,4 @@ The issue tracker and triage label vocabulary should have been provided to you. 
 
 2. **Publish it** to the project issue tracker, using the issue tracker docs you were given, with exactly one label: the one resolved for the `idea` role. An idea is a raw parking-lot entry, not a triaged or specified task.
 
-3. **Report** the issue URL, note that `/to-spec` (or `/grill-with-docs` to grill it first) develops it later, and return to what you were doing.
+3. **Report** the issue URL, tell the user to run `/to-spec` (or `/grill-with-docs` to grill it first) when they revisit it, and return to what you were doing.
