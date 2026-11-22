@@ -1,9 +1,5 @@
 # Mocking in Kotlin
 
-> Placeholder: this file was seeded from general MockK knowledge, not yet
-> from real project experience. Tighten it up with actual gotchas as they
-> come up on Kotlin projects.
-
 ## Relaxed mocks hide missing stubs
 
 `mockk<T>(relaxed = true)` returns default values (0, "", empty collections,
@@ -20,33 +16,3 @@ val cart = mockk<Cart>(relaxed = true)
 val cart = mockk<Cart>()
 every { cart.getTotal() } returns 15
 ```
-
-## Dependency injection
-
-```kotlin
-// Easy to mock
-fun processPayment(order: Order, paymentClient: PaymentClient): Receipt =
-    paymentClient.charge(order.total)
-
-// Hard to mock
-fun processPayment(order: Order): Receipt {
-    val client = StripeClient(System.getenv("STRIPE_KEY"))
-    return client.charge(order.total)
-}
-```
-
-## SDK-style interfaces
-
-Prefer one method per external operation over one generic call with
-conditional branching:
-
-```kotlin
-interface Api {
-    fun getUser(id: String): User
-    fun getOrders(userId: String): List<Order>
-    fun createOrder(data: OrderData): Order
-}
-```
-
-Each method is independently mockable (`every { api.getUser(any()) } returns
-...`), with one clear shape returned per call.

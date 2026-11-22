@@ -1,7 +1,5 @@
 # Python Docstrings
 
-Formatting reference for Python docstrings. The decision of *whether* a symbol needs a docstring at all, along with the "naming → test → comment" ordering, lives in the `comments` skill; this file covers only *how* to format the ones that survive that test.
-
 ## Class Docstrings
 
 Open with what the class is **for** and why it matters to the caller, not a description of its internal mechanics.
@@ -123,12 +121,3 @@ Starting a write calls :meth:`IrTransmitGate.begin_transmit`, then
 # Incorrect: loses the cross-reference
 """Transmits IR payloads through a ``PulseWriter``."""
 ```
-
-## Checklist
-
-- [ ] Class docstring leads with user-facing purpose, not mechanics
-- [ ] Technical contracts are in named bullet sections
-- [ ] Method docstrings are one line unless non-obvious behavior needs explanation
-- [ ] Multi-parameter or non-obvious signatures use `Args:`/`Returns:`/`Raises:` blocks, and each `Args:` entry documents only its own parameter
-- [ ] Plain values and literals use `double backticks`; references to other classes/methods use `` :class:`Name` ``/`` :meth:`name` ``
-- [ ] No `__init__` docstring if class docstring covers parameters

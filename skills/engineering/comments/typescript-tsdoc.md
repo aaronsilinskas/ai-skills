@@ -1,9 +1,5 @@
 # TypeScript TSDoc
 
-> Placeholder. Seeded from general TSDoc/JSDoc knowledge, not yet from real project experience. Tighten with actual conventions and gotchas as they come up on TypeScript projects.
-
-The decision of *whether* to document a symbol lives in the `comments` skill; this file covers only TSDoc formatting.
-
 ## Don't restate the types
 
 TypeScript's types already carry parameter and return shapes, so TSDoc leans even harder on *why* than Python docstrings do. Do not add `@param {type}` JSDoc type annotations, because the type annotation is the source of truth. A `@param` tag should add meaning the type can't express, or be omitted entirely.
