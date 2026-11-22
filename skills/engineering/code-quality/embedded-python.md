@@ -1,8 +1,6 @@
 # Embedded Python (CircuitPython / MicroPython)
 
-Platform-specific rules for Python that runs on microcontrollers, LED strips, or other constrained hardware, where GC pauses, memory allocations, or CPU limits matter. Load this alongside the `code-quality` skill whenever writing or reviewing CircuitPython/MicroPython code, animation loops, per-frame update logic, per-pixel sampling, or any hot path, even if the user doesn't say "CircuitPython" explicitly.
-
-The general quality bar (readability, public-API discipline, type coverage) lives in the `code-quality` skill; this file adds the embedded constraints on top and, where they conflict, they win.
+Rules for Python on microcontrollers and other constrained hardware, where GC pauses, allocations and CPU limits matter. Where they conflict with the general `code-quality` bar, these win.
 
 ## Hot Path Definition
 

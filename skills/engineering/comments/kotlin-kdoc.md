@@ -1,9 +1,5 @@
 # Kotlin KDoc
 
-> Placeholder. Seeded from general KDoc knowledge, not yet from real project experience. Tighten with actual conventions and gotchas as they come up on Kotlin projects.
-
-The decision of *whether* to document a symbol lives in the `comments` skill; this file covers only KDoc formatting.
-
 ## Block tags
 
 KDoc uses `@param`, `@return`, and `@throws`/`@exception`, with the same "one tag entry documents one thing" discipline as Python's `Args:`. A `@param` entry describes only that parameter, never the function's broader contract.

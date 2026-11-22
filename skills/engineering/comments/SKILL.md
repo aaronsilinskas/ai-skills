@@ -1,14 +1,14 @@
 ---
 name: comments
-description: "Decide whether code needs a comment or docstring at all, and write the ones that survive that test well. Use whenever writing or reviewing comments and docstrings, adding documentation to new or undocumented code, rewriting vague or stale prose, auditing a module for missing or unnecessary docs, or deciding whether a symbol even needs a comment, even when the user just says \"add docs\", \"document this\", or \"comment this code\". Language-agnostic philosophy; language-specific formatting lives in the reference files."
+description: "Decide whether code needs a comment or docstring, and write the ones that earn it. Use when writing, reviewing or auditing comments and docstrings, or when asked to add docs or document code."
 argument-hint: "file or symbol to document or review"
 ---
 
 # Comments & Docstrings
 
-## Scope Constraint
+## Scope
 
-Only add or update comments and docstrings. Do **not** modify, refactor, or restructure code, even if you notice issues. Report code-level findings separately and leave the code unchanged. Often the _right_ fix for a bad comment is a code change, which you should recommend, not make here.
+When run on its own, change only comments and docstrings. The right fix for a bad comment is often a code change (a better name, an extracted helper, a named test): report it as a finding and leave the code as it is. When this skill is part of writing code or a wider review, make those fixes as the order below describes.
 
 ## Comments Are a Last Resort
 
@@ -41,12 +41,11 @@ def _build(self, name, options):
     ...
 ```
 
-## What to Avoid
+## What Prose Carries
 
-- **Restating the code.** If what a symbol does is obvious from its name and signature, prose adds no value.
-- **Narrating _what_ over _why_.** Describe intent and contracts, not the mechanics the reader can already see in the code.
-- **Rephrasing the types.** Don't turn a type signature into prose unless there is a non-obvious constraint the type can't express.
-- **Documentation that duplicates another source.** Two docstrings describing the same construction, or a comment echoing a test name, drift apart. Keep one source of truth.
+Prose carries only a _why_, a contract, or a units or ordering constraint the types can't express. When an assert or log message can carry that _why_, put it there: the message is the doc.
+
+Keep one source of truth. Two docstrings describing the same construction, or a comment echoing a test name, drift apart.
 
 ## Language-Specific Formatting
 
@@ -58,8 +57,6 @@ The philosophy above is language-agnostic. When you do decide prose is warranted
 
 ## Checklist
 
-- [ ] No comment or docstring narrates _what_ the code does. Naming carries intent, and tests pin behavior.
-- [ ] Any prose that remains explains a non-obvious _why_ (or an external/ordering/units contract) that naming and tests cannot convey
-- [ ] No comment or docstring merely restates the code or rephrases the types
+- [ ] Naming carries intent and tests pin behavior; any prose that remains explains a non-obvious _why_ (or an external/ordering/units contract) they cannot convey
 - [ ] Prose that survives is formatted per the target language's conventions (see the reference files)
-- [ ] Only comments/docstrings were changed. No code was modified, refactored, or restructured.
+- [ ] When run on its own: only comments and docstrings were changed, and code fixes are reported as findings
