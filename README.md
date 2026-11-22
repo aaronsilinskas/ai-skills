@@ -12,7 +12,6 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [checkout](skills/engineering/checkout/SKILL.md) | You | Check out a branch in the project directory to validate/iterate on it, clearing a blocking worktree and rescuing local changes first. |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
 | [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
 | [test-quality](skills/engineering/test-quality/SKILL.md) | You or model | Review and audit tests against a quality bar: test naming, one behavior per test, coverage planning, per-language mocking guides. Pairs with Matt's `tdd`, which owns the loop. |
@@ -32,7 +31,6 @@ Each skill here fills a gap in Matt's skills. None of them shares a name with on
 - **`comments`:** decides whether a symbol needs a comment or docstring at all, then writes the ones that earn their place.
 - **`test-quality`:** a quality bar for the tests themselves (naming, one behavior per test, coverage traced to guarantees) plus per-language mocking guides, run as its own review pass. Matt's `tdd` owns the red-green loop.
 - **`to-idea`:** captures a discovery as a lightweight `idea`-labeled issue, a stub to revisit rather than a spec. It reads the label from the project's triage-labels doc.
-- **`checkout`:** checks out a branch in the project directory so you can validate and iterate on it, clearing a worktree that holds it and rescuing local changes first.
 - **`air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
 
 ## Installation
