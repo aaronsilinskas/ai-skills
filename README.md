@@ -69,6 +69,7 @@ Claude Code plugins live under `plugins/`, listed in the marketplace file `.clau
 | Plugin | Description |
 | --- | --- |
 | [agent-progress](plugins/agent-progress/README.md) | Progress bar above the prompt and a live agents panel (`/agent-progress`) for any subagents: steps, model, context, estimated cost and time. |
+| [session-board](plugins/session-board/README.md) | Every Claude Code session at a glance from any of them: which are working, need you or finished. A band above the prompt, a `/sessions` pane, notifications, and `/sessions go` to switch to a session's Terminal tab. |
 
 Install one at the prompt of a Claude Code terminal session, answering `y` to add the marketplace and then picking a scope:
 

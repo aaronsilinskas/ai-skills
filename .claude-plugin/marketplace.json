@@ -9,6 +9,13 @@
       "description": "Mod: progress bar above the prompt and a live agents panel for any subagents, with steps, context, estimated cost and time.",
       "version": "0.2.0",
       "category": "mod"
+    },
+    {
+      "name": "session-board",
+      "source": "./plugins/session-board",
+      "description": "Mod: every Claude Code session at a glance from any of them: which are working, need you or finished, with a band, a /sessions pane, notifications and /sessions go to switch.",
+      "version": "0.1.0",
+      "category": "mod"
     }
   ]
 }

@@ -1,0 +1,17 @@
+{
+  "name": "session-board",
+  "version": "0.1.0",
+  "description": "See every Claude Code session at once: which are working, which need you (permission, question, needs input) and which finished, with a band, a /sessions pane and desktop notifications.",
+  "author": { "name": "aaronsilinskas" },
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "notify": {
+      "type": "string",
+      "title": "Desktop notifications",
+      "description": "all: when a session needs you or finishes; attention: only when it needs you; none: never",
+      "default": "all",
+      "options": ["all", "attention", "none"]
+    }
+  }
+}
