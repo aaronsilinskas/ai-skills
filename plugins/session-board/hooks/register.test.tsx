@@ -5,6 +5,7 @@ import type { Engine } from 'claude-code/testing'
 const HOME = '/home/me'
 const DIR = `${HOME}/.claude/session-board`
 const FRESH = 9_999_999_999
+const TRANSCRIPT = '/home/me/.claude/projects/work-core/me-1.jsonl'
 
 const PANE = {
   plugin: 'session-board',
@@ -49,6 +50,7 @@ function engine(on: On): World {
   on('env.get', () => ({ value: HOME }))
   on('session.id', () => ({ value: 'me-1' }))
   on('session.root', () => ({ value: '/work/core' }))
+  on('session.info', () => ({ value: { transcriptPath: TRANSCRIPT } }))
   on('command.register', () => ({ value: { command: 'sessions' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.notify', (_, e) => {
@@ -63,9 +65,16 @@ function engine(on: On): World {
     files.set(e.path, e.text)
     return { value: undefined }
   })
-  on('fs.read', (_, e) => ({ value: files.get(e.path) ?? '' }))
-  on('fs.list', () => ({
-    value: [...files.keys()].map(p => ({
+  on('fs.read', (_, e) => {
+    const text = files.get(e.path) ?? ''
+    const from = e.offset ?? 0
+    return { value: text.slice(from, e.length === undefined ? undefined : from + e.length) }
+  })
+  on('fs.stat', (_, e) => ({
+    value: { kind: 'file' as const, size: (files.get(e.path) ?? '').length, mtimeMs: t, isLink: false },
+  }))
+  on('fs.list', (_, e) => ({
+    value: [...files.keys()].filter(p => p.startsWith(`${e.path}/`)).map(p => ({
       name: p.split('/').at(-1) ?? '',
       kind: 'file' as const,
       size: 1,
@@ -78,6 +87,7 @@ function engine(on: On): World {
   on('turn.complete', () => ({ text: '' }))
   on('tool.call', () => ({ result: {} }))
   on('tool.run', () => ({ result: {} }))
+  on('command.run', () => ({ text: '' }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>engine</Text>
@@ -162,6 +172,72 @@ test("a subagent's turn leaves the session's status alone", async ($, on) => {
   await $.prompt.submit(typed('go'))
   await $.turn.complete(answered('result: nope', 'agent-1'))
   expect(mine(w.files).status).toBe('working')
+})
+
+// --- the session's name -------------------------------------------------------
+
+/** The transcript lines `/rename` leaves: the name it set, among the conversation's own rows. */
+function renamed(files: Files, ...names: string[]) {
+  const rows = names.flatMap(name => [
+    JSON.stringify({ type: 'user', message: { role: 'user', content: 'hello' } }),
+    JSON.stringify({ type: 'custom-title', customTitle: name, sessionId: 'me-1' }),
+  ])
+  files.set(TRANSCRIPT, `${rows.join('\n')}\n`)
+}
+
+const rename = (args: string) =>
+  ({ command: 'rename', args, origin: { kind: 'composer' }, presentation: 'text' }) as never
+
+test('/rename <name> names the session on the board', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.prompt.submit(typed('Add the sessions board'))
+  await $.command.run(rename('board work'))
+  expect(mine(w.files).name).toBe('board work')
+  expect(mine(w.files).title).toBe('Add the sessions board')
+})
+
+test('a bare /rename takes the name it generated from the transcript', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  renamed(w.files, 'first name', 'generated name')
+  await $.command.run(rename(''))
+  expect(mine(w.files).name).toBe('generated name')
+})
+
+test('a resumed session starts with the name its transcript holds', async ($, on) => {
+  const w = engine(on)
+  renamed(w.files, 'board work')
+  await start($)
+  expect(mine(w.files).name).toBe('board work')
+})
+
+test('a session never renamed has no name', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  expect(mine(w.files).name).toBe('')
+})
+
+test('the pane shows a named session by its name in place of its first prompt', async ($, on) => {
+  const w = engine(on)
+  other(w.files, 'named', { name: 'board work', title: 'Add the sessions board' })
+  other(w.files, 'plain', { title: 'Fix the login bug' })
+  await start($)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const text = (await ui.findAll({ type: 'Text' })).map(n => n.text).join('\n')
+  expect(text).toContain('board work')
+  expect(text).not.toContain('Add the sessions board')
+  expect(text).toContain('Fix the login bug')
+  await ui.unmount()
+})
+
+test("a named session's notification carries its name", async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.prompt.submit(typed('Add the sessions board'))
+  await $.command.run(rename('board work'))
+  await $.turn.complete(answered('needs input: which repo?'))
+  expect(w.notes).toEqual(['core · board work|needs input: which repo?'])
 })
 
 // --- permission asks ---------------------------------------------------------
