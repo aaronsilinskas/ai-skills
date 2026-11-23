@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { ButtonProps, EngineInterface, Register } from 'claude-code'
 
 import type { SessionRecord, Status } from '../types'
 
@@ -9,7 +9,7 @@ const PANE_TITLE = 'Sessions'
 const board = atom({ plugin: 'session-board', key: 'board' } as const, [], { shape: 'board-1' })
 const selfId = atom({ plugin: 'session-board', key: 'selfId' } as const, '')
 const hiddenSig = atom({ plugin: 'session-board', key: 'hiddenSig' } as const, '')
-const now = atom({ plugin: 'session-board', key: 'now' } as const, 0)
+const lastPoll = atom({ plugin: 'session-board', key: 'lastPoll' } as const, 0)
 
 const POLL_MS = 3_000
 const BEAT_MS = 20_000
@@ -17,51 +17,36 @@ const BEAT_MS = 20_000
 const STALE_MS = 90_000
 /** Files untouched for this long are not even read. */
 const FORGET_MS = 24 * 60 * 60 * 1000
-/** A permission ask the auto-mode classifier settles clears well inside this. */
+/** A permission ask a person still holds after this long earns a notification. */
 const PERMISSION_GRACE_MS = 4_000
 
-const NEEDS_YOU: ReadonlySet<Status> = new Set(['permission', 'question', 'needs-input', 'failed'])
-
-const GLYPH: Record<Status, string> = {
-  idle: '·',
-  working: '⏳',
-  permission: '⚠',
-  question: '?',
-  'needs-input': '⚠',
-  failed: '✗',
-  finished: '✓',
-  ended: '·',
-}
-const LABEL: Record<Status, string> = {
-  idle: 'idle',
-  working: 'working',
-  permission: 'needs permission',
-  question: 'asking you',
-  'needs-input': 'needs input',
-  failed: 'failed',
-  finished: 'finished',
-  ended: 'ended',
-}
 const ATTENTION = '#d97706'
 const DONE = '#16a34a'
 const FAILED = '#dc2626'
 const WORKING = '#2563eb'
 
-function colorOf(s: Status): string | undefined {
-  if (s === 'failed') return FAILED
-  if (NEEDS_YOU.has(s)) return ATTENTION
-  if (s === 'finished') return DONE
-  if (s === 'working') return WORKING
-  return undefined
+type StatusLook = {
+  glyph: string
+  label: string
+  color?: string
+  /** Order on the board: what needs you first, then working, then done. */
+  rank: number
+  needsYou: boolean
 }
 
-/** Order on the board: what needs you first, then working, then done. */
-function rank(s: Status): number {
-  if (NEEDS_YOU.has(s)) return 0
-  if (s === 'working') return 1
-  if (s === 'finished') return 2
-  return 3
+const STATUS: Record<Status, StatusLook> = {
+  permission: { glyph: '⚠', label: 'needs permission', color: ATTENTION, rank: 0, needsYou: true },
+  question: { glyph: '?', label: 'asking you', color: ATTENTION, rank: 0, needsYou: true },
+  'needs-input': { glyph: '⚠', label: 'needs input', color: ATTENTION, rank: 0, needsYou: true },
+  failed: { glyph: '✗', label: 'failed', color: FAILED, rank: 0, needsYou: true },
+  working: { glyph: '⏳', label: 'working', color: WORKING, rank: 1, needsYou: false },
+  finished: { glyph: '✓', label: 'finished', color: DONE, rank: 2, needsYou: false },
+  idle: { glyph: '·', label: 'idle', rank: 3, needsYou: false },
+  ended: { glyph: '·', label: 'ended', rank: 3, needsYou: false },
 }
+
+/** A session's status and what goes with it: what it waits on, or the turn's headline. */
+type Outcome = Pick<SessionRecord, 'status' | 'note'>
 
 function basename(path: string): string {
   const parts = path.split('/').filter(Boolean)
@@ -92,17 +77,17 @@ function callSummary(tool: string, input: unknown): string {
 
 /**
  * The turn's outcome. Honours the `result:` / `needs input:` / `failed:`
- * convention, taking the last such line; otherwise the turn simply finished.
+ * convention, taking the last such line; otherwise the turn simply finished,
+ * and its last line is the note.
  */
-function outcomeOf(answer: string): { status: Status; note: string } {
+function outcomeOf(answer: string): Outcome {
   const lines = answer.split('\n')
   for (let i = lines.length - 1; i >= 0; i--) {
     const m = /^\s*(result|needs input|failed):\s*(.*)$/i.exec(lines[i] ?? '')
     if (m) {
       const word = (m[1] ?? '').toLowerCase()
       const status: Status = word === 'result' ? 'finished' : word === 'failed' ? 'failed' : 'needs-input'
-      const rest = [m[2] ?? '', ...lines.slice(i + 1)].join(' ')
-      return { status, note: oneLine(rest, 120) }
+      return { status, note: oneLine(m[2] ?? '', 120) }
     }
   }
   const last = lines.map(l => l.trim()).filter(Boolean).at(-1) ?? ''
@@ -141,10 +126,6 @@ async function save($: EngineInterface): Promise<void> {
   await $.fs.write(`${dir}/${me.id}.json`, JSON.stringify(me))
 }
 
-function focusArgv($: EngineInterface, r: Pick<SessionRecord, 'tty' | 'jobId'>): string[] {
-  return ['/bin/sh', `${$.plugin.root}/bin/focus-session.sh`, r.tty, r.jobId]
-}
-
 /** The tty of the Claude Code process this module runs in: `ttys001`, or '' when it has none. */
 async function ttyOf($: EngineInterface): Promise<string> {
   const { stdout } = await $.process.run(['/bin/sh', '-c', 'ps -o tty= -p $PPID'])
@@ -154,36 +135,48 @@ async function ttyOf($: EngineInterface): Promise<string> {
 
 /** Brings a session to the front: its Terminal tab, or a window attached to its background job. */
 async function focusSession($: EngineInterface, r: SessionRecord): Promise<void> {
-  await $.process.run(focusArgv($, r), { timeoutMs: 10_000 }).catch(ignore)
+  const argv = ['/bin/sh', `${$.plugin.root}/bin/focus-session.sh`, r.tty, r.jobId]
+  await $.process.run(argv, { timeoutMs: 10_000 }).catch(ignore)
 }
 
-async function notifyFor($: EngineInterface, status: Status, note: string): Promise<void> {
+/** The props of a session's Go button, the same in the band and the pane. */
+function goButtonProps($: EngineInterface, r: SessionRecord): ButtonProps & { key: string } {
+  return { key: `session-board-go-${r.id}`, label: 'Go', plain: true, onPress: () => void focusSession($, r) }
+}
+
+async function notifyFor($: EngineInterface, { status, note }: Outcome): Promise<void> {
   if (notifyMode === 'none' || !me) return
-  const wants = NEEDS_YOU.has(status) || (status === 'finished' && notifyMode === 'all')
+  const wants = STATUS[status].needsYou || (status === 'finished' && notifyMode === 'all')
   if (!wants) return
-  const text = note ? `${LABEL[status]}: ${note}` : LABEL[status]
+  const label = STATUS[status].label
+  const text = note ? `${label}: ${note}` : label
   const title = me.title ? `${me.project} · ${oneLine(me.title, 40)}` : me.project
-  await $.ui.notify(text, { title, key: me.id }).catch(() => undefined)
+  await $.ui.notify(text, { title, key: me.id }).catch(ignore)
 }
 
-async function setStatus($: EngineInterface, status: Status, note: string, opts?: { quiet?: boolean }): Promise<void> {
+async function setStatus($: EngineInterface, outcome: Outcome, opts?: { quiet?: boolean }): Promise<void> {
   if (!me) return
-  if (me.status === status && me.note === note) return
-  me = { ...me, status, note, since: await $.clock.now() }
+  if (me.status === outcome.status && me.note === outcome.note) return
+  me = { ...me, ...outcome, since: await $.clock.now() }
   await save($)
-  if (!opts?.quiet) await notifyFor($, status, note)
+  if (!opts?.quiet) await notifyFor($, outcome)
   await poll($)
+}
+
+/** Settles a permission ask (allowed, refused, or decided by the classifier) and resumes work. */
+async function settleAsk($: EngineInterface, id: string | undefined): Promise<void> {
+  if (id && asking.delete(id)) await resume($)
 }
 
 /** Back to work once nothing waits on a person. */
 async function resume($: EngineInterface): Promise<void> {
   if (!me) return
-  if (asking.size > 0) {
-    const [, note] = [...asking.entries()].at(-1) ?? ['', '']
-    await setStatus($, 'permission', note, { quiet: true })
+  const pending = [...asking.values()].at(-1)
+  if (pending !== undefined) {
+    await setStatus($, { status: 'permission', note: pending }, { quiet: true })
     return
   }
-  if (me.status === 'permission' || me.status === 'question') await setStatus($, 'working', '')
+  if (me.status === 'permission' || me.status === 'question') await setStatus($, { status: 'working', note: '' })
 }
 
 async function poll($: EngineInterface): Promise<void> {
@@ -200,9 +193,15 @@ async function poll($: EngineInterface): Promise<void> {
       // A file mid-write or hand-edited: skip it this round.
     }
   }
-  found.sort((a, b) => rank(a.status) - rank(b.status) || b.since - a.since)
-  await update($, now, () => at)
+  found.sort((a, b) => STATUS[a.status].rank - STATUS[b.status].rank || b.since - a.since)
+  await update($, lastPoll, () => at)
   await update($, board, () => found)
+}
+
+/** Every live session but this one. */
+async function othersOf($: EngineInterface): Promise<SessionRecord[]> {
+  const self = await read($, selfId)
+  return (await read($, board)).filter(r => r.id !== self)
 }
 
 /**
@@ -211,16 +210,15 @@ async function poll($: EngineInterface): Promise<void> {
  */
 async function goTo($: EngineInterface, name: string): Promise<string> {
   await poll($)
-  const self = await read($, selfId)
-  const others = (await read($, board)).filter(r => r.id !== self)
+  const others = await othersOf($)
   const wanted = name.toLowerCase()
   const named = wanted ? others.filter(r => r.project.toLowerCase().startsWith(wanted)) : others
-  const waiting = named.filter(r => NEEDS_YOU.has(r.status)).sort((a, b) => a.since - b.since)
+  const waiting = named.filter(r => STATUS[r.status].needsYou).sort((a, b) => a.since - b.since)
   const done = named.filter(r => r.status === 'finished').sort((a, b) => b.since - a.since)
   const target = waiting[0] ?? done[0] ?? (wanted ? named[0] : undefined)
   if (!target) return wanted ? `No other session matches "${name}".` : 'No other session is waiting on you.'
   await focusSession($, target)
-  return `Switched to ${target.project} (${LABEL[target.status]}).`
+  return `Switched to ${target.project} (${STATUS[target.status].label}).`
 }
 
 async function openPane($: EngineInterface): Promise<void> {
@@ -241,6 +239,7 @@ export const register: Register = (on, options) => {
     const id = await $.session.id()
     const root = await $.session.root().catch(() => e.cwd)
     const at = await $.clock.now()
+    // A background job's folder is named by its id, the one `claude attach` takes.
     const jobDir = (await $.env.get('CLAUDE_JOB_DIR')) ?? ''
     const tty = await ttyOf($).catch(() => '')
     me = {
@@ -272,7 +271,7 @@ export const register: Register = (on, options) => {
   on('session.end', async ($, e, next) => {
     if (me) {
       me = { ...me, status: 'ended', since: await $.clock.now() }
-      await save($).catch(() => undefined)
+      await save($).catch(ignore)
     }
     return next(e)
   })
@@ -303,40 +302,52 @@ export const register: Register = (on, options) => {
       await save($).catch(ignore)
     }
     asking.clear()
-    await setStatus($, 'working', '', { quiet: true }).catch(ignore)
+    await setStatus($, { status: 'working', note: '' }, { quiet: true }).catch(ignore)
     return next(e)
   })
 
+  // tool.call → tool.check → (tool.judge in auto mode, or a person) → tool.run.
   on('tool.check', async ($, e, next) => {
     const verdict = await next(e)
     if (verdict.decision === 'ask' && e.approver === 'person' && e.tool_use_id) {
       const id = e.tool_use_id
       const note = callSummary(e.tool, e.input)
       asking.set(id, note)
-      await setStatus($, "permission", note, { quiet: true }).catch(ignore)
-      // Auto mode puts most asks to its classifier, which settles them fast:
-      // only a call still waiting after the grace period earns a notification.
+      await setStatus($, { status: 'permission', note }, { quiet: true }).catch(ignore)
+      // Auto mode puts most asks to its classifier (tool.judge), which settles
+      // them fast: only an ask still held after the grace period notifies.
       $.clock.after(PERMISSION_GRACE_MS, () => {
-        if (asking.has(id) && me?.status === 'permission') void notifyFor($, 'permission', note)
+        if (asking.has(id) && me?.status === 'permission') void notifyFor($, { status: 'permission', note })
       })
     }
     return verdict
   })
 
+  on('tool.judge', async ($, e, next) => {
+    const verdict = await next(e)
+    // The classifier decided: nobody is asked. An `ask` still goes to a person.
+    if (verdict.decision !== 'ask') await settleAsk($, e.tool_use_id).catch(ignore)
+    return verdict
+  })
+
+  on('tool.run', async ($, e, next) => {
+    await settleAsk($, e.tool_use_id).catch(ignore)
+    return next(e)
+  })
+
   on('tool.call', async ($, e, next) => {
-    const id = e.tool_use_id
-    if (id && asking.delete(id)) await resume($).catch(ignore)
     const isQuestion = e.tool === 'AskUserQuestion' || e.tool === 'ExitPlanMode'
     if (isQuestion) {
       const args = e as unknown as { questions?: { question?: string }[] }
       const q = args.questions?.[0]?.question ?? (e.tool === 'ExitPlanMode' ? 'plan ready for review' : '')
-      await setStatus($, "question", oneLine(q, 100)).catch(ignore)
+      await setStatus($, { status: 'question', note: oneLine(q, 100) }).catch(ignore)
     }
     try {
       return await next(e)
     } finally {
-      if (id && asking.delete(id)) await resume($).catch(ignore)
-      if (isQuestion) await resume($).catch(ignore)
+      // A refused call never reaches tool.run: settle its ask here.
+      const wasAsking = e.tool_use_id ? asking.delete(e.tool_use_id) : false
+      if (wasAsking || isQuestion) await resume($).catch(ignore)
     }
   })
 
@@ -345,12 +356,12 @@ export const register: Register = (on, options) => {
     if (e.agentId !== undefined || !me) return result
     asking.clear()
     if (e.reason === 'aborted') {
-      await setStatus($, 'idle', 'interrupted', { quiet: true })
+      await setStatus($, { status: 'idle', note: 'interrupted' }, { quiet: true })
     } else if (e.reason === 'refusal' || e.reason === 'error') {
-      await setStatus($, 'failed', e.reason === 'error' ? 'the turn ended on an API error' : 'the model refused')
+      const note = e.reason === 'error' ? 'the turn ended on an API error' : 'the model refused'
+      await setStatus($, { status: 'failed', note })
     } else {
-      const { status, note } = outcomeOf(e.answer)
-      await setStatus($, status, note)
+      await setStatus($, outcomeOf(e.answer))
     }
     return result
   })
@@ -360,18 +371,18 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
-    const self = await read($, selfId)
-    const others = (await read($, board)).filter(r => r.id !== self && r.status !== 'idle')
+    const others = (await othersOf($)).filter(r => r.status !== 'idle')
     const sig = signatureOf(others)
-    if (others.length === 0 || (sig !== '' && sig === (await read($, hiddenSig))) ) return next(e)
+    if (others.length === 0 || (sig !== '' && sig === (await read($, hiddenSig)))) return next(e)
 
     const drawn = await Promise.resolve(next(e)).catch(() => null)
     const below = drawn && typeof drawn === 'object' && (drawn as { type?: string }).type !== 'engine' ? drawn : null
     const { Box, Text, Button } = $.ui.resolve(e)
 
-    const needs = others.filter(r => NEEDS_YOU.has(r.status))
+    const needs = others.filter(r => STATUS[r.status].needsYou)
     const working = others.filter(r => r.status === 'working').length
     const done = others.filter(r => r.status === 'finished').length
+    // Named in full only while they fit one row; the rest are counted.
     const cols = e.props.bodyColumns || 80
     const shown = needs.slice(0, cols >= 120 ? 2 : 1)
 
@@ -380,11 +391,15 @@ export const register: Register = (on, options) => {
         <Box flexDirection="row" gap={1}>
           {shown.map(r => (
             <Box key={r.id} flexDirection="row" flexShrink={1}>
-              <Text color={colorOf(r.status)} bold>
-                {GLYPH[r.status]} {r.project}
+              <Text color={STATUS[r.status].color} bold>
+                {STATUS[r.status].glyph} {r.project}
               </Text>
-              <Text wrap="truncate-end"> {LABEL[r.status]}{r.note ? ` · ${oneLine(r.note, 40)}` : ''}</Text>
-              <Button key={`session-board-go-${r.id}`} label="Go" plain onPress={() => void focusSession($, r)} />
+              <Text wrap="truncate-end">
+                {' '}
+                {STATUS[r.status].label}
+                {r.note ? ` · ${oneLine(r.note, 40)}` : ''}
+              </Text>
+              <Button {...goButtonProps($, r)} />
             </Box>
           ))}
           {needs.length > shown.length && <Text color={ATTENTION}>+{needs.length - shown.length} need you</Text>}
@@ -407,7 +422,7 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const list = await read($, board)
     const self = await read($, selfId)
-    const at = await read($, now)
+    const at = await read($, lastPoll)
     const cols = Math.max(24, e.props.bodyColumns || 40)
 
     if (list.length === 0) return <Text dimColor>No live sessions.</Text>
@@ -417,16 +432,14 @@ export const register: Register = (on, options) => {
         {list.map(r => (
           <Box key={r.id} flexDirection="column" marginBottom={1}>
             <Box flexDirection="row" gap={1}>
-              <Text color={colorOf(r.status)}>{GLYPH[r.status]}</Text>
+              <Text color={STATUS[r.status].color}>{STATUS[r.status].glyph}</Text>
               <Text bold wrap="truncate-end">
                 {r.project}
                 {r.id === self ? ' (this one)' : ''}
               </Text>
-              <Text color={colorOf(r.status)}>{LABEL[r.status]}</Text>
+              <Text color={STATUS[r.status].color}>{STATUS[r.status].label}</Text>
               <Text dimColor>{age(at - r.since)}</Text>
-              {r.id !== self && (
-                <Button key={`session-board-go-${r.id}`} label="Go" plain onPress={() => void focusSession($, r)} />
-              )}
+              {r.id !== self && <Button {...goButtonProps($, r)} />}
             </Box>
             {r.title !== '' && (
               <Text dimColor wrap="truncate-end">

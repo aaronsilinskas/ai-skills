@@ -35,7 +35,8 @@ declare module 'claude-code' {
       selfId: string
       /** Band signature the person dismissed; the band returns when it changes. */
       hiddenSig: string
-      now: number
+      /** When the board was last read, epoch ms: what the pane's ages count from. */
+      lastPoll: number
     }
   }
 }
