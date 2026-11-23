@@ -39,7 +39,11 @@ type World = {
 }
 
 /** Stands in for the engine: a file system in memory, a stepping clock, one session. */
-function engine(on: On, opts: { rmError?: string } = {}): World {
+/** A finished process's result. */
+const exited = (exitCode: number, stdout: string, stderr = '') =>
+  ({ value: { exitCode, stdout, stderr, isStdoutTruncated: false, isStderrTruncated: false } }) as const
+
+function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
   const files: Files = new Map()
   const mtimes = new Map<string, number>()
   const notes: string[] = []
@@ -49,7 +53,7 @@ function engine(on: On, opts: { rmError?: string } = {}): World {
   on('clock.now', () => ({ value: (t += 1000) }))
   on('clock.every', () => ({ value: undefined }))
   on('clock.after', () => new Promise(done => timers.push(() => done({ value: undefined }))))
-  on('env.get', () => ({ value: HOME }))
+  on('env.get', () => ({ value: 'home' in opts ? opts.home : HOME }))
   on('session.id', () => ({ value: 'me-1' }))
   on('session.root', () => ({ value: '/work/core' }))
   on('command.register', () => ({ value: { command: 'sessions' } }))
@@ -60,16 +64,15 @@ function engine(on: On, opts: { rmError?: string } = {}): World {
   })
   on('process.run', (_, e) => {
     runs.push([...e.argv])
-    if (e.argv[0] === '/bin/rm' && opts.rmError !== undefined) {
-      return { value: { exitCode: 1, stdout: '', stderr: opts.rmError, isStdoutTruncated: false, isStderrTruncated: false } }
-    }
+    if (e.argv[0] === '/bin/rm' && opts.rmError !== undefined) return exited(1, '', opts.rmError)
     if (e.argv[0] === '/bin/rm') for (const p of e.argv.slice(e.argv.indexOf('--') + 1)) files.delete(p)
-    return { value: { exitCode: 0, stdout: '??\n', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    return exited(0, '??\n')
   })
   on('fs.write', (_, e) => {
     files.set(e.path, e.text)
     return { value: undefined }
   })
+  on('fs.exists', (_, e) => ({ value: files.has(e.path) }))
   on('fs.read', (_, e) => ({ value: files.get(e.path) ?? '' }))
   on('fs.list', () => ({
     value: [...files.keys()].map(p => ({
@@ -392,10 +395,18 @@ test('/sessions clean runs rm once, on exact paths inside the session-board fold
   expect(rm[0]?.slice(3).sort()).toEqual([`${DIR}/crashed.json`, `${DIR}/gone.json`])
 })
 
-test('/sessions clean says so when rm fails', async ($, on) => {
+test('/sessions clean says how many it removed when rm fails', async ($, on) => {
   const w = engine(on, { rmError: 'rm: gone.json: Permission denied\n' })
   other(w.files, 'gone', { status: 'ended' })
   await start($)
-  expect((await $.command.run(sessionsClean)).text).toBe('Could not remove every status file: rm: gone.json: Permission denied')
+  expect((await $.command.run(sessionsClean)).text).toBe('Removed 0 status files of 1: rm: gone.json: Permission denied')
   expect(w.files.has(`${DIR}/gone.json`)).toBe(true)
+})
+
+test('/sessions clean removes nothing when HOME is not an absolute path', async ($, on) => {
+  const w = engine(on, { home: '' })
+  w.files.set('/.claude/session-board/gone.json', JSON.stringify({ id: 'gone', status: 'ended', beat: 1 }))
+  await start($)
+  expect((await $.command.run(sessionsClean)).text).toBe('The session board has not started yet.')
+  expect(removals(w.runs)).toEqual([])
 })

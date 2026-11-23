@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { ButtonProps, EngineInterface, Register } from 'claude-code'
+import type { ButtonProps, EngineInterface, FsEntry, Register } from 'claude-code'
 
 import type { SessionRecord, Status } from '../types'
 
@@ -179,6 +179,15 @@ async function resume($: EngineInterface): Promise<void> {
   if (me.status === 'permission' || me.status === 'question') await setStatus($, { status: 'working', note: '' })
 }
 
+/** A status file's name: a session id and `.json`, nothing that could leave the folder. */
+const STATUS_FILE = /^[A-Za-z0-9][A-Za-z0-9_-]*\.json$/
+
+/** The status files in the board's folder, the same set for the board and for cleaning. */
+async function listStatusFiles($: EngineInterface): Promise<FsEntry[]> {
+  const entries = await $.fs.list(dir).catch(() => [])
+  return entries.filter(f => f.kind === 'file' && STATUS_FILE.test(f.name))
+}
+
 /** A status file's record, or null for one mid-write, hand-edited or not a record. */
 async function readRecord($: EngineInterface, path: string): Promise<SessionRecord | null> {
   try {
@@ -192,10 +201,9 @@ async function readRecord($: EngineInterface, path: string): Promise<SessionReco
 async function poll($: EngineInterface): Promise<void> {
   if (!dir) return
   const at = await $.clock.now()
-  const entries = await $.fs.list(dir).catch(() => [])
   const found: SessionRecord[] = []
-  for (const f of entries) {
-    if (f.kind !== 'file' || !f.name.endsWith('.json') || at - f.mtimeMs > FORGET_MS) continue
+  for (const f of await listStatusFiles($)) {
+    if (at - f.mtimeMs > FORGET_MS) continue
     const r = await readRecord($, `${dir}/${f.name}`)
     if (r && isLive(r, at)) found.push(r)
   }
@@ -227,8 +235,9 @@ async function goTo($: EngineInterface, name: string): Promise<string> {
   return `Switched to ${target.project} (${STATUS[target.status].label}).`
 }
 
-/** A status file's name: a session id and `.json`, nothing that could leave the folder. */
-const STATUS_FILE = /^[A-Za-z0-9][A-Za-z0-9_-]*\.json$/
+function fileCount(n: number): string {
+  return `${n} status ${n === 1 ? 'file' : 'files'}`
+}
 
 /**
  * Removes the status files of sessions that ended or went stale, and files
@@ -239,24 +248,25 @@ async function clean($: EngineInterface): Promise<string> {
   if (!dir) return 'The session board has not started yet.'
   const at = await $.clock.now()
   const self = await read($, selfId)
-  const entries = await $.fs.list(dir).catch(() => [])
-  const doomed: string[] = []
-  for (const f of entries) {
-    if (f.kind !== 'file' || !STATUS_FILE.test(f.name) || f.name === `${self}.json`) continue
+  const toRemove: string[] = []
+  for (const f of await listStatusFiles($)) {
+    if (f.name === `${self}.json`) continue
     const path = `${dir}/${f.name}`
     const r = await readRecord($, path)
     if (r && (r.id === self || isLive(r, at))) continue
     // An unreadable file may be mid-write: removed only once it is old.
-    if (r || at - f.mtimeMs > FORGET_MS) doomed.push(path)
+    if (r || at - f.mtimeMs > FORGET_MS) toRemove.push(path)
   }
-  if (doomed.length === 0) return 'No ended or stale status files to remove.'
-  const ran = await $.process.run(['/bin/rm', '-f', '--', ...doomed], { timeoutMs: 10_000 }).catch((err: unknown) => ({
+  if (toRemove.length === 0) return 'No ended or stale status files to remove.'
+  const removal = await $.process.run(['/bin/rm', '-f', '--', ...toRemove], { timeoutMs: 10_000 }).catch((err: unknown) => ({
     exitCode: 1,
     stderr: err instanceof Error ? err.message : String(err),
   }))
   await poll($)
-  if (ran.exitCode !== 0) return `Could not remove every status file: ${oneLine(ran.stderr, 200)}`
-  return `Removed ${doomed.length} status ${doomed.length === 1 ? 'file' : 'files'}.`
+  if (removal.exitCode === 0) return `Removed ${fileCount(toRemove.length)}.`
+  const left = await Promise.all(toRemove.map(p => $.fs.exists(p).catch(() => true)))
+  const removed = left.filter(isLeft => !isLeft).length
+  return `Removed ${fileCount(removed)} of ${toRemove.length}: ${oneLine(removal.stderr, 200)}`
 }
 
 async function openPane($: EngineInterface): Promise<void> {
@@ -273,7 +283,8 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     const home = await $.env.get('HOME')
-    dir = `${home}/.claude/session-board`
+    // Without an absolute home there is no board: never a folder relative to the project.
+    dir = home?.startsWith('/') ? `${home}/.claude/session-board` : ''
     const id = await $.session.id()
     const root = await $.session.root().catch(() => e.cwd)
     const at = await $.clock.now()
