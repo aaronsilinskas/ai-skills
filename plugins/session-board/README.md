@@ -9,7 +9,7 @@ See every Claude Code session on this machine at once, from any of them.
 Each session writes a small status file, `<session-id>.json`, to a `session-board` folder in your Claude Code configuration folder (`.claude` in your home), and reads everyone else's every few seconds.
 
 - **Band above the prompt** in every session: other sessions that need you (permission prompt, a question, `needs input:`, failed): the first by name (two in a window 120 columns wide), the rest counted, plus counts of working and finished ones. `Sessions` opens the pane; `✕` hides the band until something changes.
-- **`/sessions` pane**: every live session, sorted needs-you first, with its first prompt, its status, how long ago it changed, and what it waits on or the turn's headline.
+- **`/sessions` pane**: every live session, sorted needs-you first, with its `/rename` name (or, unnamed, its first prompt), its status, how long ago it changed, and what it waits on or the turn's headline.
 - **Desktop notifications** through your normal notification channel when a session needs you or finishes (`notify`: `all`, `attention` or `none`). A permission prompt notifies only if it is still waiting after 4 seconds, so asks that auto mode's classifier settles stay quiet.
 
 ## Switching to a session (macOS Terminal)

@@ -19,6 +19,8 @@ const STALE_MS = 90_000
 const FORGET_MS = 24 * 60 * 60 * 1000
 /** A permission ask a person still holds after this long earns a notification. */
 const PERMISSION_GRACE_MS = 4_000
+/** How much of the transcript's end is searched for its name: the most one read returns. */
+const NAME_TAIL_BYTES = 4 * 1024 * 1024
 
 const ATTENTION = '#d97706'
 const DONE = '#16a34a'
@@ -94,6 +96,41 @@ function outcomeOf(answer: string): Outcome {
   return { status: 'finished', note: oneLine(last, 120) }
 }
 
+/** What the board calls a session: its `/rename` name, else its first prompt. */
+function labelOf(r: SessionRecord): string {
+  return r.name || r.title
+}
+
+/**
+ * The latest name `/rename` gave this session, or '' for none (or no
+ * transcript to read). The engine records each one in the transcript as a
+ * `custom-title` row and repeats it as the transcript grows, so the end of the
+ * file holds the current name.
+ */
+async function transcriptName($: EngineInterface): Promise<string> {
+  return readTranscriptName($).catch(() => '')
+}
+
+async function readTranscriptName($: EngineInterface): Promise<string> {
+  const { transcriptPath } = await $.session.info()
+  if (!transcriptPath) return ''
+  const { size } = await $.fs.stat(transcriptPath)
+  const offset = Math.max(0, size - NAME_TAIL_BYTES)
+  const tail = await $.fs.read(transcriptPath, { offset, length: size - offset })
+  const lines = tail.split('\n')
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i] ?? ''
+    if (!line.includes('"custom-title"')) continue
+    try {
+      const row = JSON.parse(line) as { type?: string; customTitle?: unknown }
+      if (row.type === 'custom-title' && typeof row.customTitle === 'string') return oneLine(row.customTitle, 80)
+    } catch {
+      // The tail's first line may start mid-row.
+    }
+  }
+  return ''
+}
+
 /** What the band shows; dismissing it hides it until this changes. */
 function signatureOf(others: SessionRecord[]): string {
   return others
@@ -150,7 +187,8 @@ async function notifyFor($: EngineInterface, { status, note }: Outcome): Promise
   if (!wants) return
   const label = STATUS[status].label
   const text = note ? `${label}: ${note}` : label
-  const title = me.title ? `${me.project} · ${oneLine(me.title, 40)}` : me.project
+  const sessionLabel = labelOf(me)
+  const title = sessionLabel ? `${me.project} · ${oneLine(sessionLabel, 40)}` : me.project
   await $.ui.notify(text, { title, key: me.id }).catch(ignore)
 }
 
@@ -291,10 +329,13 @@ export const register: Register = (on, options) => {
     // A background job's folder is named by its id, the one `claude attach` takes.
     const jobDir = (await $.env.get('CLAUDE_JOB_DIR')) ?? ''
     const tty = await ttyOf($).catch(() => '')
+    // A resumed session, or this module reloaded, keeps the name it was given.
+    const name = await transcriptName($)
     me = {
       id,
       project: basename(root),
       cwd: e.cwd,
+      name,
       title: '',
       status: 'idle',
       since: at,
@@ -336,6 +377,20 @@ export const register: Register = (on, options) => {
     }
     await openPane($)
     return { text: 'Sessions pane opened.' }
+  })
+
+  on('command.run', { command: 'rename' }, async ($, e, next) => {
+    const result = await next(e)
+    if (!me) return result
+    // The transcript holds the name the engine kept: a generated one for a
+    // bare `/rename`, and none new for a rename it refused.
+    const name = (await transcriptName($)) || oneLine(e.args, 80)
+    if (name && name !== me.name) {
+      me = { ...me, name }
+      await save($).catch(ignore)
+      await poll($).catch(ignore)
+    }
+    return result
   })
 
   // ---------------------------------------------------------------------------
@@ -492,10 +547,10 @@ export const register: Register = (on, options) => {
               <Text dimColor>{age(at - r.since)}</Text>
               {r.id !== self && <Button {...goButtonProps($, r)} />}
             </Box>
-            {r.title !== '' && (
+            {labelOf(r) !== '' && (
               <Text dimColor wrap="truncate-end">
                 {'  '}
-                {oneLine(r.title, cols - 2)}
+                {oneLine(labelOf(r), cols - 2)}
               </Text>
             )}
             {r.note !== '' && (

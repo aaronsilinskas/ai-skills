@@ -5,6 +5,7 @@ import type { Engine } from 'claude-code/testing'
 const HOME = '/home/me'
 const DIR = `${HOME}/.claude/session-board`
 const FRESH = 9_999_999_999
+const TRANSCRIPT = `${HOME}/.claude/projects/work-core/me-1.jsonl`
 
 const PANE = {
   plugin: 'session-board',
@@ -34,15 +35,17 @@ type World = {
   mtimes: Map<string, number>
   notes: string[]
   runs: string[][]
+  /** Whether `/rename` refuses, as it does a bare one with no conversation to name. */
+  renameRefused: boolean
   /** Fires the timers `$.clock.after` booked, as if their time came. */
   fireTimers: () => Promise<void>
 }
 
-/** Stands in for the engine: a file system in memory, a stepping clock, one session. */
 /** A finished process's result. */
 const exited = (exitCode: number, stdout: string, stderr = '') =>
   ({ value: { exitCode, stdout, stderr, isStdoutTruncated: false, isStderrTruncated: false } }) as const
 
+/** Stands in for the engine: a file system in memory, a stepping clock, one session. */
 function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
   const files: Files = new Map()
   const mtimes = new Map<string, number>()
@@ -56,6 +59,7 @@ function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
   on('env.get', () => ({ value: 'home' in opts ? opts.home : HOME }))
   on('session.id', () => ({ value: 'me-1' }))
   on('session.root', () => ({ value: '/work/core' }))
+  on('session.info', () => ({ value: { transcriptPath: TRANSCRIPT } }))
   on('command.register', () => ({ value: { command: 'sessions' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.notify', (_, e) => {
@@ -73,9 +77,16 @@ function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
     return { value: undefined }
   })
   on('fs.exists', (_, e) => ({ value: files.has(e.path) }))
-  on('fs.read', (_, e) => ({ value: files.get(e.path) ?? '' }))
-  on('fs.list', () => ({
-    value: [...files.keys()].map(p => ({
+  on('fs.read', (_, e) => {
+    const text = files.get(e.path) ?? ''
+    const from = e.offset ?? 0
+    return { value: text.slice(from, e.length === undefined ? undefined : from + e.length) }
+  })
+  on('fs.stat', (_, e) => ({
+    value: { kind: 'file' as const, size: (files.get(e.path) ?? '').length, mtimeMs: t, isLink: false },
+  }))
+  on('fs.list', (_, e) => ({
+    value: [...files.keys()].filter(p => p.startsWith(`${e.path}/`)).map(p => ({
       name: p.split('/').at(-1) ?? '',
       kind: 'file' as const,
       size: 1,
@@ -88,6 +99,11 @@ function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
   on('turn.complete', () => ({ text: '' }))
   on('tool.call', () => ({ result: {} }))
   on('tool.run', () => ({ result: {} }))
+  on('command.run', (_, e) => {
+    if (e.command !== 'rename' || world.renameRefused || !e.args.trim()) return { text: '' }
+    nameInTranscript(files, e.args.trim())
+    return { text: `Session renamed to: ${e.args.trim()}` }
+  })
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>engine</Text>
@@ -98,7 +114,8 @@ function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
     // The timer's callback runs once its dispatch resolves.
     for (let i = 0; i < 50; i++) await Promise.resolve()
   }
-  return { files, mtimes, notes, runs, fireTimers }
+  const world: World = { files, mtimes, notes, runs, renameRefused: false, fireTimers }
+  return world
 }
 
 /** Another session's status file, live unless `beat` says otherwise. */
@@ -106,6 +123,19 @@ function other(files: Files, id: string, fields: Record<string, unknown>) {
   const record = { id, project: id, cwd: '/', title: `task ${id}`, status: 'working', since: 1, note: '', beat: FRESH, tty: '', jobId: '', ...fields }
   files.set(`${DIR}/${id}.json`, JSON.stringify(record))
 }
+
+/** Appends the rows `/rename` leaves in the transcript: a conversation row, then the name it set. */
+function nameInTranscript(files: Files, name: string) {
+  const rows = [
+    JSON.stringify({ type: 'user', message: { role: 'user', content: 'hello' } }),
+    JSON.stringify({ type: 'custom-title', customTitle: name, sessionId: 'me-1' }),
+  ]
+  files.set(TRANSCRIPT, `${files.get(TRANSCRIPT) ?? ''}${rows.join('\n')}\n`)
+}
+
+/** A slash command typed at the composer. */
+const slashCommand = (command: string, args: string) =>
+  ({ command, args, origin: { kind: 'composer' }, presentation: 'text' }) as never
 
 /** A prompt typed at the composer. */
 const typed = (text: string) => ({ text, wait: false, origin: { kind: 'composer' as const } })
@@ -172,6 +202,87 @@ test("a subagent's turn leaves the session's status alone", async ($, on) => {
   await $.prompt.submit(typed('go'))
   await $.turn.complete(answered('result: nope', 'agent-1'))
   expect(mine(w.files).status).toBe('working')
+})
+
+// --- the session's name -------------------------------------------------------
+
+const rename = (args: string) => slashCommand('rename', args)
+
+test('/rename <name> names the session on the board', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.command.run(rename('board work'))
+  expect(mine(w.files).name).toBe('board work')
+})
+
+test('renaming a session keeps its first prompt', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.prompt.submit(typed('Add the sessions board'))
+  await $.command.run(rename('board work'))
+  expect(mine(w.files).title).toBe('Add the sessions board')
+})
+
+test('a bare /rename takes the name it generated from the transcript', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  nameInTranscript(w.files, 'first name')
+  nameInTranscript(w.files, 'generated name')
+  await $.command.run(rename(''))
+  expect(mine(w.files).name).toBe('generated name')
+})
+
+test('a /rename the engine refused keeps the name the session had', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.command.run(rename('board work'))
+  w.renameRefused = true
+  await $.command.run(rename('not kept'))
+  expect(mine(w.files).name).toBe('board work')
+})
+
+test('a resumed session starts with the name its transcript holds', async ($, on) => {
+  const w = engine(on)
+  nameInTranscript(w.files, 'board work')
+  await start($)
+  expect(mine(w.files).name).toBe('board work')
+})
+
+test('a session never renamed has no name', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  expect(mine(w.files).name).toBe('')
+})
+
+test('the pane shows a named session by its name in place of its first prompt', async ($, on) => {
+  const w = engine(on)
+  other(w.files, 'named', { name: 'board work', title: 'Add the sessions board' })
+  await start($)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const text = (await ui.findAll({ type: 'Text' })).map(n => n.text).join('\n')
+  expect(text).toContain('board work')
+  expect(text).not.toContain('Add the sessions board')
+  await ui.unmount()
+})
+
+test('the pane shows a record with no name field, as an older version wrote it, by its first prompt', async ($, on) => {
+  const w = engine(on)
+  other(w.files, 'older', { title: 'Fix the login bug' })
+  expect(JSON.parse(w.files.get(`${DIR}/older.json`) ?? '{}')).not.toHaveProperty('name')
+  await start($)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const text = (await ui.findAll({ type: 'Text' })).map(n => n.text).join('\n')
+  expect(text).toContain('Fix the login bug')
+  await ui.unmount()
+})
+
+test("a named session's notification carries its name", async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.prompt.submit(typed('Add the sessions board'))
+  await $.command.run(rename('board work'))
+  await $.turn.complete(answered('needs input: which repo?'))
+  expect(w.notes).toEqual(['core · board work|needs input: which repo?'])
 })
 
 // --- permission asks ---------------------------------------------------------
@@ -307,8 +418,7 @@ test('Go on the band runs the focus script for that session', async ($, on) => {
   await ui.unmount()
 })
 
-const sessionsGo = (args: string) =>
-  ({ command: 'sessions', args, origin: { kind: 'composer' }, presentation: 'text' }) as never
+const sessionsGo = (args: string) => slashCommand('sessions', args)
 
 test('/sessions go switches to the session that has waited on you longest', async ($, on) => {
   const w = engine(on)
@@ -339,7 +449,7 @@ test('/sessions go <project> with no match switches nowhere', async ($, on) => {
 
 // --- cleaning ----------------------------------------------------------------
 
-const sessionsClean = { command: 'sessions', args: 'clean', origin: { kind: 'composer' }, presentation: 'text' } as never
+const sessionsClean = slashCommand('sessions', 'clean')
 
 const removals = (runs: string[][]) => runs.filter(a => a[0] === '/bin/rm')
 

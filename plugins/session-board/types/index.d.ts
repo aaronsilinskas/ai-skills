@@ -13,6 +13,11 @@ export type SessionRecord = {
   id: string
   project: string
   cwd: string
+  /**
+   * The name `/rename` gave the session, '' for none. Shown in place of
+   * `title`; absent from a record an older version of the plugin wrote.
+   */
+  name?: string
   /** The session's first prompt, cut short. */
   title: string
   status: Status
