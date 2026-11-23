@@ -5,7 +5,7 @@ import type { Engine } from 'claude-code/testing'
 const HOME = '/home/me'
 const DIR = `${HOME}/.claude/session-board`
 const FRESH = 9_999_999_999
-const TRANSCRIPT = '/home/me/.claude/projects/work-core/me-1.jsonl'
+const TRANSCRIPT = `${HOME}/.claude/projects/work-core/me-1.jsonl`
 
 const PANE = {
   plugin: 'session-board',
@@ -33,6 +33,8 @@ type World = {
   files: Files
   notes: string[]
   runs: string[][]
+  /** Whether `/rename` refuses, as it does a bare one with no conversation to name. */
+  renameRefused: boolean
   /** Fires the timers `$.clock.after` booked, as if their time came. */
   fireTimers: () => Promise<void>
 }
@@ -87,7 +89,11 @@ function engine(on: On): World {
   on('turn.complete', () => ({ text: '' }))
   on('tool.call', () => ({ result: {} }))
   on('tool.run', () => ({ result: {} }))
-  on('command.run', () => ({ text: '' }))
+  on('command.run', (_, e) => {
+    if (e.command !== 'rename' || world.renameRefused || !e.args.trim()) return { text: '' }
+    nameInTranscript(files, e.args.trim())
+    return { text: `Session renamed to: ${e.args.trim()}` }
+  })
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>engine</Text>
@@ -98,7 +104,8 @@ function engine(on: On): World {
     // The timer's callback runs once its dispatch resolves.
     for (let i = 0; i < 50; i++) await Promise.resolve()
   }
-  return { files, notes, runs, fireTimers }
+  const world: World = { files, notes, runs, renameRefused: false, fireTimers }
+  return world
 }
 
 /** Another session's status file, live unless `beat` says otherwise. */
@@ -106,6 +113,19 @@ function other(files: Files, id: string, fields: Record<string, unknown>) {
   const record = { id, project: id, cwd: '/', title: `task ${id}`, status: 'working', since: 1, note: '', beat: FRESH, tty: '', jobId: '', ...fields }
   files.set(`${DIR}/${id}.json`, JSON.stringify(record))
 }
+
+/** Appends the rows `/rename` leaves in the transcript: a conversation row, then the name it set. */
+function nameInTranscript(files: Files, name: string) {
+  const rows = [
+    JSON.stringify({ type: 'user', message: { role: 'user', content: 'hello' } }),
+    JSON.stringify({ type: 'custom-title', customTitle: name, sessionId: 'me-1' }),
+  ]
+  files.set(TRANSCRIPT, `${files.get(TRANSCRIPT) ?? ''}${rows.join('\n')}\n`)
+}
+
+/** A slash command typed at the composer. */
+const slashCommand = (command: string, args: string) =>
+  ({ command, args, origin: { kind: 'composer' }, presentation: 'text' }) as never
 
 /** A prompt typed at the composer. */
 const typed = (text: string) => ({ text, wait: false, origin: { kind: 'composer' as const } })
@@ -176,38 +196,44 @@ test("a subagent's turn leaves the session's status alone", async ($, on) => {
 
 // --- the session's name -------------------------------------------------------
 
-/** The transcript lines `/rename` leaves: the name it set, among the conversation's own rows. */
-function renamed(files: Files, ...names: string[]) {
-  const rows = names.flatMap(name => [
-    JSON.stringify({ type: 'user', message: { role: 'user', content: 'hello' } }),
-    JSON.stringify({ type: 'custom-title', customTitle: name, sessionId: 'me-1' }),
-  ])
-  files.set(TRANSCRIPT, `${rows.join('\n')}\n`)
-}
-
-const rename = (args: string) =>
-  ({ command: 'rename', args, origin: { kind: 'composer' }, presentation: 'text' }) as never
+const rename = (args: string) => slashCommand('rename', args)
 
 test('/rename <name> names the session on the board', async ($, on) => {
   const w = engine(on)
   await start($)
-  await $.prompt.submit(typed('Add the sessions board'))
   await $.command.run(rename('board work'))
   expect(mine(w.files).name).toBe('board work')
+})
+
+test('renaming a session keeps its first prompt', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.prompt.submit(typed('Add the sessions board'))
+  await $.command.run(rename('board work'))
   expect(mine(w.files).title).toBe('Add the sessions board')
 })
 
 test('a bare /rename takes the name it generated from the transcript', async ($, on) => {
   const w = engine(on)
   await start($)
-  renamed(w.files, 'first name', 'generated name')
+  nameInTranscript(w.files, 'first name')
+  nameInTranscript(w.files, 'generated name')
   await $.command.run(rename(''))
   expect(mine(w.files).name).toBe('generated name')
 })
 
+test('a /rename the engine refused keeps the name the session had', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await $.command.run(rename('board work'))
+  w.renameRefused = true
+  await $.command.run(rename('not kept'))
+  expect(mine(w.files).name).toBe('board work')
+})
+
 test('a resumed session starts with the name its transcript holds', async ($, on) => {
   const w = engine(on)
-  renamed(w.files, 'board work')
+  nameInTranscript(w.files, 'board work')
   await start($)
   expect(mine(w.files).name).toBe('board work')
 })
@@ -221,12 +247,21 @@ test('a session never renamed has no name', async ($, on) => {
 test('the pane shows a named session by its name in place of its first prompt', async ($, on) => {
   const w = engine(on)
   other(w.files, 'named', { name: 'board work', title: 'Add the sessions board' })
-  other(w.files, 'plain', { title: 'Fix the login bug' })
   await start($)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   const text = (await ui.findAll({ type: 'Text' })).map(n => n.text).join('\n')
   expect(text).toContain('board work')
   expect(text).not.toContain('Add the sessions board')
+  await ui.unmount()
+})
+
+test('the pane shows a record with no name field, as an older version wrote it, by its first prompt', async ($, on) => {
+  const w = engine(on)
+  other(w.files, 'older', { title: 'Fix the login bug' })
+  expect(JSON.parse(w.files.get(`${DIR}/older.json`) ?? '{}')).not.toHaveProperty('name')
+  await start($)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const text = (await ui.findAll({ type: 'Text' })).map(n => n.text).join('\n')
   expect(text).toContain('Fix the login bug')
   await ui.unmount()
 })
@@ -373,8 +408,7 @@ test('Go on the band runs the focus script for that session', async ($, on) => {
   await ui.unmount()
 })
 
-const sessionsGo = (args: string) =>
-  ({ command: 'sessions', args, origin: { kind: 'composer' }, presentation: 'text' }) as never
+const sessionsGo = (args: string) => slashCommand('sessions', args)
 
 test('/sessions go switches to the session that has waited on you longest', async ($, on) => {
   const w = engine(on)

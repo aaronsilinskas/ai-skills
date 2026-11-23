@@ -96,17 +96,22 @@ function outcomeOf(answer: string): Outcome {
   return { status: 'finished', note: oneLine(last, 120) }
 }
 
-/** What a session is called: its `/rename` name, else its first prompt. */
-function titleOf(r: SessionRecord): string {
+/** What the board calls a session: its `/rename` name, else its first prompt. */
+function labelOf(r: SessionRecord): string {
   return r.name || r.title
 }
 
 /**
- * The latest name `/rename` gave this session, or '' for none. The engine
- * records each one in the transcript as a `custom-title` row and repeats it
- * as the transcript grows, so the end of the file holds the current name.
+ * The latest name `/rename` gave this session, or '' for none (or no
+ * transcript to read). The engine records each one in the transcript as a
+ * `custom-title` row and repeats it as the transcript grows, so the end of the
+ * file holds the current name.
  */
 async function transcriptName($: EngineInterface): Promise<string> {
+  return readTranscriptName($).catch(() => '')
+}
+
+async function readTranscriptName($: EngineInterface): Promise<string> {
   const { transcriptPath } = await $.session.info()
   if (!transcriptPath) return ''
   const { size } = await $.fs.stat(transcriptPath)
@@ -118,7 +123,7 @@ async function transcriptName($: EngineInterface): Promise<string> {
     if (!line.includes('"custom-title"')) continue
     try {
       const row = JSON.parse(line) as { type?: string; customTitle?: unknown }
-      if (row.type === 'custom-title' && typeof row.customTitle === 'string') return row.customTitle
+      if (row.type === 'custom-title' && typeof row.customTitle === 'string') return oneLine(row.customTitle, 80)
     } catch {
       // The tail's first line may start mid-row.
     }
@@ -182,7 +187,8 @@ async function notifyFor($: EngineInterface, { status, note }: Outcome): Promise
   if (!wants) return
   const label = STATUS[status].label
   const text = note ? `${label}: ${note}` : label
-  const title = titleOf(me) ? `${me.project} · ${oneLine(titleOf(me), 40)}` : me.project
+  const sessionLabel = labelOf(me)
+  const title = sessionLabel ? `${me.project} · ${oneLine(sessionLabel, 40)}` : me.project
   await $.ui.notify(text, { title, key: me.id }).catch(ignore)
 }
 
@@ -275,7 +281,7 @@ export const register: Register = (on, options) => {
     const jobDir = (await $.env.get('CLAUDE_JOB_DIR')) ?? ''
     const tty = await ttyOf($).catch(() => '')
     // A resumed session, or this module reloaded, keeps the name it was given.
-    const name = await transcriptName($).catch(() => '')
+    const name = await transcriptName($)
     me = {
       id,
       project: basename(root),
@@ -324,9 +330,11 @@ export const register: Register = (on, options) => {
 
   on('command.run', { command: 'rename' }, async ($, e, next) => {
     const result = await next(e)
-    // A bare `/rename` generates the name, which only the transcript then holds.
-    const name = e.args.trim() || (await transcriptName($).catch(() => ''))
-    if (me && name && name !== me.name) {
+    if (!me) return result
+    // The transcript holds the name the engine kept: a generated one for a
+    // bare `/rename`, and none new for a rename it refused.
+    const name = (await transcriptName($)) || oneLine(e.args, 80)
+    if (name && name !== me.name) {
       me = { ...me, name }
       await save($).catch(ignore)
       await poll($).catch(ignore)
@@ -488,10 +496,10 @@ export const register: Register = (on, options) => {
               <Text dimColor>{age(at - r.since)}</Text>
               {r.id !== self && <Button {...goButtonProps($, r)} />}
             </Box>
-            {titleOf(r) !== '' && (
+            {labelOf(r) !== '' && (
               <Text dimColor wrap="truncate-end">
                 {'  '}
-                {oneLine(titleOf(r), cols - 2)}
+                {oneLine(labelOf(r), cols - 2)}
               </Text>
             )}
             {r.note !== '' && (
