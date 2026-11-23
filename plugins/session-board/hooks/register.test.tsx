@@ -30,6 +30,8 @@ type Files = Map<string, string>
 
 type World = {
   files: Files
+  /** A file's last-modified time, when it is not now. */
+  mtimes: Map<string, number>
   notes: string[]
   runs: string[][]
   /** Fires the timers `$.clock.after` booked, as if their time came. */
@@ -37,8 +39,9 @@ type World = {
 }
 
 /** Stands in for the engine: a file system in memory, a stepping clock, one session. */
-function engine(on: On): World {
+function engine(on: On, opts: { rmError?: string } = {}): World {
   const files: Files = new Map()
+  const mtimes = new Map<string, number>()
   const notes: string[] = []
   const runs: string[][] = []
   const timers: (() => void)[] = []
@@ -57,6 +60,10 @@ function engine(on: On): World {
   })
   on('process.run', (_, e) => {
     runs.push([...e.argv])
+    if (e.argv[0] === '/bin/rm' && opts.rmError !== undefined) {
+      return { value: { exitCode: 1, stdout: '', stderr: opts.rmError, isStdoutTruncated: false, isStderrTruncated: false } }
+    }
+    if (e.argv[0] === '/bin/rm') for (const p of e.argv.slice(e.argv.indexOf('--') + 1)) files.delete(p)
     return { value: { exitCode: 0, stdout: '??\n', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('fs.write', (_, e) => {
@@ -69,7 +76,7 @@ function engine(on: On): World {
       name: p.split('/').at(-1) ?? '',
       kind: 'file' as const,
       size: 1,
-      mtimeMs: t,
+      mtimeMs: mtimes.get(p) ?? t,
       isLink: false,
     })),
   }))
@@ -88,7 +95,7 @@ function engine(on: On): World {
     // The timer's callback runs once its dispatch resolves.
     for (let i = 0; i < 50; i++) await Promise.resolve()
   }
-  return { files, notes, runs, fireTimers }
+  return { files, mtimes, notes, runs, fireTimers }
 }
 
 /** Another session's status file, live unless `beat` says otherwise. */
@@ -325,4 +332,70 @@ test('/sessions go <project> with no match switches nowhere', async ($, on) => {
   await start($)
   expect((await $.command.run(sessionsGo('go nope'))).text).toBe('No other session matches "nope".')
   expect(focused(w.runs)).toEqual([])
+})
+
+// --- cleaning ----------------------------------------------------------------
+
+const sessionsClean = { command: 'sessions', args: 'clean', origin: { kind: 'composer' }, presentation: 'text' } as never
+
+const removals = (runs: string[][]) => runs.filter(a => a[0] === '/bin/rm')
+
+test('/sessions clean removes ended and stale files and keeps live ones', async ($, on) => {
+  const w = engine(on)
+  other(w.files, 'live', { status: 'working' })
+  other(w.files, 'gone', { status: 'ended' })
+  other(w.files, 'crashed', { status: 'working', beat: 1 })
+  await start($)
+  expect((await $.command.run(sessionsClean)).text).toBe('Removed 2 status files.')
+  expect([...w.files.keys()].sort()).toEqual([`${DIR}/live.json`, `${DIR}/me-1.json`])
+})
+
+test('/sessions clean removes files untouched for over a day', async ($, on) => {
+  const w = engine(on)
+  w.files.set(`${DIR}/old.json`, 'not json')
+  w.mtimes.set(`${DIR}/old.json`, -100_000_000)
+  await start($)
+  expect((await $.command.run(sessionsClean)).text).toBe('Removed 1 status file.')
+  expect(w.files.has(`${DIR}/old.json`)).toBe(false)
+})
+
+test("/sessions clean never removes this session's own file, even one that reads as ended", async ($, on) => {
+  const w = engine(on)
+  await start($)
+  w.files.set(`${DIR}/me-1.json`, JSON.stringify({ ...mine(w.files), status: 'ended', beat: 1 }))
+  w.mtimes.set(`${DIR}/me-1.json`, -100_000_000)
+  expect((await $.command.run(sessionsClean)).text).toBe('No ended or stale status files to remove.')
+  expect(w.files.has(`${DIR}/me-1.json`)).toBe(true)
+  expect(removals(w.runs)).toEqual([])
+})
+
+test('/sessions clean keeps a recent file it cannot read, and files that are not status files', async ($, on) => {
+  const w = engine(on)
+  w.files.set(`${DIR}/half-written.json`, '{"id":')
+  w.files.set(`${DIR}/notes.txt`, 'ended')
+  w.mtimes.set(`${DIR}/notes.txt`, -100_000_000)
+  await start($)
+  expect((await $.command.run(sessionsClean)).text).toBe('No ended or stale status files to remove.')
+  expect(w.files.has(`${DIR}/half-written.json`)).toBe(true)
+  expect(w.files.has(`${DIR}/notes.txt`)).toBe(true)
+})
+
+test('/sessions clean runs rm once, on exact paths inside the session-board folder', async ($, on) => {
+  const w = engine(on)
+  other(w.files, 'gone', { status: 'ended' })
+  other(w.files, 'crashed', { status: 'idle', beat: 1 })
+  await start($)
+  await $.command.run(sessionsClean)
+  const rm = removals(w.runs)
+  expect(rm.length).toBe(1)
+  expect(rm[0]?.slice(0, 3)).toEqual(['/bin/rm', '-f', '--'])
+  expect(rm[0]?.slice(3).sort()).toEqual([`${DIR}/crashed.json`, `${DIR}/gone.json`])
+})
+
+test('/sessions clean says so when rm fails', async ($, on) => {
+  const w = engine(on, { rmError: 'rm: gone.json: Permission denied\n' })
+  other(w.files, 'gone', { status: 'ended' })
+  await start($)
+  expect((await $.command.run(sessionsClean)).text).toBe('Could not remove every status file: rm: gone.json: Permission denied')
+  expect(w.files.has(`${DIR}/gone.json`)).toBe(true)
 })

@@ -179,6 +179,16 @@ async function resume($: EngineInterface): Promise<void> {
   if (me.status === 'permission' || me.status === 'question') await setStatus($, { status: 'working', note: '' })
 }
 
+/** A status file's record, or null for one mid-write, hand-edited or not a record. */
+async function readRecord($: EngineInterface, path: string): Promise<SessionRecord | null> {
+  try {
+    const r = JSON.parse(await $.fs.read(path)) as SessionRecord | null
+    return r && typeof r === 'object' && typeof r.id === 'string' ? r : null
+  } catch {
+    return null
+  }
+}
+
 async function poll($: EngineInterface): Promise<void> {
   if (!dir) return
   const at = await $.clock.now()
@@ -186,12 +196,8 @@ async function poll($: EngineInterface): Promise<void> {
   const found: SessionRecord[] = []
   for (const f of entries) {
     if (f.kind !== 'file' || !f.name.endsWith('.json') || at - f.mtimeMs > FORGET_MS) continue
-    try {
-      const r = JSON.parse(await $.fs.read(`${dir}/${f.name}`)) as SessionRecord
-      if (r && typeof r.id === 'string' && isLive(r, at)) found.push(r)
-    } catch {
-      // A file mid-write or hand-edited: skip it this round.
-    }
+    const r = await readRecord($, `${dir}/${f.name}`)
+    if (r && isLive(r, at)) found.push(r)
   }
   found.sort((a, b) => STATUS[a.status].rank - STATUS[b.status].rank || b.since - a.since)
   await update($, lastPoll, () => at)
@@ -219,6 +225,38 @@ async function goTo($: EngineInterface, name: string): Promise<string> {
   if (!target) return wanted ? `No other session matches "${name}".` : 'No other session is waiting on you.'
   await focusSession($, target)
   return `Switched to ${target.project} (${STATUS[target.status].label}).`
+}
+
+/** A status file's name: a session id and `.json`, nothing that could leave the folder. */
+const STATUS_FILE = /^[A-Za-z0-9][A-Za-z0-9_-]*\.json$/
+
+/**
+ * Removes the status files of sessions that ended or went stale, and files
+ * untouched for over a day. A live session's file stays, and this session's
+ * own always does. `$.fs` has no delete, so `rm` gets each exact path.
+ */
+async function clean($: EngineInterface): Promise<string> {
+  if (!dir) return 'The session board has not started yet.'
+  const at = await $.clock.now()
+  const self = await read($, selfId)
+  const entries = await $.fs.list(dir).catch(() => [])
+  const doomed: string[] = []
+  for (const f of entries) {
+    if (f.kind !== 'file' || !STATUS_FILE.test(f.name) || f.name === `${self}.json`) continue
+    const path = `${dir}/${f.name}`
+    const r = await readRecord($, path)
+    if (r && (r.id === self || isLive(r, at))) continue
+    // An unreadable file may be mid-write: removed only once it is old.
+    if (r || at - f.mtimeMs > FORGET_MS) doomed.push(path)
+  }
+  if (doomed.length === 0) return 'No ended or stale status files to remove.'
+  const ran = await $.process.run(['/bin/rm', '-f', '--', ...doomed], { timeoutMs: 10_000 }).catch((err: unknown) => ({
+    exitCode: 1,
+    stderr: err instanceof Error ? err.message : String(err),
+  }))
+  await poll($)
+  if (ran.exitCode !== 0) return `Could not remove every status file: ${oneLine(ran.stderr, 200)}`
+  return `Removed ${doomed.length} status ${doomed.length === 1 ? 'file' : 'files'}.`
 }
 
 async function openPane($: EngineInterface): Promise<void> {
@@ -259,8 +297,9 @@ export const register: Register = (on, options) => {
 
     await $.command.register({
       name: 'sessions',
-      description: 'Show every Claude Code session; "go" switches to the one waiting on you longest',
-      argumentHint: '[go [project]]',
+      description:
+        'Show every Claude Code session; "go" switches to the one waiting on you longest, "clean" removes ended sessions\' files',
+      argumentHint: '[go [project] | clean]',
     })
     $.clock.every(POLL_MS, () => void poll($))
     $.clock.every(BEAT_MS, () => void save($))
@@ -279,6 +318,7 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'sessions' }, async ($, e) => {
     const [verb, ...rest] = e.args.trim().split(/\s+/)
     if (verb === 'go') return { text: await goTo($, rest.join(' ')) }
+    if (verb === 'clean') return { text: await clean($) }
     if ((await $.ui.panes()).some(p => p.id === PANE)) {
       await $.ui.close({ id: PANE })
       return { text: 'Sessions pane closed.' }
