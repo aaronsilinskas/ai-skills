@@ -5,6 +5,7 @@ from pathlib import Path
 from kaizen.shared.home import Home
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
 from kaizen.shared.synced import render
+from kaizen.shared.version import Version
 from kaizen.tests.hook_config import KAIZEN_REPO_ITEM
 
 ROOT = Path("/fixture/home")
@@ -22,12 +23,16 @@ def _home(registry: str = "pages", labels: tuple[Label, ...] = DEFAULT_WORKFLOW_
     )
 
 
+def _render(home: Home) -> dict[str, str]:
+    return render(home, Version(1, 2, 3))
+
+
 def _listed_labels(text: str) -> list[str]:
     return [line.split("`")[1] for line in text.splitlines() if line.startswith("- `")]
 
 
 def test_the_manifest_renders_every_synced_file_at_its_path_in_the_home():
-    assert sorted(render(_home())) == [
+    assert sorted(_render(_home())) == [
         "docs/agents/implement-spec.md",
         "docs/agents/implement.md",
         "docs/agents/issue-conventions.md",
@@ -38,13 +43,13 @@ def test_the_manifest_renders_every_synced_file_at_its_path_in_the_home():
 
 
 def test_no_synced_file_takes_a_name_the_setup_skill_writes():
-    names = {path.rsplit("/", 1)[1] for path in render(_home())}
+    names = {path.rsplit("/", 1)[1] for path in _render(_home())}
 
     assert names & {"issue-tracker.md", "triage-labels.md", "domain.md"} == set()
 
 
 def test_each_synced_file_opens_with_the_synced_line_naming_the_overlay():
-    first_lines = {path: text.splitlines()[0] for path, text in render(_home()).items()}
+    first_lines = {path: text.splitlines()[0] for path, text in _render(_home()).items()}
 
     for path, line in first_lines.items():
         assert line.startswith("_Synced file"), path
@@ -52,14 +57,14 @@ def test_each_synced_file_opens_with_the_synced_line_naming_the_overlay():
 
 
 def test_the_synced_files_name_the_homes_own_registry_folder():
-    rendered = render(_home("pages"))
+    rendered = _render(_home("pages"))
 
     assert "`pages/` page name" in rendered["docs/agents/implement.md"]
     assert [path for path, text in rendered.items() if "projects/" in text] == []
 
 
 def test_the_labels_doc_lists_the_default_set_for_a_home_with_the_default_labels():
-    listed = _listed_labels(render(_home())[LABELS])
+    listed = _listed_labels(_render(_home())[LABELS])
 
     assert listed == [
         "needs-triage",
@@ -79,7 +84,7 @@ def test_the_labels_doc_lists_the_default_set_for_a_home_with_the_default_labels
 def test_the_labels_doc_lists_exactly_a_homes_own_labels_with_their_colours_and_descriptions():
     own = (Label("todo", "aabbcc", "Not started"), Label("blocked", "112233", "Waiting on someone"))
 
-    text = render(_home(labels=own))[LABELS]
+    text = _render(_home(labels=own))[LABELS]
 
     assert _listed_labels(text) == ["todo", "blocked"]
     assert "- `todo` (`#aabbcc`): Not started" in text
@@ -88,7 +93,7 @@ def test_the_labels_doc_lists_exactly_a_homes_own_labels_with_their_colours_and_
 
 
 def test_the_workflows_doc_tells_agents_when_to_run_home_sync():
-    workflows = render(_home())["docs/agents/workflows.md"]
+    workflows = _render(_home())["docs/agents/workflows.md"]
 
     assert "\n## Syncing\n" in workflows
     assert "`kaizen home sync`" in workflows
@@ -96,6 +101,6 @@ def test_the_workflows_doc_tells_agents_when_to_run_home_sync():
 
 
 def test_the_hooks_doc_lists_every_kaizen_hook_entry_exactly():
-    hooks_doc = render(_home())["docs/agents/pre-commit-hooks.md"]
+    hooks_doc = _render(_home())["docs/agents/pre-commit-hooks.md"]
 
     assert f"```yaml\nrepos:\n{KAIZEN_REPO_ITEM}```\n" in hooks_doc

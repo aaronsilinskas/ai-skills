@@ -20,7 +20,13 @@ DENY = ["Bash(git stash*)", "Bash(git -C * stash*)"]
 
 
 def _sync(home: Path, *extra: str, shell: Shell | None = None) -> int:
-    return main(["home", "sync", *extra], run=shell or Shell({}), cwd=home, env={})
+    return main(
+        ["home", "sync", *extra],
+        run=shell or Shell({}),
+        cwd=home,
+        env={},
+        latest=lambda: None,
+    )
 
 
 def _write(root: Path, relative: str, text: str) -> None:
@@ -37,7 +43,9 @@ def test_a_fresh_home_gets_every_synced_file_as_rendered_and_the_deny_rule(tmp_p
 
     assert _sync(home) == 0
 
-    rendered = render(find_home(home, {}))
+    found = find_home(home, {})
+    assert found.synced_version is not None
+    rendered = render(found, found.synced_version)
     assert [path for path in SYNCED if (home / path).read_text() != rendered[path]] == []
     assert _settings(home) == {"permissions": {"deny": DENY}}
 

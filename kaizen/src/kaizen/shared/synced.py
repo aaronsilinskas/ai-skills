@@ -16,6 +16,7 @@ from pathlib import Path
 from kaizen.shared.home import Home, SettingsError, read_settings, settings_text
 from kaizen.shared.labels import Label
 from kaizen.shared.pre_commit import LOCAL_REPO
+from kaizen.shared.version import UPGRADE, Version
 
 OVERLAY = "docs/agents/home-overlay.md"
 """The **home overlay**, relative to the home root: the home's own notes beside its synced files,
@@ -54,7 +55,8 @@ _FACTS: dict[str, Callable[[Home], str]] = {
     "workflow_labels": lambda home: _label_list(home.workflow_labels),
     "hook_entries": lambda home: LOCAL_REPO,
 }
-"""What a template may name: each fact, worked out from the home."""
+"""What a template may name, beside ``synced_version`` and ``upgrade``: each fact, worked out
+from the home."""
 
 
 def _label_list(labels: tuple[Label, ...]) -> str:
@@ -67,9 +69,11 @@ def _label_list(labels: tuple[Label, ...]) -> str:
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 
 
-def render(home: Home) -> dict[str, str]:
-    """Every synced file's text for *home*, keyed by its path relative to the home root."""
+def render(home: Home, synced_version: Version) -> dict[str, str]:
+    """Every synced file's text for *home*, keyed by its path relative to the home root, as the
+    release *synced_version* renders it."""
     facts = {name: fact(home) for name, fact in _FACTS.items()}
+    facts |= {"synced_version": str(synced_version), "upgrade": UPGRADE}
     return {synced.path: _render(synced.template, facts) for synced in SYNCED_FILES}
 
 

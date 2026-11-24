@@ -119,4 +119,5 @@ _Avoid_: hook config (that is the whole file), hook manifest
 
 **Synced version**:
 The kaizen release a home was last synced with, recorded in its home marker by `kaizen home sync` and `kaizen home init`.
+Every command compares it with the running release, and the synced files show it in the home's CI step.
 _Avoid_: pin, home version

@@ -38,6 +38,7 @@ from kaizen.shared.synced import (
     render,
     starter_overlay,
 )
+from kaizen.shared.version import Install, Version
 
 GITIGNORE = ".gitignore"
 
@@ -295,13 +296,16 @@ def init_home(
     run: Runner,
     cwd: Path,
     env: Mapping[str, str],
+    install: Install,
     *,
     dry_run: bool = False,
     say: Say = print,
 ) -> None:
     """Makes the git repo holding *cwd* a home: checks every precondition, writes each step of
     ``_steps`` in order, reports the leak check's findings as to-dos and prints what is left for
-    the user. With *dry_run*, prints the checks and every file in full instead."""
+    the user. With *dry_run*, prints the checks and every file in full instead. The marker
+    records the running version as the synced version, which the synced files are rendered
+    for, so the new home's first command does not warn."""
     user_home = Path(env.get("HOME") or Path.home()).resolve()
     root = Path(
         run_or_refuse(
@@ -316,7 +320,16 @@ def init_home(
     checks += _check_not_inside_home(root, env, user_home)
     new = NewHome(root, *_origin_repo(root, run), user_home)
     checks.append(f"origin is the GitHub repo {new.github}")
-    steps = _steps(new)
+    version = Version.parse(install.version)
+    if version is None:
+        raise RefusalError(
+            f"home init: kaizen's version {install.version} is not X.Y.Z, so it can't be recorded"
+            " as the new home's synced version",
+            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run init"
+            " again",
+        )
+    checks.append(f"kaizen's version {version} is X.Y.Z, so the marker can record it")
+    steps = _steps(new, version)
     checks += [step.check() for step in steps]
     if dry_run:
         for check in checks:
@@ -418,7 +431,7 @@ def _checklist(root: str, name: str) -> list[str]:
     ]
 
 
-def _steps(new: NewHome) -> list[Step]:
+def _steps(new: NewHome, version: Version) -> list[Step]:
     """What ``init`` writes, in write order. The marker comes last, so a failure partway leaves
     no marker, and a rerun is not refused as a home already."""
     return [
@@ -430,11 +443,13 @@ def _steps(new: NewHome) -> list[Step]:
         ),
         *[
             NewFile(new.root, relative, text)
-            for relative, text in render(fresh_home(new.root, new.github, new.path)).items()
+            for relative, text in render(
+                fresh_home(new.root, new.github, new.path, version), version
+            ).items()
         ],
         NewFile(new.root, OVERLAY, starter_overlay()),
         HookConfig(new.root),
-        NewFile(new.root, MARKER, fresh_marker(new.github, new.path)),
+        NewFile(new.root, MARKER, fresh_marker(new.github, new.path, version)),
     ]
 
 
@@ -478,8 +493,9 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             f"{HOOKS_DOC} lists them; an existing one is the home's own and is kept, with a "
             "to-do when it lacks any of them\n"
             f"  {MARKER}  the home marker, written last so a failure partway leaves none: "
-            f'registry = "{REGISTRY}", and a [leak] table whose own holds the home\'s '
-            "owner/repo and path, and whose allow starts empty\n\n"
+            f'registry = "{REGISTRY}", synced_version set to the running kaizen\'s version, '
+            "which the synced files are rendered for, and a [leak] table whose own holds the "
+            "home's owner/repo and path, and whose allow starts empty\n\n"
             "It prints one line per step done. It makes no network call and needs no gh.\n\n"
             "Then it runs the leak check once over the new home and prints each finding as a "
             "to-do: its file, line, rule and match, and its fixes (register the project in the "
@@ -502,5 +518,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
     parser.set_defaults(handler=_command, needs_home=False)
 
 
-def _command(args: argparse.Namespace, run: Runner, cwd: Path, env: Mapping[str, str]) -> None:
-    init_home(run, cwd, env, dry_run=args.dry_run)
+def _command(
+    args: argparse.Namespace, run: Runner, cwd: Path, env: Mapping[str, str], install: Install
+) -> None:
+    init_home(run, cwd, env, install, dry_run=args.dry_run)

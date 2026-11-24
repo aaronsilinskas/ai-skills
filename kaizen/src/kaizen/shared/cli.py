@@ -30,6 +30,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TextIO, cast
 
+from kaizen import __version__
 from kaizen.home import init as home_init
 from kaizen.home import sync as home_sync
 from kaizen.hook import leak_check as hook_leak_check
@@ -41,7 +42,8 @@ from kaizen.pr import wait
 from kaizen.project import labels as project_labels
 from kaizen.project import leak_check as project_leak_check
 from kaizen.shared.common import RefusalError, Runner, StepFailedError, run_subprocess
-from kaizen.shared.home import find_home
+from kaizen.shared.home import find_home, warn_on_stderr
+from kaizen.shared.version import Install, LatestRelease, check_synced_version, latest_on_pypi
 from kaizen.spec import finish as spec_finish
 from kaizen.spec import integrate
 from kaizen.spec import publish as spec_publish
@@ -54,7 +56,9 @@ from kaizen.ticket import publish as ticket_publish
 # Each command module adds its own subparser and sets ``handler`` (see ``start.add_parser``),
 # which is called with the parsed arguments, the runner and the ``Home``. A command that sets
 # ``needs_home=False`` as well (only ``home init``, which makes the home) is called with the
-# start directory and the environment instead, and no home is looked for.
+# start directory, the environment and the ``Install`` instead, and no home is looked for; one
+# that sets ``needs_install=True`` (only ``home sync``) is also passed the ``Install``.
+# Every command given a ``Home`` runs after the synced version check.
 # A handler that returns ``None`` has succeeded, and one that returns an int exits with it;
 # it fails by raising, which ``main`` reports.
 GROUPS = {
@@ -85,10 +89,14 @@ def main(
     run: Runner = run_subprocess,
     cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
+    version: str = __version__,
+    latest: LatestRelease = latest_on_pypi,
 ) -> int:
     """Runs one command in the home found from *cwd* and *env* (default: the current directory
-    and the process environment); ``--help`` exits before the home is looked for, and a command
-    that needs no home skips the search."""
+    and the process environment), as the install whose *version* is running and whose *latest*
+    looks up the latest release (default: the package metadata and PyPI). ``--help`` exits
+    before the home is looked for, and a command that needs no home skips the search and the
+    synced version check."""
     parser = argparse.ArgumentParser(
         prog="kaizen", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -111,22 +119,37 @@ def main(
         # attribute to the stream it wraps through __getattr__.
         sys.stderr = cast(TextIO, _SurvivesClosedPipe(sys.stderr))
     try:
-        return _run(args, run, cwd, env)
+        return _run(args, run, cwd, env, Install(version, latest))
     finally:
         sys.stdout, sys.stderr = real_stdout, real_stderr
 
 
 def _run(
-    args: argparse.Namespace, run: Runner, cwd: Path | None, env: Mapping[str, str] | None
+    args: argparse.Namespace,
+    run: Runner,
+    cwd: Path | None,
+    env: Mapping[str, str] | None,
+    install: Install,
 ) -> int:
     """Runs the parsed command and returns its exit code."""
     start = cwd or Path.cwd()
     environ = os.environ if env is None else env
     try:
-        if getattr(args, "needs_home", True):
-            code = args.handler(args, run, find_home(start, environ)) or 0
+        if not getattr(args, "needs_home", True):
+            code = args.handler(args, run, start, environ, install) or 0
         else:
-            code = args.handler(args, run, start, environ) or 0
+            home = find_home(start, environ)
+            check_synced_version(
+                install.version,
+                home.synced_version,
+                home.marker,
+                warn_on_stderr,
+                syncing=getattr(args, "records_version", False),
+            )
+            if getattr(args, "needs_install", False):
+                code = args.handler(args, run, home, install) or 0
+            else:
+                code = args.handler(args, run, home) or 0
         outcome = ""
     except RefusalError as exc:
         print(f"refused: {exc}", file=sys.stderr)
