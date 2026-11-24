@@ -1,5 +1,6 @@
 """The **synced files**: the generic docs every home holds, rendered from the templates beside
-this module for one home.
+this module for one home; and the **managed settings**, the one part of a home's Claude Code
+settings that syncing owns.
 
 ``SYNCED_FILES`` is the manifest, so adding a synced file or moving one is a change to data. A
 template renders from the home's marker facts and home settings only, through ``Home``: each
@@ -10,8 +11,9 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.resources import files
+from pathlib import Path
 
-from kaizen.shared.home import Home
+from kaizen.shared.home import Home, SettingsError, read_settings, settings_text
 from kaizen.shared.labels import Label
 
 OVERLAY = "docs/agents/home-overlay.md"
@@ -97,3 +99,31 @@ such as `## implement.md: start a ticket worktree`, and say what the home does i
 Issues and specs for this home live as GitHub issues in `<owner>/<repo>`.
 Replace `<owner>/<repo>` with the home's tracker repo.
 """
+
+
+DENY_STASH = ("Bash(git stash*)", "Bash(git -C * stash*)")
+"""The git stash deny rule: the entries a home's settings deny, since every worktree of a repo
+shares one stash stack, so a stash in one ticket worktree can be popped in another."""
+
+
+def deny_stash(settings: dict[str, object]) -> bool:
+    """Adds each entry of the git stash deny rule missing from ``permissions.deny`` in the
+    *settings* data, after the entries already there, and returns whether any was missing. Every
+    other key and entry keeps its order. Raises ``SettingsError`` when ``permissions`` is not an
+    object or its ``deny`` not a list."""
+    permissions = settings.setdefault("permissions", {})
+    if not isinstance(permissions, dict):
+        raise SettingsError("has permissions that are not a JSON object")
+    deny = permissions.setdefault("deny", [])
+    if not isinstance(deny, list):
+        raise SettingsError("has a permissions.deny that is not a JSON list")
+    missing = [entry for entry in DENY_STASH if entry not in deny]
+    deny.extend(missing)
+    return bool(missing)
+
+
+def synced_settings(root: Path) -> str | None:
+    """The text of *root*'s settings file with the managed settings merged in, or ``None`` when
+    it holds them already. Raises ``SettingsError`` as ``read_settings`` and ``deny_stash`` do."""
+    settings = read_settings(root)
+    return settings_text(settings) if deny_stash(settings) else None

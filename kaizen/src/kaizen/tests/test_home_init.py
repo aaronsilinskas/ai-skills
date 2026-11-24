@@ -32,6 +32,8 @@ from kaizen.tests.ticket_shell import (
 HTTPS = "https://github.com/acme/newhome.git"
 TILDE_ROOT = TILDE + "/work/newhome"
 """The fixture repo's root in ``~`` form."""
+DENY = ["Bash(git stash*)", "Bash(git -C * stash*)"]
+"""The git stash deny rule's entries, as init writes them."""
 SYNCED = [synced.path for synced in SYNCED_FILES]
 """Every synced file in the manifest, in its order."""
 DOCS = [*SYNCED, OVERLAY]
@@ -406,7 +408,8 @@ def test_a_rerun_after_a_failure_partway_finishes(tmp_path, capsys, monkeypatch)
 
     assert _written(root) == EVERY_FILE
     steps = [
-        "kept .claude/settings.json, its env already sets KAIZEN_HOME to the home",
+        "kept .claude/settings.json, its env already sets KAIZEN_HOME to the home and it denies"
+        " git stash",
         "kept .gitignore, it already ignores .claude/worktrees/",
         "kept projects/README.md, already as init writes it",
         "wrote projects/newhome.md",
@@ -464,7 +467,7 @@ def test_a_fresh_repo_gets_a_settings_file_whose_env_names_the_home(tmp_path):
 
     assert _init(tmp_path, root) == 0
 
-    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}}
+    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}, "permissions": {"deny": DENY}}
 
 
 def test_a_repo_outside_the_user_directory_gets_an_absolute_kaizen_home(tmp_path):
@@ -489,7 +492,8 @@ def test_an_existing_settings_file_keeps_every_other_key_in_order(tmp_path):
     text = (root / ".claude" / "settings.json").read_text()
     assert text == (
         "{\n"
-        '  "permissions": {\n    "allow": [\n      "Bash(ls)"\n    ]\n  },\n'
+        '  "permissions": {\n    "allow": [\n      "Bash(ls)"\n    ],\n'
+        '    "deny": [\n      "Bash(git stash*)",\n      "Bash(git -C * stash*)"\n    ]\n  },\n'
         f'  "env": {{\n    "A": "1",\n    "KAIZEN_HOME": "{TILDE_ROOT}"\n  }},\n'
         '  "hooks": {}\n'
         "}\n"
@@ -502,7 +506,11 @@ def test_settings_without_an_env_gain_one_after_their_other_keys(tmp_path):
 
     assert _init(tmp_path, root) == 0
 
-    assert list(_settings(root).items()) == [("hooks", {}), ("env", {"KAIZEN_HOME": TILDE_ROOT})]
+    assert list(_settings(root).items()) == [
+        ("hooks", {}),
+        ("env", {"KAIZEN_HOME": TILDE_ROOT}),
+        ("permissions", {"deny": DENY}),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -573,7 +581,7 @@ def test_mw_home_naming_this_root_is_accepted_with_a_warning_and_kaizen_home_wri
     warnings = [line for line in capsys.readouterr().err.splitlines() if "MW_HOME" in line]
     assert len(warnings) == 1 and warnings[0].startswith("warning: ")
     assert "KAIZEN_HOME" in warnings[0]
-    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}}
+    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}, "permissions": {"deny": DENY}}
 
 
 def test_both_variables_naming_different_roots_are_refused_naming_which_to_keep(tmp_path, capsys):
@@ -648,7 +656,8 @@ def test_settings_with_mw_home_set_to_this_root_in_another_form_are_told_the_new
 
 def test_settings_already_naming_this_home_are_kept_byte_for_byte(tmp_path):
     root = _repo(tmp_path)
-    text = f'{{"env":{{"KAIZEN_HOME":"{TILDE_ROOT}"}}}}'
+    deny = '"Bash(git stash*)","Bash(git -C * stash*)"'
+    text = f'{{"env":{{"KAIZEN_HOME":"{TILDE_ROOT}"}},"permissions":{{"deny":[{deny}]}}}}'
     _write(root, ".claude/settings.json", text)
 
     assert _init(tmp_path, root) == 0
@@ -702,7 +711,11 @@ def test_dry_run_prints_the_merged_settings_and_the_gitignore_change(tmp_path, c
     assert _init(tmp_path, root, "--dry-run") == 0
 
     out = capsys.readouterr().out
-    merged = f'{{\n  "hooks": {{}},\n  "env": {{\n    "KAIZEN_HOME": "{TILDE_ROOT}"\n  }}\n}}\n'
+    merged = (
+        f'{{\n  "hooks": {{}},\n  "env": {{\n    "KAIZEN_HOME": "{TILDE_ROOT}"\n  }},\n'
+        '  "permissions": {\n    "deny": [\n      "Bash(git stash*)",\n'
+        '      "Bash(git -C * stash*)"\n    ]\n  }\n}\n'
+    )
     assert f"would write .claude/settings.json:\n{merged}" in out
     assert "would append to .gitignore:\n.claude/worktrees/\n" in out
     assert (root / ".claude" / "settings.json").read_text() == '{"hooks": {}}'
@@ -717,7 +730,7 @@ def test_merging_into_existing_settings_and_gitignore_prints_what_each_step_did(
     _init(tmp_path, root)
 
     assert capsys.readouterr().out.splitlines()[1:3] == [
-        "merged KAIZEN_HOME into .claude/settings.json",
+        "merged KAIZEN_HOME and the git stash deny rule into .claude/settings.json",
         "added .claude/worktrees/ to .gitignore",
     ]
 
@@ -956,14 +969,19 @@ def test_a_differing_synced_file_or_overlay_is_refused_naming_it_before_any_writ
     assert _written(root) == [path]
 
 
-def test_no_written_synced_file_or_overlay_holds_a_second_fixture_homes_facts(tmp_path):
+@pytest.mark.parametrize("command", ["init", "sync"])
+def test_no_written_synced_file_or_overlay_holds_a_second_fixture_homes_facts(tmp_path, command):
     other = cli_home(tmp_path)
     facts = [*LEAK_OWN, str(other), str(RELAY), str(SITE), "acme/relay", "owner/site"]
     root = _repo(tmp_path)
 
     assert _init(tmp_path, root) == 0
+    if command == "sync":
+        for path in [*SYNCED, ".claude/settings.json"]:
+            (root / path).unlink()
+        assert main(["home", "sync"], run=Shell({}), cwd=root, env=_env(tmp_path)) == 0
 
-    written = {path: (root / path).read_text() for path in DOCS}
+    written = {path: (root / path).read_text() for path in [*DOCS, ".claude/settings.json"]}
     assert [(p, f) for p, text in written.items() for f in facts if f in text] == []
 
 

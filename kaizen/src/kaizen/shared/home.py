@@ -264,21 +264,32 @@ def _labels_comment() -> str:
     )
 
 
-def settings_naming_home(root: Path, path: str) -> str | None:
-    """The text of *root*'s settings file with ``env.KAIZEN_HOME`` set to *path*, every other key
-    kept in its order; ``None`` when it already sets exactly *path*, so a rerun leaves it alone.
-    An absent file gives a new one, and an ``MW_HOME`` set to exactly *path* is renamed in its
-    place. Raises ``SettingsError`` on a file that is not a JSON object, whose ``env`` is not an
-    object, or that sets either variable to anything else."""
+def read_settings(root: Path) -> dict[str, object]:
+    """*root*'s settings file as a JSON object, empty when the file is absent. Raises
+    ``SettingsError`` on a file that is not a JSON object."""
     settings = root / SETTINGS
-    data: dict[str, object] = {}
-    if settings.exists():
-        try:
-            data = json.loads(settings.read_bytes())
-        except (ValueError, OSError) as exc:  # UnicodeDecodeError is a ValueError
-            raise SettingsError("is not valid JSON") from exc
-        if not isinstance(data, dict):
-            raise SettingsError("does not hold a JSON object")
+    if not settings.exists():
+        return {}
+    try:
+        data = json.loads(settings.read_bytes())
+    except (ValueError, OSError) as exc:  # UnicodeDecodeError is a ValueError
+        raise SettingsError("is not valid JSON") from exc
+    if not isinstance(data, dict):
+        raise SettingsError("does not hold a JSON object")
+    return data
+
+
+def settings_text(data: dict[str, object]) -> str:
+    """The settings file's text for *data*, as every command that writes it writes it."""
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+
+
+def name_home(data: dict[str, object], path: str) -> bool:
+    """Sets ``env.KAIZEN_HOME`` in the settings *data* to *path*, every other key kept in its
+    order, and returns whether that changed *data*: not when it already sets exactly *path*, so a
+    rerun leaves the file alone. An ``MW_HOME`` set to exactly *path* is renamed in its place.
+    Raises ``SettingsError`` when ``env`` is not an object, or sets either variable to anything
+    else."""
     env = data.setdefault("env", {})
     if not isinstance(env, dict):
         raise SettingsError("has an env that is not a JSON object")
@@ -289,14 +300,13 @@ def settings_naming_home(root: Path, path: str) -> str | None:
                 variable,
                 str(env[variable]),
             )
-    if _OLD_ENV_VAR not in env:
-        if ENV_VAR in env:
-            return None
-        env[ENV_VAR] = path
-    else:
-        renamed = {ENV_VAR if key == _OLD_ENV_VAR else key: value for key, value in env.items()}
-        data["env"] = renamed
-    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if _OLD_ENV_VAR in env:
+        data["env"] = {ENV_VAR if key == _OLD_ENV_VAR else key: value for key, value in env.items()}
+        return True
+    if ENV_VAR in env:
+        return False
+    env[ENV_VAR] = path
+    return True
 
 
 @dataclass(frozen=True)

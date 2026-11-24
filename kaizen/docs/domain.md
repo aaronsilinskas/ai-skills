@@ -34,7 +34,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `find_home(start, env)` returns a `Home` (root, registry folder, leak facts and the **home settings**) or refuses with a fix.
   It reads the marker with `tomllib`, the one place kaizen reads TOML.
   A linked worktree of the home counts as that home, so commands work the same from a ticket worktree.
-  It also renders a new home's marker and merges the home's root into its Claude Code settings, keeping every other key.
+  It also renders a new home's marker, reads and writes the home's Claude Code settings, and sets the home's root in their env, keeping every other key.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
   The registry folder always comes from the `Home`, never from a default path.
   It also holds the starter README and page a new home gets, beside the parser so the two change together.
@@ -49,6 +49,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `SYNCED_FILES` is the manifest, each file's path in a home and its template in `shared/templates/`, shipped as package data.
   `render(home)` is the one entry point, giving every synced file's text for a `Home`, so every command that renders them renders the same.
   A template's placeholders take only facts worked out from the `Home`, and no template names a real home, owner, repo or path.
+  It also holds the **managed settings**, the git stash deny rule, which `home init` and `home sync` merge through the same function, so both write the same entries.
 - `shared/labels.py`: `Label` and the default **workflow labels**, which a home's marker may replace as a whole set.
 - `shared/issue_graph.py`: the issue reads and the parent and blocked-by edge writes the `issue`, `spec` and `ticket` groups share.
   It refuses an issue reference to a repo outside the home.
@@ -72,6 +73,9 @@ One module per command; each group's `--help` lists them.
 - `pr/`: `pr wait`, which waits for a PR's checks and exits by their outcome.
 - `home/`: `home init`, which makes the git repo it runs in a new home, and needs no home itself.
   Its output and files name no home but the new one (ADR 0002), and the marker is written last, so a failure partway leaves none and a rerun finishes the rest.
+  `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
+  Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
+  It never touches the home overlay, the hook config or any other file the home owns.
 
 ## Constraints
 
