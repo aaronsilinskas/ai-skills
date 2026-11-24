@@ -1,0 +1,107 @@
+# kaizen
+
+The command-line tool that runs agent workflows for every project a home registers: the ticket and spec workflows, the leak check, issue links and setting up a home.
+Its layout and constraints are in `docs/domain.md`, and its decisions in `docs/adr/`.
+
+## Language
+
+### Homes and projects
+
+**Home**:
+A git repo where agent sessions start.
+It holds the project registry, the agent docs those sessions follow and the facts its leak check needs, and it says nothing about any other home.
+A user may run several homes whose work must not mix.
+_Avoid_: workspace, hub
+
+**Home marker**:
+The file at a home's root, `kaizen.toml`, that declares it a home and holds its facts for kaizen: where its project registry is, what its leak check treats as its own or allowed, and its home settings.
+The first release also reads the marker under its old name, `mw.toml`, and the release after drops it.
+_Avoid_: config file, kaizen config
+
+**Project**:
+A repo that sessions started in a home work on: one listed in that home's project registry, the home itself included.
+_Avoid_: target repo, project repo
+
+**Project registry**:
+The machine-readable facts about each project (where it lives, its GitHub repo, whether it is public, its check command), kept as one page per project in the home's registry folder.
+_Avoid_: project config, project list
+
+**Workflow labels**:
+The GitHub labels the workflows and skills apply to issues (the triage roles, `idea`, `spec` and the `wayfinder:*` labels), which every project's repo holds with the colour and description its home sets.
+GitHub's default labels and Dependabot's are not among them.
+_Avoid_: triage labels (for the whole set), standard labels
+
+**Main checkout**:
+A project's own clone at its registered path.
+It may hold other sessions' uncommitted work, so ticket work never happens there.
+_Avoid_: working copy, local repo
+
+**Check command**:
+The single command that runs everything a project's CI checks (tests, lint, types), declared in the project's registry page.
+A project with nothing to run declares that explicitly.
+_Avoid_: test command, test suite (when the whole check is meant)
+
+**Leak check**:
+The search run before a commit, or before anything from a project is published, that refuses text pointing outside its home.
+It refuses references to the home in a public project; in any project, local paths and repos of the home's owners that the home neither registers nor allows; and any pattern a project's registry page denies for that project, searched only in the lines and text being published.
+_Avoid_: leak grep, public-repo check
+
+### Ticket work
+
+**Spec**:
+A GitHub issue labelled `spec` that describes one change too large for a single PR, and whose sub-issues are its tickets.
+All of its tickets merge into the default branch together, through one PR from its integration branch.
+_Avoid_: epic, feature, PRD
+
+**Ticket**:
+One GitHub issue small enough to build in one ticket worktree.
+A lone ticket ships through its own PR; a spec's ticket is integrated into that spec's integration branch instead.
+_Avoid_: task, story, slice
+
+**Ticket worktree**:
+The worktree created for one ticket, on that ticket's branch.
+It is based on the project's remote default branch, or, for a ticket of a spec, on that spec's integration branch.
+_Avoid_: agent worktree, scratch worktree (that is a command's temporary worktree)
+
+**Docs ticket**:
+A change to docs only, which needs no issue.
+It is built in a ticket worktree from the project's remote default branch, and may touch none of the project's declared code paths.
+_Avoid_: issue-less ticket, docs PR
+
+**Integration branch**:
+The branch that collects every ticket of one spec, so that a single PR merges the whole spec into the project's default branch.
+_Avoid_: feature branch, spec branch
+
+**Integrate**:
+To merge one finished ticket into its spec's integration branch, once the project's check command passes on the result.
+The ticket's branch is never pushed; only the integration branch is.
+_Avoid_: land, merge in
+
+**Scratch worktree**:
+A temporary worktree that one command creates and removes in the same run, such as the one an integration happens in, or the one holding a ticket's base for a comparison.
+Nobody edits it by hand.
+_Avoid_: merge worktree, integration worktree, base worktree
+
+**Frontier**:
+The tickets of a spec that are ready to be picked up now: open, not blocked by an open issue (a ticket already integrated into the spec no longer blocks), not yet integrated, not already being worked in a ticket worktree, not assigned to anyone, and not marked for a human.
+_Avoid_: next tickets, ready list
+
+### Syncing
+
+**Synced file**:
+A file in a home whose content kaizen renders from its templates, and which the home doesn't edit.
+`kaizen home sync --check` fails on a copy that differs from the render.
+_Avoid_: vendored file, template, generated file
+
+**Home overlay**:
+The home's own notes that sit beside its synced files and hold the rules only that home follows.
+It adds to the synced files and never edits them, and syncing never touches it.
+_Avoid_: override, customisation, local patch
+
+**Home setting**:
+A value in the home marker that changes kaizen's behaviour for that home, with a default when unset.
+_Avoid_: config, option, flag
+
+**Synced version**:
+The kaizen release a home was last synced with, recorded in its home marker by `kaizen home sync` and `kaizen home init`.
+_Avoid_: pin, home version

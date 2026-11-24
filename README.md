@@ -81,6 +81,10 @@ Install one at the prompt of a Claude Code terminal session, answering `y` to ad
 
 From a shell, the same is `claude plugin install agent-progress --marketplace aaronsilinskas/ai-skills`. In the desktop app, click + next to the prompt box, then Plugins, Add marketplace with `aaronsilinskas/ai-skills`, then Add plugin.
 
+## kaizen
+
+[kaizen](kaizen/README.md) is a command-line tool, published to PyPI as `kaizen-kit`, that runs agent workflows for every project a home repo registers: tickets, specs, the leak check and issue links. It lives in `kaizen/` as its own Python package. It adds no skill to the `npx skills` install and changes nothing about it: the skills and the CLI are separate products. Its glossary, decisions and domain map start from [`GLOSSARY-MAP.md`](GLOSSARY-MAP.md).
+
 ## Conventions
 
 Skills follow [Matt's authoring conventions](https://github.com/mattpocock/skills/blob/main/CLAUDE.md) and the [agentskills.io specification](https://agentskills.io/specification) and [best practices](https://agentskills.io/skill-creation/best-practices):
@@ -98,7 +102,7 @@ Use Matt's `writing-for-agents` skill (installed under `.claude/skills/`) when c
 
 ## Consistency check
 
-After adding, removing, or editing a skill, run the consistency guard:
+Before a PR, and after adding, removing, or editing a skill, run the check command:
 
 ```bash
 bash scripts/check.sh
@@ -109,6 +113,10 @@ It runs every check even after a failure, prints a PASS, FAIL or SKIP line for e
 1. **Conventions:** no em-dash in any git-tracked file outside `.claude/skills/` (Matt's copies, which this repo doesn't own); every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; and no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too).
 2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table, and the README lists no skill that isn't on disk.
 3. **Script lint:** `skills/engineering/wizard/template.sh` passes `bash -n` (and `shellcheck`, when installed). With no `wizard` skill in this repo, it reports SKIP.
+4. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's lint, format, types, import contracts and tests.
+5. **Home leak scan tests:** `scripts/test_home_leak_scan.py` passes.
+
+CI (`.github/workflows/check.yml`) runs the same command on every pull request and on pushes to `main`. On a pull request it also runs `scripts/home_leak_scan.py`, which fails when a line the PR adds holds a path under a user's home directory (a tilde path, or an absolute macOS, Linux or Windows home path) and lists each file and line. It needs no home's facts. Run it locally on a branch with `python3 scripts/home_leak_scan.py main HEAD`.
 
 ## Upstream
 
