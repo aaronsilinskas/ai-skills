@@ -1,6 +1,6 @@
 ---
 name: embedded-python
-description: "Python rules for microcontrollers: no allocation on hot paths, mutate in place, plain loops, runtime-safe typing. Use when writing or reviewing CircuitPython or MicroPython, or any hot path on constrained hardware (animation loops, per-frame updates, per-pixel sampling), even when the platform isn't named."
+description: "Embedded Python rules for microcontrollers. Use when writing or reviewing CircuitPython or MicroPython, or code for constrained hardware where allocations and GC pauses matter, such as per-frame loops, even when the platform isn't named."
 argument-hint: "file or function to write or review"
 ---
 

@@ -14,7 +14,7 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 | --- | --- | --- |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); `embedded-python` covers constrained hardware. |
 | [comments-backpressure](skills/engineering/comments-backpressure/SKILL.md) | You or model | Push back on comments: sort each into remove, design change, test, ADR or keep, and try those before writing one. Language formatting in reference files. |
-| [embedded-python](skills/engineering/embedded-python/SKILL.md) | You or model | Python rules for microcontrollers: no allocation on hot paths, mutate in place, plain loops, runtime-safe typing. For CircuitPython, MicroPython and other constrained hardware. |
+| [embedded-python](skills/engineering/embedded-python/SKILL.md) | You or model | Embedded Python rules for CircuitPython, MicroPython and other constrained hardware: no allocation on hot paths, mutate in place, plain loops, runtime-safe typing. |
 | [test-quality](skills/engineering/test-quality/SKILL.md) | You or model | Review and audit tests against a quality bar: test naming, one behavior per test, coverage planning, per-language mocking guides. Pairs with Matt's `tdd`, which owns the loop. |
 | [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later: a stub, not a spec. |
 
