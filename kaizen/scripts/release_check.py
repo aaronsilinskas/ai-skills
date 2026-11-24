@@ -5,7 +5,7 @@
 
 `version` refuses a tag whose version differs from the one in pyproject.toml.
 `wheel` lists the wheel, then refuses it if it holds any test file or lacks any template.
-Each prints what it found and exits 1 on a refusal.
+Each prints what it found and exits 1 on a refusal, or 2 on a usage error.
 """
 
 import sys
@@ -44,7 +44,9 @@ def is_test_file(name: str) -> bool:
 
 def wheel_problems(names: list[str]) -> list[str]:
     problems = [f"test file in the wheel: {name}" for name in names if is_test_file(name)]
-    templates = sorted(p.name for p in TEMPLATES.iterdir() if p.is_file())
+    templates = sorted(
+        p.relative_to(TEMPLATES).as_posix() for p in TEMPLATES.rglob("*") if p.is_file()
+    )
     if not templates:
         problems.append(f"no templates found in {TEMPLATES}")
     packaged = set(names)
@@ -56,23 +58,27 @@ def wheel_problems(names: list[str]) -> list[str]:
     return problems
 
 
+def check_wheel(wheel_path: str) -> list[str]:
+    with zipfile.ZipFile(wheel_path) as wheel:
+        names = wheel.namelist()
+    print("\n".join(names))
+    return wheel_problems(names)
+
+
+CHECKS = {"version": version_problems, "wheel": check_wheel}
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 2 or argv[0] not in ("version", "wheel"):
+    if len(argv) != 2 or argv[0] not in CHECKS:
         print(__doc__, file=sys.stderr)
         return 2
-    check, arg = argv
-    if check == "version":
-        problems = version_problems(arg)
-    else:
-        with zipfile.ZipFile(arg) as wheel:
-            names = wheel.namelist()
-        print("\n".join(names))
-        problems = wheel_problems(names)
+    check, target = argv
+    problems = CHECKS[check](target)
     for problem in problems:
         print(f"refused: {problem}", file=sys.stderr)
     if problems:
         return 1
-    print(f"{check} check passed: {arg}")
+    print(f"{check} check passed: {target}")
     return 0
 
 
