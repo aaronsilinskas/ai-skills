@@ -155,12 +155,7 @@ The rule (mock at system boundaries only, never your own modules) lives in `tdd`
 
 ### Designing for mockability
 
-A test that is hard to mock usually points at the source, not the test. At a system boundary, the source should:
-
-1. **Take external dependencies in** (dependency injection) rather than constructing them internally.
-2. **Expose one function or method per external operation** rather than one generic call with conditional branching, so each mock returns exactly one shape and the test setup shows which endpoints a test exercises.
-
-Fixing the source is a `code-quality` matter: report it there rather than working around it in the test.
+A test that is hard to mock usually points at the source, not the test. Fixing the source is a design matter: report it against `codebase-design` (designing for testability) and `tdd`'s mocking reference rather than working around it in the test.
 
 ## Checklist
 
