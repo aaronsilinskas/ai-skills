@@ -18,8 +18,8 @@ and sets ``KAIZEN_HOME`` to its root in its ``.claude/settings.json`` ``env``, s
 from a registered project's root outside the home's tree still finds it. This module is the only
 place that knows the marker's name, its format and ``KAIZEN_HOME``.
 
-This release also reads the old names, ``mw.toml`` and ``MW_HOME``, each with a one-line warning
-naming the new one. Both markers at one root, or both variables, must agree: the same bytes, or
+It also reads the old names, ``mw.toml`` and ``MW_HOME``, each with a one-line warning naming
+the new one. Both markers at one root, or both variables, must agree: the same bytes, or
 the same root.
 """
 
@@ -69,7 +69,7 @@ class SettingsError(ValueError):
         """That variable's value. Never in the message: it may be another home's root."""
 
     @property
-    def old_name(self) -> bool:
+    def names_old_variable(self) -> bool:
         """Whether the variable set is ``MW_HOME``, the old name of ``KAIZEN_HOME``."""
         return self.variable == _OLD_ENV_VAR
 
@@ -97,6 +97,18 @@ class Home:
     project still opts in on its registry page."""
 
 
+@dataclass(frozen=True)
+class EnvSetting:
+    """The root the environment names, and which variable, ``KAIZEN_HOME`` or else ``MW_HOME``,
+    named it."""
+
+    variable: str
+    value: str
+    root: Path
+    warnings: tuple[str, ...]
+    """The lines reading an old name owes."""
+
+
 def warn_on_stderr(line: str) -> None:
     """Prints a ``warning:`` line on stderr, beside the outcome rather than the progress."""
     print(f"warning: {line}", file=sys.stderr)
@@ -114,11 +126,9 @@ def find_home(start: Path, env: Mapping[str, str], warn: Say = warn_on_stderr) -
     setting = _env_setting(env, Path.home())
     found = _search_upward(start.resolve())
     named = setting.root if setting else None
-    # The search may find another home than the variable names: only the named root is printed.
+    served = named or found
     markers = {
-        root: _marker(
-            root, str(root) if root == (named or found) else f"a directory at or above {start}"
-        )
+        root: _marker(root, str(root) if root == served else _unnamed_root(start))
         for root in {found, named}
         if root is not None
     }
@@ -138,7 +148,7 @@ def find_home(start: Path, env: Mapping[str, str], warn: Say = warn_on_stderr) -
                 f" of a different {MARKER}",
                 f"run kaizen from inside {setting.root} or one of its registered projects",
             )
-    root = named or found
+    root = served
     if root is None:
         raise RefusalError(
             f"home: no home found: {ENV_VAR} is unset and no {MARKER} is in {start} or above it",
@@ -146,7 +156,7 @@ def find_home(start: Path, env: Mapping[str, str], warn: Say = warn_on_stderr) -
             f"holds {MARKER}",
         )
     marker = markers[root]
-    assert marker is not None  # the search and the check above each found one at the root
+    assert marker is not None, "the search and the variable's check each found a marker there"
     if marker.warning:
         warn(marker.warning)
     return _read_marker(root, marker.path)
@@ -160,17 +170,16 @@ def marker_at_or_above(start: Path) -> bool:
 
 def root_named_by_env(
     env: Mapping[str, str], user_home: Path, warn: Say = warn_on_stderr
-) -> tuple[str, Path] | None:
-    """The variable, ``KAIZEN_HOME`` or else ``MW_HOME``, that names a root in *env*, and that
-    root, with ``~`` taken as *user_home*, whether or not a home is there; ``None`` when both are
-    unset. Refuses when they name different roots, and *warn*s about ``MW_HOME`` when it is
-    read."""
+) -> EnvSetting | None:
+    """The root ``KAIZEN_HOME`` or ``MW_HOME`` in *env* names, with ``~`` taken as *user_home*,
+    whether or not a home is there; ``None`` when both are unset. Refuses when they name
+    different roots, and *warn*s about ``MW_HOME`` when it is read."""
     setting = _env_setting(env, user_home)
     if setting is None:
         return None
     for line in setting.warnings:
         warn(line)
-    return setting.variable, setting.root
+    return setting
 
 
 def same_root(value: str, root: Path, user_home: Path) -> bool:
@@ -216,7 +225,8 @@ registry = "{REGISTRY}"
 own = [{json.dumps(github)}, {json.dumps(path)}]
 # Text the leak check lets this home's projects mention although no registry page covers it:
 # local paths outside the home, written from ~ or /, such as a tool's settings folder, and
-# owner/repo names of archived repos. Add an entry here when the leak check finds one.
+# owner/repo names of archived repos. Default empty; add an entry here when the leak check finds
+# one.
 allow = []
 {_labels_comment()}"""
 
@@ -290,16 +300,6 @@ def settings_naming_home(root: Path, path: str) -> str | None:
 
 
 @dataclass(frozen=True)
-class _EnvSetting:
-    """The root the environment names, and which variable named it."""
-
-    variable: str
-    value: str
-    root: Path
-    warnings: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class _Marker:
     """The marker file a root's home is read from, and the warning reading it owes."""
 
@@ -307,15 +307,15 @@ class _Marker:
     warning: str | None
 
 
-def _env_setting(env: Mapping[str, str], user_home: Path) -> _EnvSetting | None:
+def _env_setting(env: Mapping[str, str], user_home: Path) -> EnvSetting | None:
     """Refuses when ``KAIZEN_HOME`` and ``MW_HOME`` name different roots, naming neither: either
     may be another home's root."""
     new, old = env.get(ENV_VAR), env.get(_OLD_ENV_VAR)
     if not old:
-        return _EnvSetting(ENV_VAR, new, _expand(new, user_home), ()) if new else None
+        return EnvSetting(ENV_VAR, new, _expand(new, user_home), ()) if new else None
     if not new:
         warning = f"home: read {_OLD_ENV_VAR}, the old name of {ENV_VAR}; rename it {ENV_VAR}"
-        return _EnvSetting(_OLD_ENV_VAR, old, _expand(old, user_home), (warning,))
+        return EnvSetting(_OLD_ENV_VAR, old, _expand(old, user_home), (warning,))
     root = _expand(new, user_home)
     if root != _expand(old, user_home):
         raise RefusalError(
@@ -327,13 +327,19 @@ def _env_setting(env: Mapping[str, str], user_home: Path) -> _EnvSetting | None:
         f"home: {ENV_VAR} and {_OLD_ENV_VAR}, its old name, both name the home; "
         f"unset {_OLD_ENV_VAR}"
     )
-    return _EnvSetting(ENV_VAR, new, root, (warning,))
+    return EnvSetting(ENV_VAR, new, root, (warning,))
 
 
 def _expand(value: str, user_home: Path) -> Path:
     if value == "~" or value.startswith("~/"):
         value = str(user_home) + value[1:]
     return Path(value).expanduser().resolve()
+
+
+def _unnamed_root(start: Path) -> str:
+    """How a refusal names a root the search found when the variable names another: the search
+    may have found another home, whose path must not reach this one's output."""
+    return f"a directory at or above {start}"
 
 
 def _marker(root: Path, where: str) -> _Marker | None:

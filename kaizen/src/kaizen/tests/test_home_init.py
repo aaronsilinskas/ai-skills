@@ -588,6 +588,16 @@ def test_both_variables_naming_different_roots_are_refused_naming_which_to_keep(
     assert _written(root) == []
 
 
+def test_differing_variables_are_refused_before_a_marker_above_the_root(tmp_path, capsys):
+    root = _repo(tmp_path)
+    (root.parent / "kaizen.toml").write_text("")
+    env = _env(tmp_path, KAIZEN_HOME=TILDE_ROOT, MW_HOME=str(tmp_path / "other-home"))
+
+    assert _init(tmp_path, root, env=env) == 1
+
+    assert "KAIZEN_HOME and MW_HOME name different roots" in capsys.readouterr().err
+
+
 def test_init_never_writes_the_old_marker_or_variable(tmp_path):
     root = _repo(tmp_path)
 

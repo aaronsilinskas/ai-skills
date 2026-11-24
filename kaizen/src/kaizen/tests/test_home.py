@@ -268,8 +268,8 @@ def test_both_markers_with_the_same_bytes_pass_with_the_warning(tmp_path):
 
 
 def test_both_markers_with_different_bytes_are_refused_before_any_other_check(tmp_path):
-    # The new marker is malformed too: the duplicate is refused first.
-    root = _home(_home(tmp_path / "home", "registry = \n"), MARKER + "\n", name="mw.toml")
+    malformed_new_marker = "registry = \n"
+    root = _home(_home(tmp_path / "home", malformed_new_marker), MARKER, name="mw.toml")
 
     with pytest.raises(RefusalError) as refusal:
         find_home(root, {})
@@ -289,8 +289,8 @@ def test_both_variables_naming_the_same_root_pass_with_the_warning(tmp_path):
 
 
 def test_both_variables_naming_different_roots_are_refused_before_any_other_check(tmp_path):
-    # Neither root holds a marker: the disagreement is refused first, naming neither root.
-    env = {"KAIZEN_HOME": str(tmp_path / "first"), "MW_HOME": str(tmp_path / "second")}
+    roots_without_markers = tmp_path / "first", tmp_path / "second"
+    env = dict(zip(("KAIZEN_HOME", "MW_HOME"), map(str, roots_without_markers), strict=True))
 
     with pytest.raises(RefusalError) as refusal:
         find_home(tmp_path, env)

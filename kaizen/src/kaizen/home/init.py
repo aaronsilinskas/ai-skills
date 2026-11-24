@@ -147,7 +147,7 @@ class SettingsMerge:
                 f"remove {exc.variable} from {SETTINGS}'s env if this repo is meant to be a new"
                 " home"
             )
-        elif exc.old_name:
+        elif exc.names_old_variable:
             fix = f"replace {exc.variable} in {SETTINGS}'s env with {ENV_VAR} set to {self.value}"
         else:
             # The same root in another form, such as absolute, which can hold a user name.
@@ -274,19 +274,19 @@ def _check_not_inside_home(root: Path, env: Mapping[str, str], user_home: Path) 
     """The checks that *root* is not, or not inside, a home, and that ``KAIZEN_HOME`` doesn't
     point away from it; refuses otherwise. The refusals name no other root, so another home's path
     never reaches this one's output."""
+    named = root_named_by_env(env, user_home)
+    if named is not None and named.root != root.resolve():
+        variable = named.variable
+        raise RefusalError(
+            f"home init: {variable} is set to a root other than {root}",
+            f"unset {variable}, or start a fresh session in {root}, then run init again",
+        )
     if marker_at_or_above(root):
         raise RefusalError(
             f"home init: a {MARKER} is already in {root} or a directory above it, so this repo"
             " is a home already or sits inside one",
             "run kaizen home init in a repo outside every home; "
             "init never changes an existing home",
-        )
-    named = root_named_by_env(env, user_home)
-    if named is not None and named[1] != root.resolve():
-        variable = named[0]
-        raise RefusalError(
-            f"home init: {variable} is set to a root other than {root}",
-            f"unset {variable}, or start a fresh session in {root}, then run init again",
         )
     return [f"no {MARKER} in {root} or above it", f"{ENV_VAR} is unset or names {root}"]
 
