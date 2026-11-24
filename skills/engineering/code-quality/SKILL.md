@@ -6,7 +6,7 @@ argument-hint: "file or function to review or implement"
 
 # Code Quality
 
-The quality bar for implementation code. Tests have `test-quality`, comments have `comments`, and module shape has `codebase-design`.
+The quality bar for implementation code. Tests have `test-quality`, comments have `comments-backpressure`, and module shape has `codebase-design`.
 
 The project's own standards files (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, `AGENTS.md` or `CLAUDE.md`), `GLOSSARY.md` and the ADRs touching the area extend this bar and override it on any conflict, notably on target runtime versions, listed hot paths and naming. Read any you haven't already.
 
