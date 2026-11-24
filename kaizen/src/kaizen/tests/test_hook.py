@@ -311,3 +311,26 @@ def test_kaizen_s_own_sources_pass_the_comment_hooks(kaizen, capsys, hook):
     sources.append(str(KAIZEN / "pyproject.toml"))
 
     assert kaizen(["hook", hook, *sources], Shell({})) == 0, capsys.readouterr().err
+
+
+def _dangling_symlink(path: Path) -> None:
+    path.symlink_to(path.parent / "missing")
+
+
+def _folder(path: Path) -> None:
+    path.mkdir()
+
+
+@pytest.mark.parametrize("make", [_dangling_symlink, _folder], ids=["dangling symlink", "folder"])
+@pytest.mark.parametrize(
+    ("hook", "name"),
+    [("prose-marks", "a.md"), ("section-banners", "a.py"), ("work-tracking", "a.py")],
+)
+def test_a_path_that_cant_be_read_is_skipped(tmp_path, kaizen, capsys, make, hook, name):
+    path = tmp_path / "files" / name
+    path.parent.mkdir(parents=True)
+    make(path)
+
+    assert kaizen(["hook", hook, str(path)], Shell({})) == 0
+
+    assert "Traceback" not in capsys.readouterr().err

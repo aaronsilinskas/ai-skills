@@ -27,10 +27,11 @@ def add_files_argument(parser: argparse.ArgumentParser) -> None:
 
 
 def read_text(name: str) -> str | None:
-    """The file's text, or ``None`` when it is not UTF-8 text, which no text rule applies to."""
+    """The file's text, or ``None`` when it is not UTF-8 text, which no text rule applies to, or
+    can't be read, such as a dangling symlink or a folder."""
     try:
         return Path(name).read_text(encoding="utf-8")
-    except UnicodeDecodeError:
+    except (OSError, UnicodeDecodeError):
         return None
 
 
