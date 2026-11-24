@@ -39,7 +39,7 @@ from kaizen.shared.version import Version
 
 MARKER = "kaizen.toml"
 ENV_VAR = "KAIZEN_HOME"
-_OLD_MARKER = "mw.toml"
+OLD_MARKER = "mw.toml"
 _OLD_ENV_VAR = "MW_HOME"
 REGISTRY = "projects"
 """The registry folder a fresh marker names."""
@@ -168,6 +168,18 @@ def find_home(start: Path, env: Mapping[str, str], warn: Say = warn_on_stderr) -
     if marker.warning:
         warn(marker.warning)
     return _read_marker(root, marker.path)
+
+
+def refuse_old_marker_copy(home: Home, command: str) -> None:
+    """Refuses, for a *command* that writes the marker, when *home*'s root holds the old marker
+    beside ``kaizen.toml``: writing one would leave the two different, which every later command
+    refuses."""
+    if home.marker == MARKER and (home.root / OLD_MARKER).is_file():
+        raise RefusalError(
+            f"{command}: the home holds both {MARKER} and {OLD_MARKER}, its old name, and"
+            f" writing {MARKER} would leave them different, which every kaizen command refuses",
+            f"delete {OLD_MARKER}",
+        )
 
 
 def marker_at_or_above(start: Path) -> bool:
@@ -400,7 +412,7 @@ def _unnamed_root(start: Path) -> str:
 def _marker(root: Path, where: str) -> _Marker | None:
     """The marker to read at *root*, or ``None`` when it holds neither. Refuses when it holds
     both with different bytes, naming the root as *where*."""
-    new, old = root / MARKER, root / _OLD_MARKER
+    new, old = root / MARKER, root / OLD_MARKER
     if not old.is_file():
         return _Marker(new, None) if new.is_file() else None
     if not new.is_file():
@@ -409,13 +421,13 @@ def _marker(root: Path, where: str) -> _Marker | None:
         )
     if new.read_bytes() != old.read_bytes():
         raise RefusalError(
-            f"home: {where} holds both {MARKER} and {_OLD_MARKER}, its old name, with different "
+            f"home: {where} holds both {MARKER} and {OLD_MARKER}, its old name, with different "
             "contents",
-            f"keep {MARKER}: move into it what you need from {_OLD_MARKER}, then delete "
-            f"{_OLD_MARKER}",
+            f"keep {MARKER}: move into it what you need from {OLD_MARKER}, then delete "
+            f"{OLD_MARKER}",
         )
     return _Marker(
-        new, f"home: {root} holds {_OLD_MARKER}, the old name of {MARKER}, as a copy; delete it"
+        new, f"home: {root} holds {OLD_MARKER}, the old name of {MARKER}, as a copy; delete it"
     )
 
 
@@ -424,7 +436,7 @@ def _search_upward(start: Path) -> Path | None:
         (
             d
             for d in (start, *start.parents)
-            if (d / MARKER).is_file() or (d / _OLD_MARKER).is_file()
+            if (d / MARKER).is_file() or (d / OLD_MARKER).is_file()
         ),
         None,
     )

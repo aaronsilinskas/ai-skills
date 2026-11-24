@@ -58,7 +58,9 @@ from kaizen.ticket import publish as ticket_publish
 # ``needs_home=False`` as well (only ``home init``, which makes the home) is called with the
 # start directory, the environment and the ``Install`` instead, and no home is looked for; one
 # that sets ``needs_install=True`` (only ``home sync``) is also passed the ``Install``.
-# Every command given a ``Home`` runs after the synced version check.
+# Every command given a ``Home`` runs after the synced version check. ``home sync`` sets
+# ``records_version``, since it records the running version as the home's synced version, except
+# with ``--check``, which records nothing.
 # A handler that returns ``None`` has succeeded, and one that returns an int exits with it;
 # it fails by raising, which ``main`` reports.
 GROUPS = {
@@ -144,7 +146,7 @@ def _run(
                 home.synced_version,
                 home.marker,
                 warn_on_stderr,
-                syncing=getattr(args, "records_version", False),
+                syncing=getattr(args, "records_version", False) and not args.check,
             )
             if getattr(args, "needs_install", False):
                 code = args.handler(args, run, home, install) or 0

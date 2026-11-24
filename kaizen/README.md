@@ -8,16 +8,16 @@ It needs only the Python standard library at runtime.
 
 ## Install
 
-Until the first release reaches PyPI, install from a checkout of this repo, at its root:
-
-```sh
-uv tool install ./kaizen
-```
-
-Once it is released, install it from PyPI:
+Install the latest release from PyPI:
 
 ```sh
 uv tool install kaizen-kit
+```
+
+To run an unreleased change, install a local build from a checkout of this repo, at its root:
+
+```sh
+uv tool install ./kaizen
 ```
 
 Either way puts two commands on your path, `kaizen` and its short alias `kz`.
