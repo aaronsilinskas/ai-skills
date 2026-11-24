@@ -53,16 +53,16 @@ class Version(NamedTuple):
 
 
 def recordable_version(running: str, command: str) -> Version:
-    """The *running* version, which *command* (``init`` or ``sync``) records as a home's synced
-    version; refuses one that is not ``X.Y.Z``, such as a local build's, which no home's CI could
-    install."""
+    """The *running* version, which *command* (``home init`` or ``home sync``) records as a home's
+    synced version; refuses one that is not ``X.Y.Z``, such as a local build's, which no home's CI
+    could install."""
     version = Version.parse(running)
     if version is None:
         raise RefusalError(
-            f"home {command}: kaizen's version {running} is not X.Y.Z, so it can't be recorded"
+            f"{command}: kaizen's version {running} is not X.Y.Z, so it can't be recorded"
             " as the home's synced version",
             "install a release of kaizen (`uv tool install --force kaizen-kit`), then run"
-            f" {command} again",
+            f" `kaizen {command}` again",
         )
     return version
 

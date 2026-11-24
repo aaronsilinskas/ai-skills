@@ -292,16 +292,15 @@ def test_sync_help_names_the_synced_files_the_deny_rule_and_the_check_fix(tmp_pa
     assert [text for text in expected if text not in out] == []
 
 
-def _with_old_marker_copy(tmp_path: Path) -> Path:
-    """The fixture home, synced, holding ``mw.toml`` as a copy of its ``kaizen.toml``."""
-    home = _synced(tmp_path)
+def _with_old_marker_copy(home: Path) -> Path:
+    """*home*, given ``mw.toml`` as a copy of its ``kaizen.toml``."""
     (home / "mw.toml").write_bytes((home / "kaizen.toml").read_bytes())
     return home
 
 
 @pytest.mark.parametrize("extra", [[], ["--dry-run"]], ids=["sync", "dry run"])
 def test_sync_with_both_markers_is_refused_before_any_write(tmp_path, capsys, extra):
-    home = _with_old_marker_copy(tmp_path)
+    home = _with_old_marker_copy(_synced(tmp_path))
     _edit(home)
     before = _files(home)
     capsys.readouterr()
@@ -314,9 +313,8 @@ def test_sync_with_both_markers_is_refused_before_any_write(tmp_path, capsys, ex
     assert _files(home) == before
 
 
-def test_a_home_with_both_markers_still_runs_after_sync_on_a_new_release(tmp_path, capsys):
-    home = cli_home(tmp_path, synced_version="0.0.1")
-    (home / "mw.toml").write_bytes((home / "kaizen.toml").read_bytes())
+def test_a_refused_sync_on_a_new_release_leaves_both_markers_alike(tmp_path):
+    home = _with_old_marker_copy(cli_home(tmp_path, synced_version="0.0.1"))
 
     _sync(home)
 
@@ -326,7 +324,7 @@ def test_a_home_with_both_markers_still_runs_after_sync_on_a_new_release(tmp_pat
 
 
 def test_check_with_both_markers_passes_with_the_warning(tmp_path, capsys):
-    home = _with_old_marker_copy(tmp_path)
+    home = _with_old_marker_copy(_synced(tmp_path))
     capsys.readouterr()
 
     assert _sync(home, "--check") == 0

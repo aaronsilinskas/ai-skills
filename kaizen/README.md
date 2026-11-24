@@ -14,7 +14,7 @@ Install the latest release from PyPI:
 uv tool install kaizen-kit
 ```
 
-To run an unreleased change, install a dev build from a checkout of this repo, at its root:
+To run an unreleased change, install a local build from a checkout of this repo, at its root:
 
 ```sh
 uv tool install ./kaizen

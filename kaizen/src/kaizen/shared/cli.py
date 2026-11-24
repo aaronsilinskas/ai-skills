@@ -58,9 +58,9 @@ from kaizen.ticket import publish as ticket_publish
 # ``needs_home=False`` as well (only ``home init``, which makes the home) is called with the
 # start directory, the environment and the ``Install`` instead, and no home is looked for; one
 # that sets ``needs_install=True`` (only ``home sync``) is also passed the ``Install``.
-# Every command given a ``Home`` runs after the synced version check. A command that records the
-# running version as the home's synced version sets ``records_version``, a function of its parsed
-# arguments that says whether this run records it (only ``home sync``, but for ``--check``).
+# Every command given a ``Home`` runs after the synced version check. ``home sync`` sets
+# ``records_version``, since it records the running version as the home's synced version, except
+# with ``--check``, which records nothing.
 # A handler that returns ``None`` has succeeded, and one that returns an int exits with it;
 # it fails by raising, which ``main`` reports.
 GROUPS = {
@@ -141,13 +141,12 @@ def _run(
             code = args.handler(args, run, start, environ, install) or 0
         else:
             home = find_home(start, environ)
-            records_version = getattr(args, "records_version", None)
             check_synced_version(
                 install.version,
                 home.synced_version,
                 home.marker,
                 warn_on_stderr,
-                syncing=records_version is not None and records_version(args),
+                syncing=getattr(args, "records_version", False) and not args.check,
             )
             if getattr(args, "needs_install", False):
                 code = args.handler(args, run, home, install) or 0

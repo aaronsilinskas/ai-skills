@@ -27,7 +27,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `main` resolves the home once, after argument parsing (so `--help` works anywhere) and before the handler, and passes the `Home` to it.
   `home init` is the one command that needs no home: its parser sets `needs_home=False`, and its handler gets the start directory, the environment and the `Install` instead.
   Before the handler, and after the home is found, it runs the **synced version** check, so `home init` and `--help` skip it.
-  `home sync`'s parser sets `records_version`, a function of the parsed arguments that is true for every run but `--check`'s, and `main` passes its answer to the check, so a sync only refuses an older install and never warns to run the command already running.
+  `home sync` sets `records_version`, and `main` tells the check a run records the version unless it is `--check`'s, so a sync only refuses an older install and never warns to run the command already running.
   `run`, `cwd` and `env` are the seams tests use to point kaizen at a fixture home with a recording runner.
   `version` (the running version, by default `__version__`) and `latest` (the latest-release lookup, by default a request to PyPI) are the seam for the synced version: tests pass both, so they need no install or network.
   No command reads either for itself: `main` passes them as an `Install` to `home init` and to the one command whose parser sets `needs_install=True`, `home sync`, which alone calls `latest`.
@@ -60,7 +60,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   A template's placeholders take only facts worked out from the `Home`, and no template names a real home, owner, repo or path.
   The synced version is one of those facts, passed beside the `Home` so the files show the version the marker records once they are written: `home init` and `home sync` pass the running version, which they record, and `--check` passes the home's recorded synced version, which the home's CI installs.
   It also holds the **managed settings**, the git stash deny rule, which `home init` and `home sync` merge through the same function, so both write the same entries.
-  Merging an entry rewrites the whole settings file as JSON indented by two spaces, since the standard library's `json` keeps no formatting; `home sync --help` says so.
+  Merging an entry rewrites the whole settings file as JSON indented by two spaces, since the standard library's `json` keeps no formatting.
 - `shared/pre_commit.py`: the **hook entries**, one per `kaizen hook` command, and the hook config a new home gets.
   The synced hooks doc and `home init` both write them from here, so the two never list different entries.
 - `shared/labels.py`: `Label` and the default **workflow labels**, which a home's marker may replace as a whole set.
@@ -88,7 +88,7 @@ One module per command; each group's `--help` lists them.
   Its output and files name no home but the new one (ADR 0002), and the marker is written last, so a failure partway leaves none and a rerun finishes the rest.
   `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
   Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
-  `sync` refuses a home holding both markers, `kaizen.toml` and its old name, since writing one would leave them different, which every later command refuses; `--check` and every other command read such a home with a warning.
+  `sync` must refuse a home holding both markers, since writing one leaves them different, which every later command refuses; read-only commands, `--check` among them, pass such a home with a warning.
   It never touches the home overlay, the hook config or any other file the home owns.
   `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.
 - `hook/`: the pre-commit **hooks**, each run on the file names pre-commit passes and needing a home like any command.

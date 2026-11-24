@@ -320,7 +320,7 @@ def init_home(
     checks += _check_not_inside_home(root, env, user_home)
     new = NewHome(root, *_origin_repo(root, run), user_home)
     checks.append(f"origin is the GitHub repo {new.github}")
-    version = recordable_version(install.version, "init")
+    version = recordable_version(install.version, "home init")
     checks.append(f"kaizen's version {version} is X.Y.Z, so the marker can record it")
     steps = _steps(new, version)
     checks += [step.check() for step in steps]

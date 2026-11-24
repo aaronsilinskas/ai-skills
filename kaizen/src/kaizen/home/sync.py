@@ -132,7 +132,7 @@ def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say =
     there is one. With *dry_run*, prints each change's diff instead and writes nothing. Refuses
     a running version that is not ``X.Y.Z``, which no home's CI could install, and a home that
     still holds the old marker beside ``kaizen.toml``."""
-    version = recordable_version(install.version, "sync")
+    version = recordable_version(install.version, "home sync")
     refuse_old_marker_copy(home, "home sync")
     found = changes(home, version)
     if not found:
@@ -219,13 +219,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         dest="check",
         help="fail, listing every difference, unless the home is in step; write nothing",
     )
-    parser.set_defaults(handler=_command, needs_install=True, records_version=_records_version)
-
-
-def _records_version(args: argparse.Namespace) -> bool:
-    """Whether this run records the running version as the home's synced version: every run but
-    ``--check``'s."""
-    return not args.check
+    parser.set_defaults(handler=_command, needs_install=True, records_version=True)
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:
