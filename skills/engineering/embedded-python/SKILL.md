@@ -100,7 +100,7 @@ Minimize and isolate CircuitPython-specific dependencies so the same code can ru
 
 **Guard `typing` and `collections.abc` imports with `TYPE_CHECKING`:**
 
-Advanced `typing` constructs and `collections.abc` abstractions are still absent or incomplete. Import them for the type checker only, under a bare `TYPE_CHECKING = False`. This is the one sanctioned form:
+Advanced `typing` constructs and `collections.abc` abstractions are still absent or incomplete. Import them for the type checker only, under a module-level `TYPE_CHECKING = False`. This is the one sanctioned form:
 
 ```python
 from __future__ import annotations
@@ -108,12 +108,12 @@ from __future__ import annotations
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, TypeAlias
+    from typing import Any
 ```
 
-Declare `TYPE_CHECKING` after the runtime imports; never import it. The device never imports `typing` and skips the block, while type checkers treat the name as true and check the guarded imports. A `try:` around these imports is not used: it still attempts the import on every boot.
+Define `TYPE_CHECKING` in the module rather than importing it, since `typing` is absent on the device. The device skips the block and never attempts the import, while type checkers treat the name as true and check the guarded imports. A `try:` around these imports is not used, because it still attempts the import on every boot.
 
-A module whose annotations name a guarded import starts with `from __future__ import annotations`. CircuitPython and MicroPython never evaluate annotations, but CPython before 3.14 evaluates them eagerly, so host-side tests would hit an unbound name. CircuitPython builds `__future__` in; on MicroPython, install it from micropython-lib (`mip install __future__`).
+Guarded names appear only inside annotations, since they are unbound at runtime. A module whose annotations name one starts with `from __future__ import annotations`. CircuitPython and MicroPython never evaluate annotations, but CPython before 3.14 evaluates them eagerly, so host-side tests would hit an unbound name. CircuitPython builds `__future__` in; on MicroPython, install it from micropython-lib (`mip install __future__`).
 
 **Module count matters.** Import cost is paid at startup on-device. Keep related logic in the same file rather than splitting into many small modules when startup latency is a concern.
 
@@ -153,7 +153,7 @@ class MyConfig:
     DEFAULT_BRIGHTNESS: Final = 0x33
 ```
 
-`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard because `typing` may be absent on some embedded runtimes. The annotation itself must **never** be quoted. String-quoting `Final` is unnecessary for CircuitPython.
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard described above. The annotation itself must **never** be quoted. String-quoting `Final` is unnecessary for CircuitPython.
 
 ## State Object Lifecycle
 
