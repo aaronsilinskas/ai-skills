@@ -81,6 +81,7 @@ forbidden_modules = [
     "kaizen.pr",
     "kaizen.issue",
     "kaizen.home",
+    "kaizen.hook",
 ]
 ignore_imports = [
     # The CLI is the entry point: it registers every group's commands.
@@ -90,6 +91,7 @@ ignore_imports = [
     "kaizen.shared.cli -> kaizen.pr.*",
     "kaizen.shared.cli -> kaizen.issue.*",
     "kaizen.shared.cli -> kaizen.home.*",
+    "kaizen.shared.cli -> kaizen.hook.*",
 ]
 
 [[tool.importlinter.contracts]]

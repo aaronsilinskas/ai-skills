@@ -8,7 +8,7 @@ Each command's `--help` says what it checks and does; this map holds only what `
 
 - `kaizen/`: the package's own folder, with a `src` layout, its own `pyproject.toml` and lock file.
   The distribution is `kaizen-kit`, the module `kaizen`, and both console scripts, `kaizen` and `kz`, run the same entry point.
-- `kaizen/src/kaizen/`: the module: its shared code (`shared/`), its command groups (`ticket/`, `spec/`, `project/`, `pr/`, `issue/`, `home/`) and their tests (`tests/`).
+- `kaizen/src/kaizen/`: the module: its shared code (`shared/`), its command groups (`ticket/`, `spec/`, `project/`, `pr/`, `issue/`, `home/`, `hook/`) and their tests (`tests/`).
 - `kaizen/src/kaizen/__init__.py`: `__version__`, the running version, read from the package metadata, so the version is set only in `pyproject.toml`.
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
   git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo and never touch GitHub.
@@ -57,6 +57,8 @@ Paths below are relative to `kaizen/src/kaizen/`.
   A template's placeholders take only facts worked out from the `Home`, and no template names a real home, owner, repo or path.
   The synced version is one of those facts, so a `Home` is rendered with the version its marker records beside the files: `sync` sets the running version on it, and `--check` keeps the recorded one, which the home's CI installs.
   It also holds the **managed settings**, the git stash deny rule, which `home init` and `home sync` merge through the same function, so both write the same entries.
+- `shared/pre_commit.py`: the **hook entries**, one per `kaizen hook` command, and the hook config a new home gets.
+  The synced hooks doc and `home init` both write them from here, so the two never list different entries.
 - `shared/labels.py`: `Label` and the default **workflow labels**, which a home's marker may replace as a whole set.
 - `shared/issue_graph.py`: the issue reads and the parent and blocked-by edge writes the `issue`, `spec` and `ticket` groups share.
   It refuses an issue reference to a repo outside the home.
@@ -83,12 +85,18 @@ One module per command; each group's `--help` lists them.
   `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
   Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
   It never touches the home overlay, the hook config or any other file the home owns.
+  `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.
+- `hook/`: the pre-commit **hooks**, each run on the file names pre-commit passes and needing a home like any command.
+  `hook leak-check` is `project leak-check --staged`; `hook no-commit-to-branch` reads the default branch through `shared/branch.py`: `origin/HEAD`, asking origin only when the clone never recorded it.
+  The comment hooks read comments through `hook/comments.py`: Python's through `tokenize`, other languages' as whole-line comments by their prefix, keyed by file suffix.
+  A comment after code on the same line is read only in Python, since telling it from a string needs the language's tokenizer; a file of an unknown language is skipped.
+  `hook/common.py` holds the one refusal every file hook raises, listing each finding's file, line and rule.
 
 ## Constraints
 
 - kaizen's runtime is the Python standard library only; dev tools sit in the dev dependency group.
 - Every command checks all its preconditions before its first mutating command, and with `--dry-run` runs only queries.
-  Commands that only query (`project leak-check`, `pr wait`, `issue show`, `spec status`, `ticket diff`) have no `--dry-run`.
+  Commands that only query (`project leak-check`, the `hook` commands, `pr wait`, `issue show`, `spec status`, `ticket diff`) have no `--dry-run`.
 - Every command prints one line per completed step, so a failure partway through shows what is already done.
 - No command uses stored state: branches, worktrees and GitHub are read each time.
 - The import contracts in `pyproject.toml`: `shared/` imports no command group (the CLI excepted), and `spec/` imports nothing of `ticket/`.

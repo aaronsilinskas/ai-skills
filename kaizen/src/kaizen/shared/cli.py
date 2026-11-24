@@ -11,6 +11,7 @@ command on a ticket and its base with a verdict.
 ``spec status`` prints a spec's tickets and its frontier.
 ``issue show`` prints one issue whole, ``issue link`` adds its parent and blocked-by edges,
 and ``issue publish`` creates one issue after the leak check.
+The ``hook`` commands are the pre-commit hooks a home's or project's config runs.
 ``pr wait`` blocks until a PR's checks finish and exits by their outcome.
 ``home init`` makes the git repo it runs in a new home, and is the one command that needs none;
 ``home sync`` brings a home's synced files back in step with kaizen's templates.
@@ -32,6 +33,8 @@ from typing import TextIO, cast
 from kaizen import __version__
 from kaizen.home import init as home_init
 from kaizen.home import sync as home_sync
+from kaizen.hook import leak_check as hook_leak_check
+from kaizen.hook import no_commit_to_branch, prose_marks, section_banners, work_tracking
 from kaizen.issue import link as issue_link
 from kaizen.issue import publish as issue_publish
 from kaizen.issue import show as issue_show
@@ -60,6 +63,10 @@ from kaizen.ticket import publish as ticket_publish
 # it fails by raising, which ``main`` reports.
 GROUPS = {
     "home": ("set up a new home, or sync its synced files", (home_init, home_sync)),
+    "hook": (
+        "the pre-commit hooks, each run on the files pre-commit passes",
+        (hook_leak_check, no_commit_to_branch, prose_marks, section_banners, work_tracking),
+    ),
     "issue": ("read, link and publish issues", (issue_show, issue_link, issue_publish)),
     "project": (
         "check the current project, or sync the workflow labels to the projects' repos",

@@ -42,6 +42,7 @@ After upgrading kaizen, run `kaizen home sync` in each home to bring its synced 
 A home records the release that last synced it as its synced version, in `kaizen.toml`.
 Every command compares the two: a newer install warns to run `kaizen home sync`, and an older one refuses until you run `uv tool upgrade kaizen-kit`.
 A home's CI runs `uvx --from kaizen-kit==<synced version> kaizen home sync --check`, which fails on a hand edit to a synced file, and the synced docs show that step with the home's version.
+The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
 
 ## Move an existing home to the new names
 

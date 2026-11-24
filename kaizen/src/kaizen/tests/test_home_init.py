@@ -17,6 +17,7 @@ from kaizen.shared.home import find_home
 from kaizen.shared.labels import Label
 from kaizen.shared.registry import all_projects, resolve
 from kaizen.shared.synced import OVERLAY, SYNCED_FILES, render
+from kaizen.tests.hook_config import KAIZEN_REPO_ITEM
 from kaizen.tests.ticket_shell import (
     FOOTER,
     LEAK_OWN,
@@ -42,6 +43,7 @@ EVERY_FILE = sorted(
     [
         ".claude/settings.json",
         ".gitignore",
+        ".pre-commit-config.yaml",
         "kaizen.toml",
         "projects/README.md",
         "projects/newhome.md",
@@ -150,6 +152,7 @@ def test_each_step_done_prints_one_line_after_the_home_root(tmp_path, capsys):
         "wrote projects/README.md",
         "wrote projects/newhome.md",
         *[f"wrote {path}" for path in DOCS],
+        "wrote .pre-commit-config.yaml",
         "wrote kaizen.toml",
         f"{root} is now a home",
     ]
@@ -420,6 +423,7 @@ def test_a_rerun_after_a_failure_partway_finishes(tmp_path, capsys, monkeypatch)
         "kept projects/README.md, already as init writes it",
         "wrote projects/newhome.md",
         *[f"wrote {path}" for path in DOCS],
+        "wrote .pre-commit-config.yaml",
         "wrote kaizen.toml",
     ]
     assert capsys.readouterr().out.splitlines()[1 : 1 + len(steps)] == steps
@@ -1055,3 +1059,87 @@ def test_init_refuses_a_running_version_that_is_not_x_y_z_before_any_write(tmp_p
         "refused: home init: kaizen's version 3.4.5.dev0 is not X.Y.Z"
     )
     assert _written(root) == []
+
+
+def test_a_fresh_repo_gets_a_hook_config_running_every_kaizen_hook(tmp_path):
+    root = _repo(tmp_path)
+
+    _init(tmp_path, root)
+
+    assert (root / ".pre-commit-config.yaml").read_text() == f"repos:\n{KAIZEN_REPO_ITEM}"
+
+
+def test_dry_run_lists_the_hook_entries(tmp_path, capsys):
+    root = _repo(tmp_path)
+
+    _init(tmp_path, root, "--dry-run")
+
+    assert f"would write .pre-commit-config.yaml:\nrepos:\n{KAIZEN_REPO_ITEM}" in (
+        capsys.readouterr().out
+    )
+
+
+def test_an_existing_hook_config_is_kept_unchanged(tmp_path, capsys):
+    root = _repo(tmp_path)
+    _write(root, ".pre-commit-config.yaml", "repos: []\n")
+
+    assert _init(tmp_path, root) == 0
+
+    assert (root / ".pre-commit-config.yaml").read_text() == "repos: []\n"
+    assert "kept .pre-commit-config.yaml: the home's own;" in capsys.readouterr().out
+
+
+def test_an_existing_hook_config_without_the_hook_entries_gets_a_to_do_to_add_them(
+    tmp_path, capsys
+):
+    root = _repo(tmp_path)
+    _write(root, ".pre-commit-config.yaml", "repos: []\n")
+
+    _init(tmp_path, root)
+
+    checklist = capsys.readouterr().out.split("still to do, by you:")[1]
+    assert (
+        "add the kaizen hook entries docs/agents/pre-commit-hooks.md lists to"
+        " .pre-commit-config.yaml" in checklist
+    )
+
+
+def test_an_existing_hook_config_with_every_kaizen_hook_is_kept_without_a_to_do(tmp_path, capsys):
+    root = _repo(tmp_path)
+    _write(root, ".pre-commit-config.yaml", f"repos:\n{KAIZEN_REPO_ITEM}  - repo: other\n")
+
+    assert _init(tmp_path, root) == 0
+
+    out = capsys.readouterr().out
+    assert "kept .pre-commit-config.yaml: it already runs every kaizen hook" in out
+    assert "pre-commit-hooks.md" not in out.split("still to do, by you:")[1]
+
+
+def test_a_hook_config_that_is_not_text_is_refused_before_any_write(tmp_path, capsys):
+    root = _repo(tmp_path)
+    (root / ".pre-commit-config.yaml").write_bytes(b"\xff\xfe")
+
+    assert _init(tmp_path, root) == 1
+
+    assert _written(root) == [".pre-commit-config.yaml"]
+    assert "refused: home init: .pre-commit-config.yaml exists but can't be read as text" in (
+        capsys.readouterr().err
+    )
+
+
+def test_the_checklist_says_to_install_the_hooks(tmp_path, capsys):
+    root = _repo(tmp_path)
+
+    _init(tmp_path, root)
+
+    checklist = capsys.readouterr().out.split("still to do, by you:")[1]
+    assert f"run `pre-commit install` in {root}" in checklist
+
+
+def test_init_help_names_the_hook_config_and_that_an_existing_one_is_kept(tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        main(["home", "init", "--help"], cwd=tmp_path, env={})
+
+    out = " ".join(capsys.readouterr().out.split())
+    assert ".pre-commit-config.yaml the hook config" in out
+    assert "an existing one is the home's own and is kept" in out

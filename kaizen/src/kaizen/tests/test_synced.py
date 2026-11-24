@@ -6,6 +6,7 @@ from kaizen.shared.home import Home
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
 from kaizen.shared.synced import render
 from kaizen.shared.version import Version
+from kaizen.tests.hook_config import KAIZEN_REPO_ITEM
 
 ROOT = Path("/fixture/home")
 
@@ -35,6 +36,7 @@ def test_the_manifest_renders_every_synced_file_at_its_path_in_the_home():
         "docs/agents/implement-spec.md",
         "docs/agents/implement.md",
         "docs/agents/issue-conventions.md",
+        "docs/agents/pre-commit-hooks.md",
         "docs/agents/workflow-labels.md",
         "docs/agents/workflows.md",
     ]
@@ -96,3 +98,9 @@ def test_the_workflows_doc_tells_agents_when_to_run_home_sync():
     assert "\n## Syncing\n" in workflows
     assert "`kaizen home sync`" in workflows
     assert "`kaizen home sync --check`" in workflows
+
+
+def test_the_hooks_doc_lists_every_kaizen_hook_entry_exactly():
+    hooks_doc = _render(_home())["docs/agents/pre-commit-hooks.md"]
+
+    assert f"```yaml\nrepos:\n{KAIZEN_REPO_ITEM}```\n" in hooks_doc
