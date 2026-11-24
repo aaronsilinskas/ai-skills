@@ -14,7 +14,7 @@ This repo is a skill source, and it also uses Matt Pocock's skills while working
 - **Python only through `uv`, from `kaizen/`.** Run `cd kaizen && uv run ...`, never bare `python` or `pip`.
 - **Standard library only at runtime.** `dependencies` in `kaizen/pyproject.toml` stays empty. Dev tools (pytest, ruff, mypy, import-linter) go in its `dev` dependency group.
 - **Check before a PR.** `bash kaizen/scripts/check.sh` runs ruff, the formatter check, mypy, the import contracts and pytest. It must pass, as must `bash scripts/check.sh`.
-- **Release only by tag.** Pushing a tag `kaizen-vX.Y.Z`, matching the version in `kaizen/pyproject.toml`, releases it to PyPI as `kaizen-kit`. Never build or upload a release by hand.
+- **Release only by tag.** Pushing a tag `kaizen-vX.Y.Z`, matching the version in `kaizen/pyproject.toml`, releases it to PyPI as `kaizen-kit` through `.github/workflows/release.yml`. Never upload a release by hand, and never push a release tag: the maintainer does. To prepare one, set the new version in `kaizen/pyproject.toml` and land it through a PR. `kaizen/README.md`'s Release section says what the workflow checks and lists the maintainer's steps.
 - **One sentence per line** in kaizen's Markdown docs (`kaizen/README.md`, `kaizen/GLOSSARY.md`, `kaizen/docs/`), so two edits to one paragraph don't conflict.
 
 ## Agent skills

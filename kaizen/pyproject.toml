@@ -52,7 +52,7 @@ select = [
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src"]
+files = ["src", "scripts"]
 mypy_path = "src"
 explicit_package_bases = true
 check_untyped_defs = true
