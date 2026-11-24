@@ -907,7 +907,9 @@ def test_each_synced_file_is_written_as_render_gives_it_for_the_new_home(tmp_pat
 
     assert _init(tmp_path, root) == 0
 
-    rendered = render(find_home(root, {}))
+    home = find_home(root, {})
+    assert home.synced_version is not None
+    rendered = render(home, home.synced_version)
     assert sorted(rendered) == sorted(SYNCED)
     assert [path for path in SYNCED if (root / path).read_text() != rendered[path]] == []
 
@@ -1012,7 +1014,7 @@ def test_init_records_the_running_version_as_the_synced_version(tmp_path):
 
     assert _init(tmp_path, root, version="3.4.5") == 0
 
-    assert find_home(root, {}).synced_version == "3.4.5"
+    assert str(find_home(root, {}).synced_version) == "3.4.5"
     assert "uvx --from kaizen-kit==3.4.5 kaizen home sync --check" in (
         (root / "docs/agents/workflows.md").read_text()
     )
@@ -1042,3 +1044,14 @@ def test_a_new_homes_first_command_does_not_warn(tmp_path, capsys):
 
     err = capsys.readouterr().err
     assert (code, [line for line in err.splitlines() if line.startswith("warning:")]) == (0, [])
+
+
+def test_init_refuses_a_running_version_that_is_not_x_y_z_before_any_write(tmp_path, capsys):
+    root = _repo(tmp_path)
+
+    assert _init(tmp_path, root, version="3.4.5.dev0") == 1
+
+    assert capsys.readouterr().err.startswith(
+        "refused: home init: kaizen's version 3.4.5.dev0 is not X.Y.Z"
+    )
+    assert _written(root) == []

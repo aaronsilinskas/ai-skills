@@ -3,7 +3,7 @@ kaizen's templates, or, with ``--check``, fail on any difference."""
 
 import argparse
 import difflib
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Runner, Say
@@ -15,7 +15,7 @@ from kaizen.shared.synced import (
     managed_settings_text,
     render,
 )
-from kaizen.shared.version import UPGRADE, Install, newer_release, triple
+from kaizen.shared.version import UPGRADE, Install, Version, newer_release
 
 CHECK_FIX = "run `kaizen home sync`, and move home rules to the home overlay"
 """The fix a failed ``--check`` gives: a difference is either a template change the home hasn't
@@ -34,7 +34,7 @@ class Change:
     """Its text now, ``None`` when it is absent."""
     synced: str
     """Its text once synced."""
-    applied: str | None = None
+    done_line: str | None = None
     """For a file the home owns but for one part that ``sync`` writes, the output line saying
     what it wrote; ``None`` for a file ``sync`` renders whole."""
 
@@ -55,19 +55,18 @@ class Change:
         path = root / self.relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.synced, encoding="utf-8")
-        if self.applied is not None:
-            return self.applied
+        if self.done_line is not None:
+            return self.done_line
         return f"wrote {self.relative}" if self.current is None else f"rewrote {self.relative}"
 
 
-def changes(home: Home) -> list[Change]:
-    """Every file of *home* whose text differs from what ``sync`` writes for its synced version:
-    each synced file, in the manifest's order, then the settings file, then the marker. Reads
-    only; refuses, before anything is written, on a path that is not a file and on settings that
-    can't take the managed settings."""
-    assert home.synced_version is not None, "sync and --check each set the version first"
+def changes(home: Home, version: Version) -> list[Change]:
+    """Every file of *home* whose text differs from what ``sync`` writes as the release *version*:
+    each synced file, in the manifest's order, then the settings file, then the marker recording
+    *version*. Reads only; refuses, before anything is written, on a path that is not a file and
+    on settings that can't take the managed settings."""
     found = []
-    for relative, synced in render(home).items():
+    for relative, synced in render(home, version).items():
         current = _current(home.root, relative)
         if current != synced.encode():
             found.append(Change(relative, _text(current), synced))
@@ -88,14 +87,14 @@ def changes(home: Home) -> list[Change]:
             )
         )
     marker = (home.root / home.marker).read_text(encoding="utf-8")
-    recorded = with_synced_version(marker, home.synced_version)
+    recorded = with_synced_version(marker, version)
     if recorded != marker:
         found.append(
             Change(
                 home.marker,
                 marker,
                 recorded,
-                f"recorded synced version {home.synced_version} in {home.marker}",
+                f"recorded synced version {version} in {home.marker}",
             )
         )
     return found
@@ -124,14 +123,15 @@ def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say =
     synced version, one line each, or says nothing changed; then names a newer release when
     there is one. With *dry_run*, prints each change's diff instead and writes nothing. Refuses
     a running version that is not ``X.Y.Z``, which no home's CI could install."""
-    if triple(install.version) is None:
+    version = Version.parse(install.version)
+    if version is None:
         raise RefusalError(
             f"home sync: kaizen's version {install.version} is not X.Y.Z, so it can't be recorded"
             " as the home's synced version",
             "install a release of kaizen (`uv tool install --force kaizen-kit`), then run sync"
             " again",
         )
-    found = changes(replace(home, synced_version=install.version))
+    found = changes(home, version)
     if not found:
         say(f"nothing changed: {IN_STEP}")
     for change in found:
@@ -148,13 +148,13 @@ def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say =
 
 def check_home(home: Home, *, say: Say = print) -> None:
     """Prints each of *home*'s ``changes`` as a diff and refuses, naming them all, when there is
-    any. Writes nothing, and renders for the synced version *home* records, which the release
-    its CI runs is pinned to; refuses when it records none."""
+    any. Writes nothing, and renders for the synced version *home* records, the release its CI
+    installs; refuses when it records none."""
     if home.synced_version is None:
         raise RefusalError(
             f"home sync --check: {home.marker} records no synced version", "run `kaizen home sync`"
         )
-    found = changes(home)
+    found = changes(home, home.synced_version)
     for change in found:
         say(f"differs: {change.relative}\n{change.diff()}")
     if found:
@@ -208,14 +208,15 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
     )
     mode.add_argument(
         "--check",
-        action="store_true",
+        action="store_false",
+        dest="records_version",
         help="fail, listing every difference, unless the home is in step; write nothing",
     )
     parser.set_defaults(handler=_command, needs_install=True)
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:
-    if args.check:
+    if not args.records_version:
         check_home(home)
     else:
         sync_home(home, install, dry_run=args.dry_run)

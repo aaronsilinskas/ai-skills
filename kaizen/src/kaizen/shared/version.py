@@ -10,6 +10,7 @@ import re
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from kaizen.shared.common import RefusalError, Say
 
@@ -34,17 +35,31 @@ _TIMEOUT = 3
 _TRIPLE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
 
-def triple(version: str) -> tuple[int, int, int] | None:
-    """*version* as an integer triple, or ``None`` when it is not ``X.Y.Z``."""
-    match = _TRIPLE.fullmatch(version)
-    return None if match is None else (int(match[1]), int(match[2]), int(match[3]))
+class Version(NamedTuple):
+    """A release version ``X.Y.Z``, which compares as an integer triple."""
+
+    major: int
+    minor: int
+    patch: int
+
+    @classmethod
+    def parse(cls, text: str) -> "Version | None":
+        """*text* as a ``Version``, or ``None`` when it is not ``X.Y.Z``."""
+        match = _TRIPLE.fullmatch(text)
+        return None if match is None else cls(int(match[1]), int(match[2]), int(match[3]))
+
+    def __str__(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"
 
 
-def check_synced_version(running: str, synced: str | None, marker: str, warn: Say) -> None:
+def check_synced_version(
+    running: str, synced: Version | None, marker: str, warn: Say, *, syncing: bool = False
+) -> None:
     """Compares the *running* version with the *synced* version a home's *marker* records:
-    *warn*s once on a newer install, on a home that records none and on a running version that
-    is not ``X.Y.Z``, and refuses on an older install."""
-    ours = triple(running)
+    refuses on an older install, and *warn*s once on a running version that is not ``X.Y.Z``, on
+    a newer install and on a home that records none. With *syncing*, for the command that
+    records the version, it only refuses, since that command is the fix the warnings name."""
+    ours = Version.parse(running)
     if ours is None:
         warn(
             f"kaizen's version {running} is not X.Y.Z, such as a local build's, so this home's"
@@ -52,18 +67,17 @@ def check_synced_version(running: str, synced: str | None, marker: str, warn: Sa
         )
         return
     if synced is None:
-        warn(f"this home's {marker} records no synced version: run `kaizen home sync`")
+        if not syncing:
+            warn(f"this home's {marker} records no synced version: run `kaizen home sync`")
         return
-    theirs = triple(synced)
-    assert theirs is not None, "the home module refuses a synced version that is not X.Y.Z"
-    if ours > theirs:
+    if ours < synced:
+        raise RefusalError(
+            f"kaizen {running} is older than this home's synced version {synced}", UPGRADE
+        )
+    if ours > synced and not syncing:
         warn(
             f"kaizen {running} is newer than this home's synced version {synced}:"
             " run `kaizen home sync`"
-        )
-    elif ours < theirs:
-        raise RefusalError(
-            f"kaizen {running} is older than this home's synced version {synced}", UPGRADE
         )
 
 
@@ -71,7 +85,7 @@ def newer_release(running: str, latest: LatestRelease) -> str | None:
     """The line naming the latest release and the upgrade command when it is newer than
     *running*; ``None`` otherwise, or when the lookup fails."""
     found = latest()
-    ours, theirs = triple(running), None if found is None else triple(found)
+    ours, theirs = Version.parse(running), None if found is None else Version.parse(found)
     if ours is None or theirs is None or theirs <= ours:
         return None
     return f"kaizen {found} is out (this is {running}): run `{UPGRADE}`"

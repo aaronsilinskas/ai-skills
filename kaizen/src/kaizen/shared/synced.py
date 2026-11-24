@@ -15,6 +15,7 @@ from pathlib import Path
 
 from kaizen.shared.home import Home, SettingsError, read_settings, settings_text
 from kaizen.shared.labels import Label
+from kaizen.shared.version import UPGRADE, Version
 
 OVERLAY = "docs/agents/home-overlay.md"
 """The **home overlay**, relative to the home root: the home's own notes beside its synced files,
@@ -46,9 +47,9 @@ SYNCED_LINE = (
 _FACTS: dict[str, Callable[[Home], str]] = {
     "registry": lambda home: home.registry.relative_to(home.root).as_posix(),
     "workflow_labels": lambda home: _label_list(home.workflow_labels),
-    "synced_version": lambda home: _synced_version(home),
 }
-"""What a template may name: each fact, worked out from the home."""
+"""What a template may name, beside ``synced_version`` and ``upgrade``: each fact, worked out
+from the home."""
 
 
 def _label_list(labels: tuple[Label, ...]) -> str:
@@ -58,21 +59,14 @@ def _label_list(labels: tuple[Label, ...]) -> str:
     )
 
 
-def _synced_version(home: Home) -> str:
-    """The version the files are rendered for, which the marker records beside them."""
-    if home.synced_version is None:
-        raise ValueError("synced files render only for a home with a synced version")
-    return home.synced_version
-
-
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 
 
-def render(home: Home) -> dict[str, str]:
-    """Every synced file's text for *home*, keyed by its path relative to the home root. The
-    files show *home*'s synced version, so the caller sets the one the marker records with
-    them."""
+def render(home: Home, synced_version: Version) -> dict[str, str]:
+    """Every synced file's text for *home*, keyed by its path relative to the home root, as the
+    release *synced_version* renders it."""
     facts = {name: fact(home) for name, fact in _FACTS.items()}
+    facts |= {"synced_version": str(synced_version), "upgrade": UPGRADE}
     return {synced.path: _render(synced.template, facts) for synced in SYNCED_FILES}
 
 

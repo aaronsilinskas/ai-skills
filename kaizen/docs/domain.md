@@ -22,8 +22,9 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/cli.py`: the CLI and its one entry point, `main(argv, run, cwd, env, version, latest)`.
   Commands are grouped noun then verb, and each command module registers its own subparser and handler, listed under its group in `GROUPS`.
   `main` resolves the home once, after argument parsing (so `--help` works anywhere) and before the handler, and passes the `Home` to it.
-  `home init` is the one command that needs no home: its parser sets `needs_home=False`, and its handler gets the start directory and environment instead.
+  `home init` is the one command that needs no home: its parser sets `needs_home=False`, and its handler gets the start directory, the environment and the `Install` instead.
   Before the handler, and after the home is found, it runs the **synced version** check, so `home init` and `--help` skip it.
+  `home sync` without `--check` sets `records_version`, so the check only refuses an older install there and never warns to run the command already running.
   `run`, `cwd` and `env` are the seams tests use to point kaizen at a fixture home with a recording runner.
   `version` (the running version, by default `__version__`) and `latest` (the latest-release lookup, by default a request to PyPI) are the seam for the synced version: tests pass both, so they need no install or network.
   No command reads either for itself: `main` passes them as an `Install` to `home init` and to the one command whose parser sets `needs_install=True`, `home sync`, which alone calls `latest`.

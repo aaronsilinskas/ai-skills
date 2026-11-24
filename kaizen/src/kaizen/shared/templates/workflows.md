@@ -50,4 +50,4 @@ When the check fails on a hand edit to a synced file, move that rule to the home
 It also records the release it ran as `synced_version` in `kaizen.toml`: these files were rendered by {{synced_version}}.
 The home's CI step is `uvx --from kaizen-kit=={{synced_version}} kaizen home sync --check`, so CI judges the synced files by the release that wrote them, whatever a machine has installed.
 When a sync changes the synced version, put the new one in that step, in the same commit.
-Every `kaizen` command compares the installed release with the synced version: a newer install warns to sync, and an older one refuses until `uv tool upgrade kaizen-kit` runs.
+Every `kaizen` command compares the installed release with the synced version: a newer install warns to sync, and an older one refuses until `{{upgrade}}` runs.

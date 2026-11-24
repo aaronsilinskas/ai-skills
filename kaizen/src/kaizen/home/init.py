@@ -36,7 +36,7 @@ from kaizen.shared.synced import (
     render,
     starter_overlay,
 )
-from kaizen.shared.version import Install
+from kaizen.shared.version import Install, Version
 
 GITIGNORE = ".gitignore"
 
@@ -278,7 +278,16 @@ def init_home(
     checks += _check_not_inside_home(root, env, user_home)
     new = NewHome(root, *_origin_repo(root, run), user_home)
     checks.append(f"origin is the GitHub repo {new.github}")
-    steps = _steps(new, install.version)
+    version = Version.parse(install.version)
+    if version is None:
+        raise RefusalError(
+            f"home init: kaizen's version {install.version} is not X.Y.Z, so it can't be recorded"
+            " as the new home's synced version",
+            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run init"
+            " again",
+        )
+    checks.append(f"kaizen's version {version} is X.Y.Z, so the marker can record it")
+    steps = _steps(new, version)
     checks += [step.check() for step in steps]
     if dry_run:
         for check in checks:
@@ -377,7 +386,7 @@ def _checklist(root: str, name: str) -> list[str]:
     ]
 
 
-def _steps(new: NewHome, version: str) -> list[Step]:
+def _steps(new: NewHome, version: Version) -> list[Step]:
     """What ``init`` writes, in write order. The marker comes last, so a failure partway leaves
     no marker, and a rerun is not refused as a home already."""
     return [
@@ -390,7 +399,7 @@ def _steps(new: NewHome, version: str) -> list[Step]:
         *[
             NewFile(new.root, relative, text)
             for relative, text in render(
-                fresh_home(new.root, new.github, new.path, version)
+                fresh_home(new.root, new.github, new.path, version), version
             ).items()
         ],
         NewFile(new.root, OVERLAY, starter_overlay()),

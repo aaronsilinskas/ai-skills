@@ -35,7 +35,7 @@ from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Say
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
-from kaizen.shared.version import triple
+from kaizen.shared.version import Version
 
 MARKER = "kaizen.toml"
 ENV_VAR = "KAIZEN_HOME"
@@ -97,8 +97,8 @@ class Home:
     auto_merge_comment_only: bool = True
     """Whether ``kaizen ticket ship`` may auto-merge a PR on the comment-only check at all; a
     project still opts in on its registry page."""
-    synced_version: str | None = None
-    """The release, ``X.Y.Z``, that last synced the home's synced files; ``None`` when the marker
+    synced_version: Version | None = None
+    """The release that last synced the home's synced files; ``None`` when the marker
     records none."""
     marker: str = MARKER
     """The marker's file name, ``kaizen.toml`` or its old name, which ``kaizen home sync`` writes
@@ -205,7 +205,7 @@ def home_path(path: Path, user_home: Path) -> str:
     return str(path)
 
 
-def fresh_marker(github: str, path: str, synced_version: str) -> str:
+def fresh_marker(github: str, path: str, synced_version: Version) -> str:
     """The text of a new home's marker: its registry folder, its *synced_version*, each home
     setting commented out at its default, and a leak table whose own patterns are the home's
     GitHub repo *github* (``owner/repo``) and its root *path*, and that allows nothing yet.
@@ -242,7 +242,7 @@ allow = []
 {_labels_comment()}"""
 
 
-def fresh_home(root: Path, github: str, path: str, synced_version: str) -> Home:
+def fresh_home(root: Path, github: str, path: str, synced_version: Version) -> Home:
     """The ``Home`` that ``find_home`` reads at *root* once
     ``fresh_marker(github, path, synced_version)`` is written there."""
     return Home(
@@ -250,15 +250,17 @@ def fresh_home(root: Path, github: str, path: str, synced_version: str) -> Home:
     )
 
 
-_TABLE = re.compile(r"\s*\[\[?[^\[\]]+\]\]?[ \t]*(#.*)?\s*")
+_TABLE = re.compile(r"\[\[?[\w\s\"'.-]+\]\]?[ \t]*(#.*)?\s*")
+"""A table header line, ``[name]`` or ``[[name]]``, at the start of its line, where an indented
+row of a multi-line array is not."""
 _SYNCED_VERSION = re.compile(r"\s*synced_version\s*=")
 
 
-def _synced_version_line(version: str) -> str:
-    return f"synced_version = {json.dumps(version)}\n"
+def _synced_version_line(version: Version) -> str:
+    return f'synced_version = "{version}"\n'
 
 
-def with_synced_version(marker: str, version: str) -> str:
+def with_synced_version(marker: str, version: Version) -> str:
     """The *marker* text recording *version* as the synced version: its top-level
     ``synced_version`` line replaced, or, when it has none, one inserted above the first table and
     the comment lines that head it. Every other byte is kept, which a TOML writer, had the
@@ -479,11 +481,7 @@ def _read_marker(root: Path, marker: Path) -> Home:
     pr_footer = _pr_footer(data, refuse)
     workflow_labels = _workflow_labels(data, refuse)
     auto_merge_comment_only = _auto_merge_comment_only(data, refuse)
-    synced_version = data.get("synced_version")
-    if synced_version is not None and (
-        not isinstance(synced_version, str) or triple(synced_version) is None
-    ):
-        raise refuse("is malformed: 'synced_version' must be a version X.Y.Z, such as \"0.1.0\"")
+    synced_version = _synced_version(data, refuse)
     return Home(
         root=root,
         registry=registry,
@@ -538,6 +536,18 @@ def _auto_merge_comment_only(
     if not isinstance(value, bool):
         raise refuse("is malformed: 'auto_merge_comment_only' must be true or false")
     return value
+
+
+def _synced_version(
+    data: Mapping[str, object], refuse: Callable[[str], RefusalError]
+) -> Version | None:
+    value = data.get("synced_version")
+    if value is None:
+        return None
+    version = Version.parse(value) if isinstance(value, str) else None
+    if version is None:
+        raise refuse("is malformed: 'synced_version' must be a version X.Y.Z, such as \"0.1.0\"")
+    return version
 
 
 def _pr_footer(data: Mapping[str, object], refuse: Callable[[str], RefusalError]) -> str:

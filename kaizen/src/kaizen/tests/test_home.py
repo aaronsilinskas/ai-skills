@@ -10,6 +10,7 @@ import pytest
 from kaizen.shared.common import RefusalError
 from kaizen.shared.home import find_home, fresh_home, fresh_marker
 from kaizen.shared.labels import Label
+from kaizen.shared.version import Version
 
 MARKER = 'registry = "projects"\n[leak]\nown = ["acme/home", "/fixture/acme"]\n'
 
@@ -222,10 +223,11 @@ def test_a_configured_colour_is_read_lowercased(tmp_path):
 
 
 def test_fresh_home_is_the_home_find_home_reads_from_the_fresh_marker(tmp_path):
-    marker = fresh_marker("acme/home", "/fixture/acme", "1.2.3")
+    version = Version(1, 2, 3)
+    marker = fresh_marker("acme/home", "/fixture/acme", version)
     root = _home(tmp_path / "home", marker).resolve()
 
-    assert fresh_home(root, "acme/home", "/fixture/acme", "1.2.3") == find_home(root, {})
+    assert fresh_home(root, "acme/home", "/fixture/acme", version) == find_home(root, {})
 
 
 @pytest.mark.parametrize(

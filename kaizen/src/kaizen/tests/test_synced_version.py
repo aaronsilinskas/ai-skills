@@ -8,9 +8,8 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.cli import main
+from kaizen.shared.home import MARKER
 from kaizen.tests.ticket_shell import Shell, cli_home
-
-MARKER = "kaizen.toml"
 
 
 class Lookup:
@@ -92,6 +91,16 @@ def test_a_synced_version_key_inside_a_table_is_not_the_recorded_one(tmp_path):
     (home / MARKER).write_text(marker)
 
     _kaizen(home, "home", "sync", version="1.2.3", latest=lambda: None)
+
+    assert _marker(home) == marker.replace("[leak]", 'synced_version = "1.2.3"\n\n[leak]', 1)
+
+
+def test_a_multi_line_array_row_is_not_taken_for_a_table(tmp_path):
+    home = _home(tmp_path, None)
+    marker = 'registry = "projects"\nx = [\n  ["a"]\n]\n[leak]\nown = ["owner/home"]\n'
+    (home / MARKER).write_text(marker)
+
+    _kaizen(home, "home", "sync", version="1.2.3")
 
     assert _marker(home) == marker.replace("[leak]", 'synced_version = "1.2.3"\n\n[leak]', 1)
 
@@ -185,6 +194,15 @@ def test_sync_refuses_on_an_older_install_and_writes_nothing(tmp_path, capsys):
     assert _kaizen(home, "home", "sync", version="1.9.9", latest=lambda: None) == 1
 
     assert {p: p.read_bytes() for p in home.rglob("*") if p.is_file()} == before
+
+
+@pytest.mark.parametrize("recorded", [None, "1.0.0"])
+def test_sync_itself_does_not_warn_to_run_sync(tmp_path, capsys, recorded):
+    home = _home(tmp_path, recorded)
+
+    assert _kaizen(home, "home", "sync", version="1.2.3") == 0
+
+    assert _warnings(capsys.readouterr().err) == []
 
 
 def test_a_home_with_no_recorded_version_warns_to_sync(tmp_path, capsys):

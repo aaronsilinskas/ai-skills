@@ -132,7 +132,13 @@ def _run(
             code = args.handler(args, run, start, environ, install) or 0
         else:
             home = find_home(start, environ)
-            check_synced_version(install.version, home.synced_version, home.marker, warn_on_stderr)
+            check_synced_version(
+                install.version,
+                home.synced_version,
+                home.marker,
+                warn_on_stderr,
+                syncing=getattr(args, "records_version", False),
+            )
             if getattr(args, "needs_install", False):
                 code = args.handler(args, run, home, install) or 0
             else:
