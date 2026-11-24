@@ -81,6 +81,10 @@ Install one at the prompt of a Claude Code terminal session, answering `y` to ad
 
 From a shell, the same is `claude plugin install agent-progress --marketplace aaronsilinskas/ai-skills`. In the desktop app, click + next to the prompt box, then Plugins, Add marketplace with `aaronsilinskas/ai-skills`, then Add plugin.
 
+## kaizen
+
+[kaizen](kaizen/README.md) is a command-line tool, published to PyPI as `kaizen-kit`, that runs agent workflows for every project a home repo registers: tickets, specs, the leak check and issue links. It lives in `kaizen/` as its own Python package. It adds no skill to the `npx skills` install and changes nothing about it: the skills and the CLI are separate products. Its glossary, decisions and domain map start from [`GLOSSARY-MAP.md`](GLOSSARY-MAP.md).
+
 ## Conventions
 
 Skills follow [Matt's authoring conventions](https://github.com/mattpocock/skills/blob/main/CLAUDE.md) and the [agentskills.io specification](https://agentskills.io/specification) and [best practices](https://agentskills.io/skill-creation/best-practices):
