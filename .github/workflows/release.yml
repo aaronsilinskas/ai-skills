@@ -1,0 +1,60 @@
+name: release
+
+# Only a kaizen-vX.Y.Z tag releases kaizen; no branch push, PR or other tag runs this.
+on:
+  push:
+    tags: ['kaizen-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kaizen
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      - name: Tag matches the package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: uv run python scripts/release_check.py version "$TAG"
+
+      - name: kaizen check
+        run: bash scripts/check.sh
+
+      - name: Build wheel and sdist
+        run: uv build --no-sources --out-dir dist
+
+      - name: Wheel holds the templates and no tests
+        run: uv run python scripts/release_check.py wheel dist/*.whl
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: kaizen/dist/
+          if-no-files-found: error
+
+  # Only this job can mint the OIDC token PyPI's Trusted Publisher accepts, and only from the
+  # protected pypi environment. No PyPI token is stored anywhere.
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/kaizen-kit/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

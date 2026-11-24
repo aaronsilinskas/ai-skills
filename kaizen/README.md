@@ -71,3 +71,36 @@ bash scripts/check.sh
 
 `scripts/check.sh` runs ruff, the ruff formatter's check, mypy, import-linter and pytest, and fails if any of them does.
 The tests sit inside the package, beside the code they cover, and the built wheel leaves them out.
+
+## Release
+
+A tag `kaizen-vX.Y.Z` releases kaizen to PyPI as `kaizen-kit`, and nothing else does.
+The release workflow, `.github/workflows/release.yml`, runs only on those tags.
+It refuses a tag whose version differs from the version in `kaizen/pyproject.toml`, runs `scripts/check.sh`, and builds a wheel and sdist with `uv build`.
+It then lists the wheel and refuses it if it holds any test file or lacks any template.
+Its publish job takes the build from the first job and uploads it through PyPI's Trusted Publisher, from the protected `pypi` environment, so no PyPI token is stored anywhere.
+
+To check a build by hand before tagging, from `kaizen/`:
+
+```sh
+uv build --no-sources --out-dir dist
+uv run python scripts/release_check.py version kaizen-vX.Y.Z
+uv run python scripts/release_check.py wheel dist/kaizen_kit-X.Y.Z-py3-none-any.whl
+```
+
+To release:
+
+1. Set the new version in `kaizen/pyproject.toml` and land it on `main` through a PR.
+2. Tag that commit `kaizen-vX.Y.Z` and push the tag.
+3. Approve the `pypi` environment's deployment when the run asks.
+4. Check the release by hand: `uvx --from kaizen-kit==X.Y.Z kaizen --help`.
+
+### Maintainer setup for the first release
+
+The first release is 0.1.0.
+Before pushing its tag, the maintainer sets up two things outside the repo:
+
+1. On PyPI, add a Trusted Publisher to the existing `kaizen-kit` project: this repo, the workflow `release.yml`, and the environment `pypi`.
+2. In the repo's GitHub settings, create the environment `pypi` and protect it, with required reviewers and deployments limited to `kaizen-v*` tags.
+
+Then push `kaizen-v0.1.0`, check it with `uvx --from kaizen-kit==0.1.0 kaizen --help`, and yank the 0.0.0 placeholder on PyPI so no resolver picks it.
