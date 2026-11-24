@@ -153,14 +153,7 @@ The rule (mock at system boundaries only, never your own modules) lives in `tdd`
 - TypeScript: [mocking-typescript.md](mocking-typescript.md)
 - Kotlin: [mocking-kotlin.md](mocking-kotlin.md)
 
-### Designing for mockability
-
-A test that is hard to mock usually points at the source, not the test. At a system boundary, the source should:
-
-1. **Take external dependencies in** (dependency injection) rather than constructing them internally.
-2. **Expose one function or method per external operation** rather than one generic call with conditional branching, so each mock returns exactly one shape and the test setup shows which endpoints a test exercises.
-
-Fixing the source is a `code-quality` matter: report it there rather than working around it in the test.
+A test that is hard to mock usually points at the source, not the test. Report the fix as a design finding rather than working around it in the test: `codebase-design`'s designing for testability covers taking dependencies in, and `tdd`'s mocking reference covers one function per external operation.
 
 ## Checklist
 

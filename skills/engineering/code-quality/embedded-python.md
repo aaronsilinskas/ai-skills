@@ -1,6 +1,6 @@
 # Embedded Python (CircuitPython / MicroPython)
 
-Rules for Python on microcontrollers and other constrained hardware, where GC pauses, allocations and CPU limits matter. Where they conflict with the general `code-quality` bar, these win.
+Rules for Python on microcontrollers and other constrained hardware, where GC pauses, allocations and CPU limits matter. Where they conflict with the general `code-quality` bar, these win. On a hot path they also win over `codebase-design`'s "return results, don't produce side effects": mutate state in place, and test it by asserting the public state after the call. Cold paths keep following `codebase-design`.
 
 ## Hot Path Definition
 
@@ -118,13 +118,11 @@ Prefer explicit, simple data structures (`list`, `dict`, plain classes with `__s
 
 ## Type Hint Exceptions
 
-The `code-quality` skill requires type hints on all parameters and returns. On embedded targets, use narrowly-scoped exceptions when a concrete runtime constraint makes precise typing impractical, for example:
+Embedded targets often hit the concrete constraints behind the Type Coverage exceptions in `SKILL.md`, for example:
 
 - Board/runtime-provided objects that have incomplete or incorrect stubs
 - CircuitPython-specific APIs where stub types conflict with known runtime behavior
 - Dynamic callback/plugin-style call sites where strict callable signatures are not representable without harming portability
-
-When using an exception, still annotate with the best available fallback type and add a brief code comment explaining why a precise type is not possible in that location.
 
 For board-provided attributes and pin objects (for example `board.TX`, `board.RX`) where stubs may be incomplete, prefer leaving diagnostics visible instead of adding inline `# pyright: ignore[...]` comments. Only suppress these diagnostics when explicitly requested by the user or required by project policy.
 
