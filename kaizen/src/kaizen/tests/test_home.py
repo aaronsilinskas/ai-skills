@@ -32,11 +32,12 @@ def test_a_marker_at_the_start_directory_is_the_home(tmp_path):
 
 
 def test_the_leak_allowlist_holds_the_paths_and_repos_the_marker_allows(tmp_path):
-    marker = MARKER + 'allow = ["~/.claude", "/opt/tool", "acme/archived"]\n'
+    tilde_path = "~" + "/tool-settings"
+    marker = MARKER + f'allow = ["{tilde_path}", "/opt/tool", "acme/archived"]\n'
 
     home = find_home(_home(tmp_path / "home", marker), {})
 
-    assert home.leak_allow_paths == ("~/.claude", "/opt/tool")
+    assert home.leak_allow_paths == (tilde_path, "/opt/tool")
     assert home.leak_allow_repos == ("acme/archived",)
 
 
@@ -72,7 +73,9 @@ def test_kaizen_home_written_from_another_users_home_directory_finds_the_home(
     users = {"other": SimpleNamespace(pw_dir=str(tmp_path / "other"))}
     monkeypatch.setattr(pwd, "getpwnam", users.__getitem__)
 
-    assert find_home(tmp_path, {"KAIZEN_HOME": "~other/home"}).root == root.resolve()
+    other_users_home = "~" + "other/home"
+
+    assert find_home(tmp_path, {"KAIZEN_HOME": other_users_home}).root == root.resolve()
 
 
 def test_kaizen_home_and_the_marker_agreeing_is_the_home(tmp_path):

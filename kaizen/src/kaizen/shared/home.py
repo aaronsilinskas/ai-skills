@@ -8,7 +8,7 @@ A home declares itself with ``kaizen.toml`` at its root::
     auto_merge_comment_only = false  # optional, default true: the comment-only check's switch
     [leak]
     own = ["owner/home-repo", "/path/to/home"]   # kept out of this home's public projects
-    allow = ["~/.claude", "owner/archived"]      # optional: outside paths and repos it allows
+    allow = ["/opt/tool", "owner/archived"]      # optional: outside paths and repos it allows
     [[workflow_labels]]          # optional: one table per label, replacing the default set
     name = "needs-triage"
     color = "fbca04"
