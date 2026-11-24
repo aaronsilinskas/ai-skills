@@ -14,8 +14,8 @@ and ``issue publish`` creates one issue after the leak check.
 ``pr wait`` blocks until a PR's checks finish and exits by their outcome.
 ``home init`` makes the git repo it runs in a new home, and is the one command that needs none.
 Each command that changes anything checks its preconditions first and has a ``--dry-run``.
-Run it inside a **home** (the tree under a directory holding ``mw.toml``), or from one of its
-projects' roots with ``MW_HOME`` set to the home's root; the home's docs say how to install it.
+Run it inside a **home** (the tree under a directory holding ``kaizen.toml``), or from one of its
+projects' roots with ``KAIZEN_HOME`` set to the home's root; the home's docs say how to install it.
 """
 
 import argparse

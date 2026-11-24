@@ -1130,6 +1130,6 @@ def test_a_malformed_footer_is_refused_naming_the_marker_before_any_command(
     assert main(argv, run=shell, cwd=home, env={}) == 1
 
     err = capsys.readouterr().err
-    assert f"{home / 'mw.toml'} is malformed: {problem}" in err
-    assert f"fix {home / 'mw.toml'}" in err
+    assert f"{home / 'kaizen.toml'} is malformed: {problem}" in err
+    assert f"fix {home / 'kaizen.toml'}" in err
     assert shell.calls == []

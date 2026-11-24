@@ -21,6 +21,7 @@ from kaizen.shared.home import (
     home_path,
     marker_at_or_above,
     root_named_by_env,
+    same_root,
     settings_naming_home,
 )
 from kaizen.shared.leak import LeakFoundError, leak_check
@@ -118,12 +119,13 @@ class NewFile:
 
 @dataclass(frozen=True)
 class SettingsMerge:
-    """``MW_HOME`` merged into the settings file's ``env``, so sessions started in the home find
-    it; the file is created when absent, and the same ``MW_HOME`` already there is kept."""
+    """``KAIZEN_HOME`` merged into the settings file's ``env``, so sessions started in the home
+    find it; the file is created when absent, and the same ``KAIZEN_HOME`` already there is
+    kept."""
 
     root: Path
     value: str
-    """``MW_HOME``'s value: the root as the home's files write it."""
+    """``KAIZEN_HOME``'s value: the root as the home's files write it."""
     user_home: Path
 
     @property
@@ -137,14 +139,19 @@ class SettingsMerge:
             raise RefusalError(f"home init: {exc}", self._fix(exc)) from exc
 
     def _fix(self, exc: SettingsError) -> str:
-        if exc.mw_home is None:
+        if exc.variable is None or exc.value is None:
             fix = f"fix {SETTINGS} so it holds a JSON object whose env is an object"
-        elif root_named_by_env({ENV_VAR: exc.mw_home}, self.user_home) == self.root.resolve():
+        elif not same_root(exc.value, self.root, self.user_home):
+            # The value is not printed: it may be another home's root.
+            fix = (
+                f"remove {exc.variable} from {SETTINGS}'s env if this repo is meant to be a new"
+                " home"
+            )
+        elif exc.old_name:
+            fix = f"replace {exc.variable} in {SETTINGS}'s env with {ENV_VAR} set to {self.value}"
+        else:
             # The same root in another form, such as absolute, which can hold a user name.
             fix = f"set {ENV_VAR} in {SETTINGS}'s env to {self.value} instead"
-        else:
-            # The value is not printed: it may be another home's root.
-            fix = f"remove {ENV_VAR} from {SETTINGS}'s env if this repo is meant to be a new home"
         return f"{fix}, then run init again"
 
     def check(self) -> str:
@@ -264,8 +271,8 @@ def init_home(
 
 
 def _check_not_inside_home(root: Path, env: Mapping[str, str], user_home: Path) -> list[str]:
-    """The checks that *root* is not, or not inside, a home, and that ``MW_HOME`` doesn't point
-    away from it; refuses otherwise. The refusals name no other root, so another home's path
+    """The checks that *root* is not, or not inside, a home, and that ``KAIZEN_HOME`` doesn't
+    point away from it; refuses otherwise. The refusals name no other root, so another home's path
     never reaches this one's output."""
     if marker_at_or_above(root):
         raise RefusalError(
@@ -275,10 +282,11 @@ def _check_not_inside_home(root: Path, env: Mapping[str, str], user_home: Path) 
             "init never changes an existing home",
         )
     named = root_named_by_env(env, user_home)
-    if named is not None and named != root.resolve():
+    if named is not None and named[1] != root.resolve():
+        variable = named[0]
         raise RefusalError(
-            f"home init: {ENV_VAR} is set to a root other than {root}",
-            f"unset {ENV_VAR}, or start a fresh session in {root}, then run init again",
+            f"home init: {variable} is set to a root other than {root}",
+            f"unset {variable}, or start a fresh session in {root}, then run init again",
         )
     return [f"no {MARKER} in {root} or above it", f"{ENV_VAR} is unset or names {root}"]
 
@@ -306,7 +314,7 @@ def _report_leaks(new: NewHome, run: Runner, say: Say) -> None:
     written."""
     heading = "leak check: searched committed files only"
     try:
-        # No env: the marker just written at the root is the home, whatever MW_HOME says.
+        # No env: the marker just written at the root is the home, whatever KAIZEN_HOME says.
         home = find_home(new.root, {})
         public = resolve(new.name, home.registry).public
         leak_check(new.root, home, run, public=public, user_home=new.user_home)

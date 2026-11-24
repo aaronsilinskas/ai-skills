@@ -14,9 +14,9 @@ from kaizen.shared.labels import Label
 MARKER = 'registry = "projects"\n[leak]\nown = ["acme/home", "/fixture/acme"]\n'
 
 
-def _home(root: Path, marker: str = MARKER) -> Path:
-    (root / "projects").mkdir(parents=True)
-    (root / "mw.toml").write_text(marker)
+def _home(root: Path, marker: str = MARKER, name: str = "kaizen.toml") -> Path:
+    (root / "projects").mkdir(parents=True, exist_ok=True)
+    (root / name).write_text(marker)
     return root
 
 
@@ -57,67 +57,69 @@ def test_the_marker_is_found_from_a_subdirectory(tmp_path):
     assert find_home(root / "src" / "deep", {}).root == root.resolve()
 
 
-def test_mw_home_alone_finds_the_home_from_outside_its_tree(tmp_path):
+def test_kaizen_home_alone_finds_the_home_from_outside_its_tree(tmp_path):
     root = _home(tmp_path / "home")
     project = tmp_path / "project"
     project.mkdir()
 
-    assert find_home(project, {"MW_HOME": str(root)}).root == root.resolve()
+    assert find_home(project, {"KAIZEN_HOME": str(root)}).root == root.resolve()
 
 
-def test_mw_home_written_from_another_users_home_directory_finds_the_home(tmp_path, monkeypatch):
+def test_kaizen_home_written_from_another_users_home_directory_finds_the_home(
+    tmp_path, monkeypatch
+):
     root = _home(tmp_path / "other" / "home")
     users = {"other": SimpleNamespace(pw_dir=str(tmp_path / "other"))}
     monkeypatch.setattr(pwd, "getpwnam", users.__getitem__)
 
-    assert find_home(tmp_path, {"MW_HOME": "~other/home"}).root == root.resolve()
+    assert find_home(tmp_path, {"KAIZEN_HOME": "~other/home"}).root == root.resolve()
 
 
-def test_mw_home_and_the_marker_agreeing_is_the_home(tmp_path):
+def test_kaizen_home_and_the_marker_agreeing_is_the_home(tmp_path):
     root = _home(tmp_path / "home")
 
-    assert find_home(root, {"MW_HOME": str(root)}).root == root.resolve()
+    assert find_home(root, {"KAIZEN_HOME": str(root)}).root == root.resolve()
 
 
-def test_mw_home_and_the_marker_disagreeing_is_refused_naming_only_mw_homes_root(tmp_path):
+def test_kaizen_home_and_the_marker_disagreeing_is_refused_naming_only_kaizen_homes_root(tmp_path):
     first = _home(tmp_path / "first")
     second = _home(tmp_path / "second" / "deep")
 
     with pytest.raises(RefusalError) as refusal:
-        find_home(second, {"MW_HOME": str(first)})
+        find_home(second, {"KAIZEN_HOME": str(first)})
 
     message = str(refusal.value)
-    assert f"MW_HOME names {first.resolve()}" in message
+    assert f"KAIZEN_HOME names {first.resolve()}" in message
     assert f"fix: run kaizen from inside {first.resolve()}" in message
     assert "second" not in message
 
 
-def test_a_linked_git_worktree_of_mw_home_counts_as_that_home(tmp_path):
+def test_a_linked_git_worktree_of_kaizen_home_counts_as_that_home(tmp_path):
     # A ticket worktree of the home sits in its tree and carries its own copy of the marker.
     root = _home(tmp_path / "home")
     worktree = _home(root / ".claude" / "worktrees" / "fix-7-x")
     (worktree / ".git").write_text(f"gitdir: {root}/.git/worktrees/fix-7-x\n")
 
-    assert find_home(worktree, {"MW_HOME": str(root)}).root == root.resolve()
+    assert find_home(worktree, {"KAIZEN_HOME": str(root)}).root == root.resolve()
 
 
-def test_a_git_worktree_of_another_repo_inside_mw_homes_tree_is_still_refused(tmp_path):
+def test_a_git_worktree_of_another_repo_inside_kaizen_homes_tree_is_still_refused(tmp_path):
     root = _home(tmp_path / "home")
     other = _home(root / "nested")
     (other / ".git").write_text(f"gitdir: {tmp_path}/elsewhere/.git/worktrees/nested\n")
 
-    with pytest.raises(RefusalError, match="MW_HOME"):
-        find_home(other, {"MW_HOME": str(root)})
+    with pytest.raises(RefusalError, match="KAIZEN_HOME"):
+        find_home(other, {"KAIZEN_HOME": str(root)})
 
 
 def test_neither_finding_a_home_is_refused_with_a_fix_naming_both(tmp_path):
-    with pytest.raises(RefusalError, match=r"no home(.|\n)*fix:.*MW_HOME.*mw\.toml"):
+    with pytest.raises(RefusalError, match=r"no home(.|\n)*fix:.*KAIZEN_HOME.*kaizen\.toml"):
         find_home(tmp_path, {})
 
 
-def test_mw_home_naming_a_directory_without_a_marker_is_refused(tmp_path):
-    with pytest.raises(RefusalError, match=r"MW_HOME(.|\n)*mw\.toml"):
-        find_home(tmp_path, {"MW_HOME": str(tmp_path / "nowhere")})
+def test_kaizen_home_naming_a_directory_without_a_marker_is_refused(tmp_path):
+    with pytest.raises(RefusalError, match=r"KAIZEN_HOME(.|\n)*kaizen\.toml"):
+        find_home(tmp_path, {"KAIZEN_HOME": str(tmp_path / "nowhere")})
 
 
 @pytest.mark.parametrize(
@@ -157,7 +159,7 @@ def test_mw_home_naming_a_directory_without_a_marker_is_refused(tmp_path):
 def test_a_malformed_marker_is_refused_naming_the_marker(tmp_path, marker, reason):
     root = _home(tmp_path / "home", marker)
 
-    with pytest.raises(RefusalError, match=rf"mw\.toml(.|\n)*{reason}"):
+    with pytest.raises(RefusalError, match=rf"kaizen\.toml(.|\n)*{reason}"):
         find_home(root, {})
 
 
@@ -202,7 +204,9 @@ def test_a_malformed_workflow_label_is_refused_naming_the_marker_and_the_fix(
     tmp_path, marker, reason
 ):
     root = _home(tmp_path / "home", marker)
-    refusal = rf"mw\.toml is malformed: [^\n]*{re.escape(reason)}[^\n]*\n  fix: fix .*mw\.toml"
+    refusal = (
+        rf"kaizen\.toml is malformed: [^\n]*{re.escape(reason)}[^\n]*\n  fix: fix .*kaizen\.toml"
+    )
 
     with pytest.raises(RefusalError, match=refusal):
         find_home(root, {})
@@ -218,3 +222,92 @@ def test_fresh_home_is_the_home_find_home_reads_from_the_fresh_marker(tmp_path):
     root = _home(tmp_path / "home", fresh_marker("acme/home", "/fixture/acme")).resolve()
 
     assert fresh_home(root, "acme/home", "/fixture/acme") == find_home(root, {})
+
+
+@pytest.mark.parametrize(
+    ("marker", "variable", "warnings"),
+    [
+        ("kaizen.toml", "KAIZEN_HOME", []),
+        ("kaizen.toml", "MW_HOME", ["MW_HOME"]),
+        ("mw.toml", "KAIZEN_HOME", ["mw.toml"]),
+        ("mw.toml", "MW_HOME", ["MW_HOME", "mw.toml"]),
+    ],
+)
+def test_each_marker_and_variable_name_finds_the_home_warning_about_each_old_name(
+    tmp_path, marker, variable, warnings
+):
+    root = _home(tmp_path / "home", name=marker)
+    project = tmp_path / "project"
+    project.mkdir()
+    said: list[str] = []
+
+    home = find_home(project, {variable: str(root)}, warn=said.append)
+
+    assert home.root == root.resolve()
+    assert home.leak_own == ("acme/home", "/fixture/acme")
+    assert len(said) == len(warnings)
+    for line, old in zip(said, warnings, strict=True):
+        new = {"MW_HOME": "KAIZEN_HOME", "mw.toml": "kaizen.toml"}[old]
+        assert old in line and new in line and "\n" not in line
+
+
+def test_the_old_marker_found_by_the_upward_search_warns_naming_the_new_one(tmp_path):
+    root = _home(tmp_path / "home", name="mw.toml")
+    said: list[str] = []
+
+    assert find_home(root, {}, warn=said.append).root == root.resolve()
+    assert len(said) == 1 and "mw.toml" in said[0] and "kaizen.toml" in said[0]
+
+
+def test_both_markers_with_the_same_bytes_pass_with_the_warning(tmp_path):
+    root = _home(_home(tmp_path / "home"), name="mw.toml")
+    said: list[str] = []
+
+    assert find_home(root, {}, warn=said.append).root == root.resolve()
+    assert len(said) == 1 and "mw.toml" in said[0] and "kaizen.toml" in said[0]
+
+
+def test_both_markers_with_different_bytes_are_refused_before_any_other_check(tmp_path):
+    # The new marker is malformed too: the duplicate is refused first.
+    root = _home(_home(tmp_path / "home", "registry = \n"), MARKER + "\n", name="mw.toml")
+
+    with pytest.raises(RefusalError) as refusal:
+        find_home(root, {})
+
+    message = str(refusal.value)
+    assert "kaizen.toml" in message and "mw.toml" in message
+    assert re.search(r"fix: keep kaizen\.toml.*delete mw\.toml", message)
+
+
+def test_both_variables_naming_the_same_root_pass_with_the_warning(tmp_path):
+    root = _home(tmp_path / "home")
+    said: list[str] = []
+    env = {"KAIZEN_HOME": str(root), "MW_HOME": str(root) + "/"}
+
+    assert find_home(tmp_path, env, warn=said.append).root == root.resolve()
+    assert len(said) == 1 and "MW_HOME" in said[0] and "KAIZEN_HOME" in said[0]
+
+
+def test_both_variables_naming_different_roots_are_refused_before_any_other_check(tmp_path):
+    # Neither root holds a marker: the disagreement is refused first, naming neither root.
+    env = {"KAIZEN_HOME": str(tmp_path / "first"), "MW_HOME": str(tmp_path / "second")}
+
+    with pytest.raises(RefusalError) as refusal:
+        find_home(tmp_path, env)
+
+    message = str(refusal.value)
+    assert "KAIZEN_HOME and MW_HOME name different roots" in message
+    assert re.search(r"fix: keep KAIZEN_HOME.*unset MW_HOME", message)
+    assert str(tmp_path) not in message
+
+
+def test_differing_markers_in_another_home_than_the_variable_names_are_refused_unnamed(tmp_path):
+    root = _home(tmp_path / "home")
+    other = _home(_home(tmp_path / "other-home", "registry = \n"), name="mw.toml")
+
+    with pytest.raises(RefusalError) as refusal:
+        find_home(other, {"KAIZEN_HOME": str(root)})
+
+    message = str(refusal.value)
+    assert f"a directory at or above {other} holds both kaizen.toml and mw.toml" in message
+    assert str(other) not in message.replace(f"a directory at or above {other}", "")

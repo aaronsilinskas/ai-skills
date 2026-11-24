@@ -40,7 +40,7 @@ EVERY_FILE = sorted(
     [
         ".claude/settings.json",
         ".gitignore",
-        "mw.toml",
+        "kaizen.toml",
         "projects/README.md",
         "projects/newhome.md",
         OVERLAY,
@@ -142,7 +142,7 @@ def test_each_step_done_prints_one_line_after_the_home_root(tmp_path, capsys):
         "wrote projects/README.md",
         "wrote projects/newhome.md",
         *[f"wrote {path}" for path in DOCS],
-        "wrote mw.toml",
+        "wrote kaizen.toml",
         f"{root} is now a home",
     ]
 
@@ -161,7 +161,7 @@ def test_the_marker_comments_every_key(tmp_path):
 
     _init(tmp_path, root)
 
-    lines = (root / "mw.toml").read_text().splitlines()
+    lines = (root / "kaizen.toml").read_text().splitlines()
     keys = [i for i, line in enumerate(lines) if "=" in line and not line.startswith("#")]
     assert [lines[i].split(" =")[0] for i in keys] == ["registry", "own", "allow"]
     assert all(lines[i - 1].startswith("#") for i in keys)
@@ -172,14 +172,14 @@ def test_the_marker_comments_name_the_pr_footer_setting_and_its_default(tmp_path
 
     _init(tmp_path, root)
 
-    lines = (root / "mw.toml").read_text().splitlines()
+    lines = (root / "kaizen.toml").read_text().splitlines()
     assert f"# pr_footer = {json.dumps(FOOTER, ensure_ascii=False)}" in lines
 
 
 def test_the_commented_pr_footer_line_uncommented_sets_the_default_footer(tmp_path):
     root = _repo(tmp_path)
     _init(tmp_path, root)
-    marker = root / "mw.toml"
+    marker = root / "kaizen.toml"
 
     marker.write_text(marker.read_text().replace("# pr_footer = ", "pr_footer = "))
 
@@ -191,7 +191,7 @@ def test_the_marker_names_the_comment_only_switch_and_its_default(tmp_path):
 
     _init(tmp_path, root)
 
-    assert "# auto_merge_comment_only = true\n" in (root / "mw.toml").read_text()
+    assert "# auto_merge_comment_only = true\n" in (root / "kaizen.toml").read_text()
 
 
 def test_the_marker_says_its_own_path_may_be_widened_to_a_parent_folder(tmp_path):
@@ -199,7 +199,7 @@ def test_the_marker_says_its_own_path_may_be_widened_to_a_parent_folder(tmp_path
 
     _init(tmp_path, root)
 
-    assert "may be widened to a parent folder" in (root / "mw.toml").read_text()
+    assert "may be widened to a parent folder" in (root / "kaizen.toml").read_text()
 
 
 @pytest.mark.parametrize(
@@ -252,7 +252,7 @@ def test_a_repo_at_the_user_directory_itself_is_written_as_a_bare_tilde(tmp_path
 
     assert _init(tmp_path, root) == 0
 
-    assert _settings(root)["env"]["MW_HOME"] == TILDE
+    assert _settings(root)["env"]["KAIZEN_HOME"] == TILDE
     assert f"path: {TILDE}\n" in (root / "projects" / "newhome.md").read_text()
 
 
@@ -269,10 +269,10 @@ def test_a_run_from_a_subdirectory_uses_the_toplevel_and_prints_it_first(tmp_pat
     assert capsys.readouterr().out.splitlines()[0] == f"home root: {root}"
 
 
-def test_mw_home_naming_this_root_is_accepted(tmp_path):
+def test_kaizen_home_naming_this_root_is_accepted(tmp_path):
     root = _repo(tmp_path)
 
-    assert _init(tmp_path, root, env=_env(tmp_path, MW_HOME=TILDE_ROOT)) == 0
+    assert _init(tmp_path, root, env=_env(tmp_path, KAIZEN_HOME=TILDE_ROOT)) == 0
 
 
 def test_outside_a_git_repo_is_refused(tmp_path, capsys):
@@ -285,39 +285,43 @@ def test_outside_a_git_repo_is_refused(tmp_path, capsys):
     assert _written(root) == []
 
 
-def test_a_marker_at_the_root_is_refused(tmp_path, capsys):
+@pytest.mark.parametrize("name", ["kaizen.toml", "mw.toml"])
+def test_a_marker_under_either_name_at_the_root_is_refused(tmp_path, capsys, name):
     root = _repo(tmp_path)
-    (root / "mw.toml").write_text("")
+    (root / name).write_text("")
 
     assert _init(tmp_path, root) == 1
 
-    assert capsys.readouterr().err.startswith("refused: home init: a mw.toml is already in")
-    assert _written(root) == ["mw.toml"]
+    assert capsys.readouterr().err.startswith("refused: home init: a kaizen.toml is already in")
+    assert _written(root) == [name]
 
 
 def test_a_marker_above_the_root_is_refused_without_naming_where(tmp_path, capsys):
     above = tmp_path / "outer-home"
     root = above / "nested" / "newhome"
     root.mkdir(parents=True)
-    (above / "mw.toml").write_text("")
+    (above / "kaizen.toml").write_text("")
 
     assert _init(tmp_path, root) == 1
 
     err = capsys.readouterr().err
-    assert err.startswith("refused: home init: a mw.toml is already in")
+    assert err.startswith("refused: home init: a kaizen.toml is already in")
     assert "outer-home" not in err.replace(str(root), "")
     assert _written(root) == []
 
 
-def test_mw_home_naming_another_root_is_refused_without_its_value(tmp_path, capsys):
+@pytest.mark.parametrize("variable", ["KAIZEN_HOME", "MW_HOME"])
+def test_either_variable_naming_another_root_is_refused_without_its_value(
+    tmp_path, capsys, variable
+):
     root = _repo(tmp_path)
     other = tmp_path / "other-home"
 
-    assert _init(tmp_path, root, env=_env(tmp_path, MW_HOME=str(other))) == 1
+    assert _init(tmp_path, root, env=_env(tmp_path, **{variable: str(other)})) == 1
 
     err = capsys.readouterr().err
-    assert err.startswith("refused: home init: MW_HOME is set to a root other than")
-    assert "unset MW_HOME, or start a fresh session" in err
+    assert f"refused: home init: {variable} is set to a root other than" in err
+    assert f"unset {variable}, or start a fresh session" in err
     assert "other-home" not in err
     assert _written(root) == []
 
@@ -362,7 +366,7 @@ def test_dry_run_writes_nothing_and_prints_the_checks(tmp_path, capsys):
     assert _written(root) == []
     out = capsys.readouterr().out
     assert out.startswith(f"home root: {root}\n")
-    for check in ["git repo's root", "no mw.toml", "MW_HOME is unset", "acme/newhome"]:
+    for check in ["git repo's root", "no kaizen.toml", "KAIZEN_HOME is unset", "acme/newhome"]:
         assert any(line.startswith("checked: ") and check in line for line in out.splitlines())
     assert out.endswith("dry run: nothing written\n")
 
@@ -402,12 +406,12 @@ def test_a_rerun_after_a_failure_partway_finishes(tmp_path, capsys, monkeypatch)
 
     assert _written(root) == EVERY_FILE
     steps = [
-        "kept .claude/settings.json, its env already sets MW_HOME to the home",
+        "kept .claude/settings.json, its env already sets KAIZEN_HOME to the home",
         "kept .gitignore, it already ignores .claude/worktrees/",
         "kept projects/README.md, already as init writes it",
         "wrote projects/newhome.md",
         *[f"wrote {path}" for path in DOCS],
-        "wrote mw.toml",
+        "wrote kaizen.toml",
     ]
     assert capsys.readouterr().out.splitlines()[1 : 1 + len(steps)] == steps
     assert resolve("newhome", find_home(root, {}).registry).github == "acme/newhome"
@@ -420,14 +424,14 @@ def test_init_help_states_the_preconditions_the_files_and_dry_run(tmp_path, caps
     out = " ".join(capsys.readouterr().out.split())
     for text in [
         "outside a git repo",
-        "MW_HOME is set to a different root",
+        "KAIZEN_HOME is set to a different root",
         "no origin remote",
         "projects/README.md",
         "projects/<repo>.md",
-        "mw.toml",
+        "kaizen.toml",
         "--dry-run",
         ".claude/settings.json",
-        "env.MW_HOME",
+        "env.KAIZEN_HOME",
         "every other key",
         "is not valid JSON",
         ".gitignore",
@@ -460,16 +464,16 @@ def test_a_fresh_repo_gets_a_settings_file_whose_env_names_the_home(tmp_path):
 
     assert _init(tmp_path, root) == 0
 
-    assert _settings(root) == {"env": {"MW_HOME": TILDE_ROOT}}
+    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}}
 
 
-def test_a_repo_outside_the_user_directory_gets_an_absolute_mw_home(tmp_path):
+def test_a_repo_outside_the_user_directory_gets_an_absolute_kaizen_home(tmp_path):
     root = tmp_path / "elsewhere" / "newhome"
     root.mkdir(parents=True)
 
     assert _init(tmp_path, root) == 0
 
-    assert _settings(root)["env"]["MW_HOME"] == str(root)
+    assert _settings(root)["env"]["KAIZEN_HOME"] == str(root)
 
 
 def test_an_existing_settings_file_keeps_every_other_key_in_order(tmp_path):
@@ -486,7 +490,7 @@ def test_an_existing_settings_file_keeps_every_other_key_in_order(tmp_path):
     assert text == (
         "{\n"
         '  "permissions": {\n    "allow": [\n      "Bash(ls)"\n    ]\n  },\n'
-        f'  "env": {{\n    "A": "1",\n    "MW_HOME": "{TILDE_ROOT}"\n  }},\n'
+        f'  "env": {{\n    "A": "1",\n    "KAIZEN_HOME": "{TILDE_ROOT}"\n  }},\n'
         '  "hooks": {}\n'
         "}\n"
     )
@@ -498,7 +502,7 @@ def test_settings_without_an_env_gain_one_after_their_other_keys(tmp_path):
 
     assert _init(tmp_path, root) == 0
 
-    assert list(_settings(root).items()) == [("hooks", {}), ("env", {"MW_HOME": TILDE_ROOT})]
+    assert list(_settings(root).items()) == [("hooks", {}), ("env", {"KAIZEN_HOME": TILDE_ROOT})]
 
 
 @pytest.mark.parametrize(
@@ -506,7 +510,7 @@ def test_settings_without_an_env_gain_one_after_their_other_keys(tmp_path):
     [
         ('{"env": {', "is not valid JSON"),
         ("[]", "does not hold a JSON object"),
-        ('{"env": ["MW_HOME"]}', "has an env that is not a JSON object"),
+        ('{"env": ["KAIZEN_HOME"]}', "has an env that is not a JSON object"),
     ],
     ids=["not JSON", "not an object", "env not an object"],
 )
@@ -522,24 +526,24 @@ def test_malformed_settings_are_refused_before_any_write(tmp_path, capsys, text,
     assert (root / ".claude" / "settings.json").read_text() == text
 
 
-def test_settings_with_another_mw_home_are_refused_naming_the_file_but_not_the_value(
+def test_settings_with_another_kaizen_home_are_refused_naming_the_file_but_not_the_value(
     tmp_path, capsys
 ):
     root = _repo(tmp_path)
-    text = '{"env": {"MW_HOME": "/other-home"}}\n'
+    text = '{"env": {"KAIZEN_HOME": "/other-home"}}\n'
     _write(root, ".claude/settings.json", text)
 
     assert _init(tmp_path, root) == 1
 
     err = capsys.readouterr().err
-    assert err.startswith("refused: home init: .claude/settings.json already sets MW_HOME to a")
-    assert "fix: remove MW_HOME from .claude/settings.json's env" in err
+    assert err.startswith("refused: home init: .claude/settings.json already sets KAIZEN_HOME to a")
+    assert "fix: remove KAIZEN_HOME from .claude/settings.json's env" in err
     assert "other-home" not in err
 
 
 def test_settings_with_the_same_root_in_another_form_are_refused_before_any_write(tmp_path):
     root = _repo(tmp_path)
-    _write(root, ".claude/settings.json", f'{{"env": {{"MW_HOME": "{root}"}}}}')
+    _write(root, ".claude/settings.json", f'{{"env": {{"KAIZEN_HOME": "{root}"}}}}')
 
     assert _init(tmp_path, root) == 1
 
@@ -550,18 +554,91 @@ def test_settings_with_the_same_root_in_another_form_are_told_to_use_the_tilde_f
     tmp_path, capsys
 ):
     root = _repo(tmp_path)
-    _write(root, ".claude/settings.json", f'{{"env": {{"MW_HOME": "{root}"}}}}')
+    _write(root, ".claude/settings.json", f'{{"env": {{"KAIZEN_HOME": "{root}"}}}}')
 
     _init(tmp_path, root)
 
     err = capsys.readouterr().err
-    assert f"fix: set MW_HOME in .claude/settings.json's env to {TILDE_ROOT} instead" in err
-    assert "remove MW_HOME" not in err
+    assert f"fix: set KAIZEN_HOME in .claude/settings.json's env to {TILDE_ROOT} instead" in err
+    assert "remove KAIZEN_HOME" not in err
+
+
+def test_mw_home_naming_this_root_is_accepted_with_a_warning_and_kaizen_home_written(
+    tmp_path, capsys
+):
+    root = _repo(tmp_path)
+
+    assert _init(tmp_path, root, env=_env(tmp_path, MW_HOME=TILDE_ROOT)) == 0
+
+    warnings = [line for line in capsys.readouterr().err.splitlines() if "MW_HOME" in line]
+    assert len(warnings) == 1 and warnings[0].startswith("warning: ")
+    assert "KAIZEN_HOME" in warnings[0]
+    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}}
+
+
+def test_both_variables_naming_different_roots_are_refused_naming_which_to_keep(tmp_path, capsys):
+    root = _repo(tmp_path)
+    env = _env(tmp_path, KAIZEN_HOME=TILDE_ROOT, MW_HOME=str(tmp_path / "other-home"))
+
+    assert _init(tmp_path, root, env=env) == 1
+
+    err = capsys.readouterr().err
+    assert err.startswith("refused: home: KAIZEN_HOME and MW_HOME name different roots")
+    assert "fix: keep KAIZEN_HOME" in err
+    assert _written(root) == []
+
+
+def test_init_never_writes_the_old_marker_or_variable(tmp_path):
+    root = _repo(tmp_path)
+
+    _init(tmp_path, root)
+
+    assert "mw.toml" not in _written(root)
+    assert "MW_HOME" not in (root / ".claude" / "settings.json").read_text()
+
+
+def test_settings_whose_env_sets_mw_home_to_this_home_get_it_renamed_in_place(tmp_path):
+    root = _repo(tmp_path)
+    _write(root, ".claude/settings.json", f'{{"env": {{"A": "1", "MW_HOME": "{TILDE_ROOT}"}}}}')
+
+    assert _init(tmp_path, root) == 0
+
+    assert list(_settings(root)["env"].items()) == [("A", "1"), ("KAIZEN_HOME", TILDE_ROOT)]
+
+
+def test_settings_with_mw_home_set_to_another_root_are_refused_naming_the_old_variable(
+    tmp_path, capsys
+):
+    root = _repo(tmp_path)
+    _write(root, ".claude/settings.json", '{"env": {"MW_HOME": "/other-home"}}\n')
+
+    assert _init(tmp_path, root) == 1
+
+    err = capsys.readouterr().err
+    assert err.startswith("refused: home init: .claude/settings.json already sets MW_HOME to a")
+    assert "fix: remove MW_HOME from .claude/settings.json's env" in err
+    assert "other-home" not in err
+    assert _written(root) == [".claude/settings.json"]
+
+
+def test_settings_with_mw_home_set_to_this_root_in_another_form_are_told_the_new_setting(
+    tmp_path, capsys
+):
+    root = _repo(tmp_path)
+    _write(root, ".claude/settings.json", f'{{"env": {{"MW_HOME": "{root}"}}}}')
+
+    assert _init(tmp_path, root) == 1
+
+    err = capsys.readouterr().err
+    assert (
+        f"fix: replace MW_HOME in .claude/settings.json's env with KAIZEN_HOME set to {TILDE_ROOT}"
+        in err
+    )
 
 
 def test_settings_already_naming_this_home_are_kept_byte_for_byte(tmp_path):
     root = _repo(tmp_path)
-    text = f'{{"env":{{"MW_HOME":"{TILDE_ROOT}"}}}}'
+    text = f'{{"env":{{"KAIZEN_HOME":"{TILDE_ROOT}"}}}}'
     _write(root, ".claude/settings.json", text)
 
     assert _init(tmp_path, root) == 0
@@ -615,7 +692,7 @@ def test_dry_run_prints_the_merged_settings_and_the_gitignore_change(tmp_path, c
     assert _init(tmp_path, root, "--dry-run") == 0
 
     out = capsys.readouterr().out
-    merged = f'{{\n  "hooks": {{}},\n  "env": {{\n    "MW_HOME": "{TILDE_ROOT}"\n  }}\n}}\n'
+    merged = f'{{\n  "hooks": {{}},\n  "env": {{\n    "KAIZEN_HOME": "{TILDE_ROOT}"\n  }}\n}}\n'
     assert f"would write .claude/settings.json:\n{merged}" in out
     assert "would append to .gitignore:\n.claude/worktrees/\n" in out
     assert (root / ".claude" / "settings.json").read_text() == '{"hooks": {}}'
@@ -630,7 +707,7 @@ def test_merging_into_existing_settings_and_gitignore_prints_what_each_step_did(
     _init(tmp_path, root)
 
     assert capsys.readouterr().out.splitlines()[1:3] == [
-        "merged MW_HOME into .claude/settings.json",
+        "merged KAIZEN_HOME into .claude/settings.json",
         "added .claude/worktrees/ to .gitignore",
     ]
 
@@ -655,7 +732,7 @@ def test_each_leak_finding_is_printed_as_a_to_do_with_its_fixes(tmp_path, capsys
     finding = next(line for line in out.splitlines() if "notes.md:3" in line)
     assert "outside path" in finding
     assert f"{TILDE}/elsewhere/plans" in finding
-    for fix in ["register the project", "leak.allow in the home's mw.toml", "remove the text"]:
+    for fix in ["register the project", "leak.allow in the home's kaizen.toml", "remove the text"]:
         assert fix in finding
 
 
@@ -703,7 +780,7 @@ def test_a_refusal_other_than_a_finding_fails_init_as_an_error_since_its_files_a
         err.splitlines()[-1]
         == "kaizen: exit 1 (failed: the steps printed above are done; finish the rest by hand)"
     )
-    assert (root / "mw.toml").is_file()
+    assert (root / "kaizen.toml").is_file()
 
 
 def test_dry_run_skips_the_leak_check_and_says_it_would_run_it(tmp_path, capsys):
@@ -725,7 +802,7 @@ def test_the_closing_checklist_lists_what_only_the_user_can_do(tmp_path, capsys)
     checklist = out.split("still to do, by you:\n")[1].splitlines()
     for item in [
         "restart the session",
-        "MW_HOME",
+        "KAIZEN_HOME",
         "add a page to projects/ for each project",
         "permissions.additionalDirectories",
         "projects/newhome.md: public, check, code_paths",
@@ -753,7 +830,7 @@ def test_init_help_describes_the_leak_to_dos_and_the_checklist(tmp_path, capsys)
     for text in [
         "prints each finding as a to-do",
         "searches committed files only, and findings never fail the command",
-        "restart the session in the home's root, so MW_HOME",
+        "restart the session in the home's root, so KAIZEN_HOME",
         "add a page to projects/ for each project",
         "permissions.additionalDirectories",
         "settle the to-do fields on projects/<repo>.md",
@@ -770,7 +847,7 @@ def test_the_fresh_marker_comments_name_the_workflow_labels_setting_and_its_defa
 
     _init(tmp_path, root)
 
-    marker = (root / "mw.toml").read_text()
+    marker = (root / "kaizen.toml").read_text()
     assert "# [[workflow_labels]]\n" in marker
     for name in ["needs-triage", "ready-for-agent", "wayfinder:task"]:
         assert name in marker
@@ -780,7 +857,7 @@ def test_the_fresh_marker_comments_name_the_workflow_labels_setting_and_its_defa
 def test_uncommenting_the_fresh_marker_s_workflow_labels_example_sets_that_one_label(tmp_path):
     root = _repo(tmp_path)
     _init(tmp_path, root)
-    marker = root / "mw.toml"
+    marker = root / "kaizen.toml"
 
     marker.write_text(
         re.sub(
@@ -844,7 +921,7 @@ def test_dry_run_prints_every_synced_file_and_the_overlay_and_writes_nothing(tmp
 def test_a_rerun_keeps_identical_synced_files_and_overlay(tmp_path, capsys):
     root = _repo(tmp_path)
     _init(tmp_path, root)
-    (root / "mw.toml").unlink()
+    (root / "kaizen.toml").unlink()
     capsys.readouterr()
 
     assert _init(tmp_path, root) == 0
