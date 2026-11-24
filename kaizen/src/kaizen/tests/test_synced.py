@@ -83,3 +83,11 @@ def test_the_labels_doc_lists_exactly_a_homes_own_labels_with_their_colours_and_
     assert "- `todo` (`#aabbcc`): Not started" in text
     assert "- `blocked` (`#112233`): Waiting on someone" in text
     assert [label.name for label in DEFAULT_WORKFLOW_LABELS if f"`{label.name}`" in text] == []
+
+
+def test_the_workflows_doc_tells_agents_when_to_run_home_sync():
+    workflows = render(_home())["docs/agents/workflows.md"]
+
+    assert "\n## Syncing\n" in workflows
+    assert "`kaizen home sync`" in workflows
+    assert "`kaizen home sync --check`" in workflows

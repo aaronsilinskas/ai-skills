@@ -90,13 +90,18 @@ _Avoid_: next tickets, ready list
 
 **Synced file**:
 A file in a home whose content kaizen renders from its templates, and which the home doesn't edit.
-`kaizen home sync --check` fails on a copy that differs from the render.
+`kaizen home sync` rewrites a copy that differs from the render, and `kaizen home sync --check` fails on one.
 _Avoid_: vendored file, template, generated file
 
 **Home overlay**:
 The home's own notes that sit beside its synced files and hold the rules only that home follows.
 It adds to the synced files and never edits them, and syncing never touches it.
 _Avoid_: override, customisation, local patch
+
+**Managed settings**:
+The part of a home's Claude Code settings that syncing owns: only the git stash deny rule, whose entries `kaizen home sync` and `kaizen home init` add to the settings' deny list.
+Every other key and entry in that file is the home's, and so is the env variable that names the home, which only `kaizen home init` writes.
+_Avoid_: synced settings, managed keys
 
 **Home setting**:
 A value in the home marker that changes kaizen's behaviour for that home, with a default when unset.

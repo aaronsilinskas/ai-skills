@@ -20,13 +20,22 @@ from kaizen.shared.home import (
     fresh_marker,
     home_path,
     marker_at_or_above,
+    name_home,
+    read_settings,
     root_named_by_env,
     same_root,
-    settings_naming_home,
+    settings_text,
 )
 from kaizen.shared.leak import LeakFoundError, leak_check
 from kaizen.shared.registry import WORKTREES, resolve, starter_page, starter_readme
-from kaizen.shared.synced import OVERLAY, SYNCED_FILES, render, starter_overlay
+from kaizen.shared.synced import (
+    OVERLAY,
+    SETTINGS_SHAPE,
+    SYNCED_FILES,
+    merge_stash_deny,
+    render,
+    starter_overlay,
+)
 
 GITIGNORE = ".gitignore"
 
@@ -120,8 +129,8 @@ class NewFile:
 @dataclass(frozen=True)
 class SettingsMerge:
     """``KAIZEN_HOME`` merged into the settings file's ``env``, so sessions started in the home
-    find it; the file is created when absent, and the same ``KAIZEN_HOME`` already there is
-    kept."""
+    find it, and the managed settings merged as ``kaizen home sync`` merges them; the file is
+    created when absent, and one that holds both already is kept."""
 
     root: Path
     value: str
@@ -134,13 +143,16 @@ class SettingsMerge:
 
     def _merged(self) -> str | None:
         try:
-            return settings_naming_home(self.root, self.value)
+            settings = read_settings(self.root)
+            named = name_home(settings, self.value)
+            denied = merge_stash_deny(settings)
         except SettingsError as exc:
             raise RefusalError(f"home init: {exc}", self._fix(exc)) from exc
+        return settings_text(settings) if named or denied else None
 
     def _fix(self, exc: SettingsError) -> str:
         if exc.variable is None or exc.value is None:
-            fix = f"fix {SETTINGS} so it holds a JSON object whose env is an object"
+            fix = f"fix {SETTINGS} so it holds {SETTINGS_SHAPE}"
         elif not same_root(exc.value, self.root, self.user_home):
             # The value is not printed: it may be another home's root.
             fix = (
@@ -156,22 +168,33 @@ class SettingsMerge:
 
     def check(self) -> str:
         self._merged()
-        return f"{SETTINGS} is absent, or a JSON object whose env sets no other {ENV_VAR}"
+        return (
+            f"{SETTINGS} is absent, or a JSON object whose env sets no other {ENV_VAR} and that"
+            " can take the git stash deny rule"
+        )
 
     def preview(self) -> str:
         merged = self._merged()
         if merged is None:
-            return f"would keep {SETTINGS}: its env already sets {ENV_VAR} to the home"
+            return (
+                f"would keep {SETTINGS}: its env already sets {ENV_VAR} to the home, and it"
+                " denies git stash"
+            )
         return f"would write {SETTINGS}:\n{merged}"
 
     def apply(self) -> str:
         merged = self._merged()
         if merged is None:
-            return f"kept {SETTINGS}, its env already sets {ENV_VAR} to the home"
+            return (
+                f"kept {SETTINGS}, its env already sets {ENV_VAR} to the home and it denies"
+                " git stash"
+            )
         existed = self.path.exists()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(merged)
-        return f"merged {ENV_VAR} into {SETTINGS}" if existed else f"wrote {SETTINGS}"
+        if existed:
+            return f"merged {ENV_VAR} and the git stash deny rule into {SETTINGS}"
+        return f"wrote {SETTINGS}"
 
 
 @dataclass(frozen=True)
@@ -381,14 +404,17 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             f"the root or in any directory above it; when {ENV_VAR} is set to a different root; "
             "when the repo has no origin remote, or one that is not a GitHub repo in SSH or "
             f"HTTPS form; when {SETTINGS} is not valid JSON, is not a JSON object, has an env "
-            f"that is not an object, or already sets {ENV_VAR} to a different value; and when "
+            "or permissions that is not an object or a permissions.deny that is not a list, or "
+            f"already sets {ENV_VAR} to a different value; and when "
             f"{GITIGNORE} can't be read as text. It also refuses when a file it writes whole "
             "already exists and differs from what it would write; an identical one is kept, so "
             "a rerun after a failure partway finishes.\n\n"
             "It writes, in this order:\n"
             f"  {SETTINGS}  env.{ENV_VAR} set to the home's root (written from ~ when under "
-            "your user directory), so sessions started in the home find it; the file is created "
-            "when absent, and an existing one keeps every other key and their order\n"
+            "your user directory), so sessions started in the home find it, and the git stash "
+            "deny rule's entries added to permissions.deny, as `kaizen home sync` adds them; the "
+            "file is created when absent, and an existing one keeps every other key and entry "
+            "and their order\n"
             f"  {GITIGNORE}  a {WORKTREES}/ line, so ticket worktrees stay out of git status; "
             "the file is created when absent, and the line is added only when missing\n"
             f"  {REGISTRY}/README.md  the project registry's README: what each page key means, "

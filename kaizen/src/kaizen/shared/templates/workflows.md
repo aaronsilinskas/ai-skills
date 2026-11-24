@@ -40,3 +40,10 @@ Review happens afterwards in `code-review`, against the project's `CODING_STANDA
 A session running the `chief-of-staff` skill runs the `to-spec`, `to-tickets` and `implement-spec` steps itself.
 `grill-with-docs` still runs with the user, and the user still gives the go-ahead before publishing.
 Any step the user pre-approves for such a session is a home rule, in the home overlay.
+
+## Syncing
+
+This file and the others that open with the synced-file line are rendered from `kaizen`'s templates, so a rule only this home follows goes in the home overlay instead.
+Run `kaizen home sync` from the home's root after `kaizen` is upgraded, or when `kaizen home sync --check` fails, with `--dry-run` first to see each change.
+It rewrites each synced file that differs and adds the git stash deny rule to `.claude/settings.json`; commit what it changed.
+When the check fails on a hand edit to a synced file, move that rule to the home overlay before syncing, or the sync drops it.

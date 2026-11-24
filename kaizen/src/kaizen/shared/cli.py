@@ -12,7 +12,8 @@ command on a ticket and its base with a verdict.
 ``issue show`` prints one issue whole, ``issue link`` adds its parent and blocked-by edges,
 and ``issue publish`` creates one issue after the leak check.
 ``pr wait`` blocks until a PR's checks finish and exits by their outcome.
-``home init`` makes the git repo it runs in a new home, and is the one command that needs none.
+``home init`` makes the git repo it runs in a new home, and is the one command that needs none;
+``home sync`` brings a home's synced files back in step with kaizen's templates.
 Each command that changes anything checks its preconditions first and has a ``--dry-run``.
 Run it inside a **home** (the tree under a directory holding ``kaizen.toml``), or from one of its
 projects' roots with ``KAIZEN_HOME`` set to the home's root; the home's docs say how to install it.
@@ -29,6 +30,7 @@ from pathlib import Path
 from typing import TextIO, cast
 
 from kaizen.home import init as home_init
+from kaizen.home import sync as home_sync
 from kaizen.issue import link as issue_link
 from kaizen.issue import publish as issue_publish
 from kaizen.issue import show as issue_show
@@ -53,7 +55,7 @@ from kaizen.ticket import publish as ticket_publish
 # A handler that returns ``None`` has succeeded, and one that returns an int exits with it;
 # it fails by raising, which ``main`` reports.
 GROUPS = {
-    "home": ("set up a new home", (home_init,)),
+    "home": ("set up a new home, or sync its synced files", (home_init, home_sync)),
     "issue": ("read, link and publish issues", (issue_show, issue_link, issue_publish)),
     "project": (
         "check the current project, or sync the workflow labels to the projects' repos",
