@@ -141,7 +141,9 @@ def test_check_passes_on_a_synced_home(tmp_path, capsys):
 
     assert _sync(home, "--check") == 0
 
-    assert "in step" in capsys.readouterr().out
+    assert capsys.readouterr().out == (
+        "home sync --check: every synced file and setting is in step\n"
+    )
 
 
 def _edit(home: Path) -> str:

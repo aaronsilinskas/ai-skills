@@ -28,7 +28,14 @@ from kaizen.shared.home import (
 )
 from kaizen.shared.leak import LeakFoundError, leak_check
 from kaizen.shared.registry import WORKTREES, resolve, starter_page, starter_readme
-from kaizen.shared.synced import OVERLAY, SYNCED_FILES, deny_stash, render, starter_overlay
+from kaizen.shared.synced import (
+    OVERLAY,
+    SETTINGS_SHAPE,
+    SYNCED_FILES,
+    merge_stash_deny,
+    render,
+    starter_overlay,
+)
 
 GITIGNORE = ".gitignore"
 
@@ -138,17 +145,14 @@ class SettingsMerge:
         try:
             settings = read_settings(self.root)
             named = name_home(settings, self.value)
-            denied = deny_stash(settings)
+            denied = merge_stash_deny(settings)
         except SettingsError as exc:
             raise RefusalError(f"home init: {exc}", self._fix(exc)) from exc
         return settings_text(settings) if named or denied else None
 
     def _fix(self, exc: SettingsError) -> str:
         if exc.variable is None or exc.value is None:
-            fix = (
-                f"fix {SETTINGS} so it holds a JSON object whose env and permissions are objects"
-                " and whose permissions.deny is a list"
-            )
+            fix = f"fix {SETTINGS} so it holds {SETTINGS_SHAPE}"
         elif not same_root(exc.value, self.root, self.user_home):
             # The value is not printed: it may be another home's root.
             fix = (

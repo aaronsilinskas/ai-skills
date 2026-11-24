@@ -8,7 +8,13 @@ from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Runner, Say
 from kaizen.shared.home import SETTINGS, Home, SettingsError
-from kaizen.shared.synced import OVERLAY, SYNCED_FILES, render, synced_settings
+from kaizen.shared.synced import (
+    OVERLAY,
+    SETTINGS_SHAPE,
+    SYNCED_FILES,
+    managed_settings_text,
+    render,
+)
 
 CHECK_FIX = "run `kaizen home sync`, and move home rules to the home overlay"
 """The fix a failed ``--check`` gives: a difference is either a template change the home hasn't
@@ -17,7 +23,8 @@ synced yet, or a hand edit that belongs in the home overlay."""
 
 @dataclass(frozen=True)
 class Change:
-    """One file ``sync`` writes because its text differs from what ``sync`` writes."""
+    """One file of a home that is out of step: a synced file whose text is not its render, or the
+    settings file lacking part of the managed settings."""
 
     relative: str
     """Its path relative to the home root."""
@@ -25,8 +32,9 @@ class Change:
     """Its text now, ``None`` when it is absent."""
     synced: str
     """Its text once synced."""
-    merged: str | None = None
-    """What ``sync`` merges into it, for a file ``sync`` owns only part of."""
+    owned_part: str | None = None
+    """For a file the home owns but for one part that ``sync`` merges in, that part's name, as
+    the output line names it; ``None`` for a file ``sync`` renders whole."""
 
     def diff(self) -> str:
         """The difference from its text now to its synced text, as a unified diff."""
@@ -45,8 +53,8 @@ class Change:
         path = root / self.relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.synced, encoding="utf-8")
-        if self.merged is not None:
-            return f"merged {self.merged} into {self.relative}"
+        if self.owned_part is not None:
+            return f"merged {self.owned_part} into {self.relative}"
         return f"wrote {self.relative}" if self.current is None else f"rewrote {self.relative}"
 
 
@@ -60,12 +68,10 @@ def changes(home: Home) -> list[Change]:
         if current != synced.encode():
             found.append(Change(relative, _text(current), synced))
     try:
-        settings = synced_settings(home.root)
+        settings = managed_settings_text(home.root)
     except SettingsError as exc:
         raise RefusalError(
-            f"home sync: {exc}",
-            f"fix {SETTINGS} so it holds a JSON object whose permissions.deny is a list,"
-            " then run sync again",
+            f"home sync: {exc}", f"fix {SETTINGS} so it holds {SETTINGS_SHAPE}, then run sync again"
         ) from exc
     if settings is not None:
         current = _current(home.root, SETTINGS)
@@ -88,24 +94,15 @@ def _text(current: bytes | None) -> str | None:
     return None if current is None else current.decode("utf-8", errors="replace")
 
 
-def sync_home(home: Home, *, dry_run: bool = False, check: bool = False, say: Say = print) -> None:
+IN_STEP = "every synced file and setting is in step"
+
+
+def sync_home(home: Home, *, dry_run: bool = False, say: Say = print) -> None:
     """Writes each of *home*'s ``changes``, one line each, or says nothing changed. With
-    *dry_run*, prints each change's diff instead; with *check*, prints them and refuses when there
-    is any. Neither writes anything."""
+    *dry_run*, prints each change's diff instead and writes nothing."""
     found = changes(home)
-    if check:
-        for change in found:
-            say(f"differs: {change.relative}\n{change.diff()}")
-        if found:
-            raise RefusalError(
-                f"home sync --check: {len(found)} file(s) differ from what sync writes: "
-                + ", ".join(change.relative for change in found),
-                CHECK_FIX,
-            )
-        say("home sync --check: every synced file and setting is in step")
-        return
     if not found:
-        say("nothing changed: every synced file and setting is in step")
+        say(f"nothing changed: {IN_STEP}")
     for change in found:
         say(
             f"would write {change.relative}:\n{change.diff()}"
@@ -116,10 +113,25 @@ def sync_home(home: Home, *, dry_run: bool = False, check: bool = False, say: Sa
         say("dry run: nothing written")
 
 
+def check_home(home: Home, *, say: Say = print) -> None:
+    """Prints each of *home*'s ``changes`` as a diff and refuses, naming them all, when there is
+    any. Writes nothing."""
+    found = changes(home)
+    for change in found:
+        say(f"differs: {change.relative}\n{change.diff()}")
+    if found:
+        raise RefusalError(
+            f"home sync --check: {len(found)} file(s) differ from what sync writes: "
+            + ", ".join(change.relative for change in found),
+            CHECK_FIX,
+        )
+    say(f"home sync --check: {IN_STEP}")
+
+
 def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     parser = subparsers.add_parser(
         "sync",
-        help="re-render the home's synced files and managed settings, or check them",
+        help="re-render the home's synced files and merge its managed settings, or check both",
         description=(
             "Bring the home's synced files back in step with kaizen's templates, after kaizen is "
             "upgraded or a template changes. It renders every synced file:\n"
@@ -155,4 +167,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    sync_home(home, dry_run=args.dry_run, check=args.check)
+    if args.check:
+        check_home(home)
+    else:
+        sync_home(home, dry_run=args.dry_run)

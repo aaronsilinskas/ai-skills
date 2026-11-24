@@ -106,11 +106,11 @@ DENY_STASH = ("Bash(git stash*)", "Bash(git -C * stash*)")
 shares one stash stack, so a stash in one ticket worktree can be popped in another."""
 
 
-def deny_stash(settings: dict[str, object]) -> bool:
-    """Adds each entry of the git stash deny rule missing from ``permissions.deny`` in the
-    *settings* data, after the entries already there, and returns whether any was missing. Every
-    other key and entry keeps its order. Raises ``SettingsError`` when ``permissions`` is not an
-    object or its ``deny`` not a list."""
+def merge_stash_deny(settings: dict[str, object]) -> bool:
+    """Changes the *settings* data in place: adds each entry of the git stash deny rule missing
+    from its ``permissions.deny``, after the entries already there, and returns whether any was
+    missing. Every other key and entry keeps its order. Raises ``SettingsError`` when
+    ``permissions`` is not an object or its ``deny`` not a list."""
     permissions = settings.setdefault("permissions", {})
     if not isinstance(permissions, dict):
         raise SettingsError("has permissions that are not a JSON object")
@@ -122,8 +122,16 @@ def deny_stash(settings: dict[str, object]) -> bool:
     return bool(missing)
 
 
-def synced_settings(root: Path) -> str | None:
+SETTINGS_SHAPE = (
+    "a JSON object whose env and permissions are objects and whose permissions.deny is a list"
+)
+"""The shape a home's settings file must have for ``home init`` and ``home sync`` to merge into
+it, as their fixes state it."""
+
+
+def managed_settings_text(root: Path) -> str | None:
     """The text of *root*'s settings file with the managed settings merged in, or ``None`` when
-    it holds them already. Raises ``SettingsError`` as ``read_settings`` and ``deny_stash`` do."""
+    it holds them already. Raises ``SettingsError`` as ``read_settings`` and
+    ``merge_stash_deny`` do."""
     settings = read_settings(root)
-    return settings_text(settings) if deny_stash(settings) else None
+    return settings_text(settings) if merge_stash_deny(settings) else None

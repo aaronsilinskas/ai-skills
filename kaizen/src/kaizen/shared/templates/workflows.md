@@ -45,5 +45,5 @@ Any step the user pre-approves for such a session is a home rule, in the home ov
 
 This file and the others that open with the synced-file line are rendered from `kaizen`'s templates, so a rule only this home follows goes in the home overlay instead.
 Run `kaizen home sync` from the home's root after `kaizen` is upgraded, or when `kaizen home sync --check` fails, with `--dry-run` first to see each change.
-It rewrites each synced file that differs and adds the git stash deny rule to `.claude/settings.json`; ship the result as a docs ticket.
+It rewrites each synced file that differs and adds the git stash deny rule to `.claude/settings.json`; commit what it changed.
 When the check fails on a hand edit to a synced file, move that rule to the home overlay before syncing, or the sync drops it.
