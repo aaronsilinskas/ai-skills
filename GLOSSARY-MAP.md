@@ -5,4 +5,4 @@ Each context keeps its own glossary, its ADRs in its `docs/adr/` and its domain 
 
 ## Contexts
 
-- [kaizen](./kaizen/GLOSSARY.md): the command-line tool in `kaizen/`, which runs agent workflows for the projects a home registers
+- [kaizen](./kaizen/GLOSSARY.md): the command-line tool in `kaizen/`, which runs the deterministic parts of agent workflows for the projects a home registers

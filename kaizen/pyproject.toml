@@ -1,7 +1,7 @@
 [project]
 name = "kaizen-kit"
 version = "0.1.0"
-description = "Runs the ticket and spec workflows, the leak check and issue links for every project a home registers"
+description = "The deterministic parts of agent workflows: tickets, specs, the leak check and synced files for every project a home registers"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"

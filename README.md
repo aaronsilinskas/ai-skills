@@ -83,7 +83,7 @@ From a shell, the same is `claude plugin install agent-progress --marketplace aa
 
 ## kaizen
 
-[kaizen](kaizen/README.md) is a command-line tool, published to PyPI as `kaizen-kit`, that runs agent workflows for every project a home repo registers: tickets, specs, the leak check and issue links. It lives in `kaizen/` as its own Python package. It adds no skill to the `npx skills` install and changes nothing about it: the skills and the CLI are separate products. Its glossary, decisions and domain map start from [`GLOSSARY-MAP.md`](GLOSSARY-MAP.md).
+[kaizen](kaizen/README.md) is a command-line tool, published to PyPI as `kaizen-kit`, that runs the deterministic parts of agent workflows for every project a home repo registers: tickets, specs, the leak check and issue links. It is usually changed through the retro process. It lives in `kaizen/` as its own Python package. It adds no skill to the `npx skills` install and changes nothing about it: the skills and the CLI are separate products. Its glossary, decisions and domain map start from [`GLOSSARY-MAP.md`](GLOSSARY-MAP.md).
 
 ## Conventions
 

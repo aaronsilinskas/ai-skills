@@ -1,8 +1,10 @@
 # kaizen
 
-kaizen is a command-line tool for running agent workflows across a set of repos.
+kaizen is a command-line tool for the deterministic parts of agent workflows across a set of repos.
+Agents and skills make the judgement calls; kaizen runs the steps that must come out the same every time, such as starting a ticket worktree, shipping a PR through the leak check, or syncing a home's shared files.
+It is usually changed through the retro process: each retro turns a recurring friction point into a command, a refusal or a check, so agents get a bit better each day.
 It works from a **home**: a git repo where agent sessions start, holding a registry of the projects it works on, the agent docs those sessions follow, and the facts its leak check needs.
-For every project a home registers, kaizen runs the ticket and spec workflows, the leak check and issue links, and `kaizen home init` makes a new home.
+`kaizen home init` makes a new home.
 
 It needs only the Python standard library at runtime.
 
