@@ -12,7 +12,7 @@ The project's own standards files (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, `AG
 
 ## Guiding Principle
 
-Readability is the default. Apply performance discipline only where a real constraint demands it, such as hot paths, inner loops, and constrained hardware (see the platform reference files). Everywhere else, never trade clarity for micro-optimizations that don't demonstrably matter.
+Readability is the default. Apply performance discipline only where a real constraint demands it, such as hot paths, inner loops, and constrained hardware. Everywhere else, never trade clarity for micro-optimizations that don't demonstrably matter.
 
 ## Use the Public API
 
@@ -20,13 +20,11 @@ Do not reach into another module's private state (names conventionally marked pr
 
 ## Type Coverage
 
-Type hints (or the language's equivalent) are required for all function and method parameters and return values. Use narrowly-scoped exceptions only when a concrete constraint makes precise typing impractical, and even then annotate with the best available fallback and note *why* precise typing isn't possible at that location. Platform-specific typing exceptions (e.g. incomplete hardware stubs) live in the reference files.
+Type hints (or the language's equivalent) are required for all function and method parameters and return values. Use narrowly-scoped exceptions only when a concrete constraint makes precise typing impractical, and even then annotate with the best available fallback and note *why* precise typing isn't possible at that location.
 
-## Platform- and Language-Specific Rules
+## Embedded Targets
 
-The guidance above is general. Load the matching reference file when the target applies:
-
-- CircuitPython / MicroPython, or any hot path on constrained hardware (animation loops, per-frame updates, per-pixel sampling), even when the user doesn't name the platform: [embedded-python.md](embedded-python.md)
+The guidance above is general. Call the Skill tool with "embedded-python" when the target is embedded: CircuitPython, MicroPython, or a hot path on constrained hardware, even when the user doesn't name the platform.
 
 ## Checklist
 
@@ -34,4 +32,4 @@ The guidance above is general. Load the matching reference file when the target 
 - [ ] Readability preserved; optimizations confined to where a real constraint demands them
 - [ ] No reaching into another module's private state. Only the public interface is used, or a deliberate interface expansion.
 - [ ] All function/method parameters and return types annotated (except documented, justified edge cases)
-- [ ] Any applicable platform reference file (e.g. `embedded-python.md`) has been applied
+- [ ] `embedded-python` applied when the target is embedded

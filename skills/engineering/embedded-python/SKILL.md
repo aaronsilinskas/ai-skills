@@ -1,3 +1,9 @@
+---
+name: embedded-python
+description: "Embedded Python rules for microcontrollers. Use when writing or reviewing CircuitPython or MicroPython, or code for constrained hardware where allocations and GC pauses matter, such as per-frame loops, even when the platform isn't named."
+argument-hint: "file or function to write or review"
+---
+
 # Embedded Python (CircuitPython / MicroPython)
 
 Rules for Python on microcontrollers and other constrained hardware, where GC pauses, allocations and CPU limits matter. Where they conflict with the general `code-quality` bar, these win. On a hot path they also win over `codebase-design`'s "return results, don't produce side effects": mutate state in place, and test it by asserting the public state after the call. Cold paths keep following `codebase-design`.
@@ -84,7 +90,7 @@ Prefer multiply over divide when the denominator is fixed. In hot paths, always 
 
 ## CircuitPython and MicroPython Compatibility
 
-This reference targets the **latest stable releases** of CircuitPython and MicroPython. Do not flag features as unavailable unless they are absent from current releases.
+This skill targets the **latest stable releases** of CircuitPython and MicroPython. Do not flag features as unavailable unless they are absent from current releases.
 
 Minimize and isolate CircuitPython-specific dependencies so the same code can run on MicroPython and other environments. Avoid scattering platform-specific imports or calls throughout modules; contain them at the boundary.
 
@@ -118,7 +124,7 @@ Prefer explicit, simple data structures (`list`, `dict`, plain classes with `__s
 
 ## Type Hint Exceptions
 
-Embedded targets often hit the concrete constraints behind the Type Coverage exceptions in `SKILL.md`, for example:
+Embedded targets often hit the concrete constraints behind the exceptions in `code-quality`'s Type Coverage section, for example:
 
 - Board/runtime-provided objects that have incomplete or incorrect stubs
 - CircuitPython-specific APIs where stub types conflict with known runtime behavior
