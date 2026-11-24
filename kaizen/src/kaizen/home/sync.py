@@ -7,7 +7,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Runner, Say
-from kaizen.shared.home import MARKER, SETTINGS, Home, SettingsError, with_synced_version
+from kaizen.shared.home import (
+    MARKER,
+    OLD_MARKER,
+    SETTINGS,
+    Home,
+    SettingsError,
+    refuse_old_marker_copy,
+    with_synced_version,
+)
 from kaizen.shared.synced import (
     OVERLAY,
     SETTINGS_SHAPE,
@@ -15,7 +23,7 @@ from kaizen.shared.synced import (
     managed_settings_text,
     render,
 )
-from kaizen.shared.version import UPGRADE, Install, Version, newer_release
+from kaizen.shared.version import UPGRADE, Install, Version, newer_release, recordable_version
 
 CHECK_FIX = "run `kaizen home sync`, and move home rules to the home overlay"
 """The fix a failed ``--check`` gives: a difference is either a template change the home hasn't
@@ -122,15 +130,10 @@ def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say =
     """Writes each of *home*'s ``changes`` for the running version, which it records as the
     synced version, one line each, or says nothing changed; then names a newer release when
     there is one. With *dry_run*, prints each change's diff instead and writes nothing. Refuses
-    a running version that is not ``X.Y.Z``, which no home's CI could install."""
-    version = Version.parse(install.version)
-    if version is None:
-        raise RefusalError(
-            f"home sync: kaizen's version {install.version} is not X.Y.Z, so it can't be recorded"
-            " as the home's synced version",
-            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run sync"
-            " again",
-        )
+    a running version that is not ``X.Y.Z``, which no home's CI could install, and a home that
+    still holds the old marker beside ``kaizen.toml``."""
+    version = recordable_version(install.version, "sync")
+    refuse_old_marker_copy(home, "home sync")
     found = changes(home, version)
     if not found:
         say(f"nothing changed: {IN_STEP}")
@@ -178,7 +181,9 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "that nothing changed.\n\n"
             f"It also merges the managed settings into {SETTINGS}: the git stash deny rule, whose "
             "entries it adds to permissions.deny when missing, keeping every other key and entry "
-            f"in order. It leaves the env's KAIZEN_HOME to `kaizen home init`, and never touches "
+            "in order. When it adds an entry, it rewrites the whole file as JSON indented by "
+            "two spaces, so the file's own formatting is not kept. It leaves the env's "
+            "KAIZEN_HOME to `kaizen home init`, and never touches "
             f"the home overlay ({OVERLAY}), .pre-commit-config.yaml or any other file the home "
             "owns.\n\n"
             "Last it records the running kaizen's version as synced_version in the home's "
@@ -189,7 +194,9 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             f"home's synced version, so a sync never rolls a home back (the fix is `{UPGRADE}`); "
             "when kaizen's version is not X.Y.Z, such as a local build's; when "
             f"{SETTINGS} is not a JSON object, its permissions not an object or its "
-            "permissions.deny not a list; and when a synced file's path is not a file.\n\n"
+            "permissions.deny not a list; when a synced file's path is not a file; and when the "
+            f"home holds both {MARKER} and {OLD_MARKER}, its old name, which writing {MARKER} "
+            f"would leave different (the fix is to delete {OLD_MARKER}).\n\n"
             "Then it asks PyPI, once and briefly, for kaizen's latest release, and prints the "
             "upgrade command when that is newer; a failed lookup prints nothing. No other kaizen "
             "command uses the network.\n\n"
@@ -208,15 +215,21 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
     )
     mode.add_argument(
         "--check",
-        action="store_false",
-        dest="records_version",
+        action="store_true",
+        dest="check",
         help="fail, listing every difference, unless the home is in step; write nothing",
     )
-    parser.set_defaults(handler=_command, needs_install=True)
+    parser.set_defaults(handler=_command, needs_install=True, records_version=_records_version)
+
+
+def _records_version(args: argparse.Namespace) -> bool:
+    """Whether this run records the running version as the home's synced version: every run but
+    ``--check``'s."""
+    return not args.check
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:
-    if not args.records_version:
+    if args.check:
         check_home(home)
     else:
         sync_home(home, install, dry_run=args.dry_run)

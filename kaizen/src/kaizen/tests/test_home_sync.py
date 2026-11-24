@@ -286,5 +286,49 @@ def test_sync_help_names_the_synced_files_the_deny_rule_and_the_check_fix(tmp_pa
         "--dry-run",
         "--check",
         "move home rules to the home overlay",
+        "rewrites the whole file as JSON indented by two spaces",
+        "delete mw.toml",
     ]
     assert [text for text in expected if text not in out] == []
+
+
+def _with_old_marker_copy(tmp_path: Path) -> Path:
+    """The fixture home, synced, holding ``mw.toml`` as a copy of its ``kaizen.toml``."""
+    home = _synced(tmp_path)
+    (home / "mw.toml").write_bytes((home / "kaizen.toml").read_bytes())
+    return home
+
+
+@pytest.mark.parametrize("extra", [[], ["--dry-run"]], ids=["sync", "dry run"])
+def test_sync_with_both_markers_is_refused_before_any_write(tmp_path, capsys, extra):
+    home = _with_old_marker_copy(tmp_path)
+    _edit(home)
+    before = _files(home)
+    capsys.readouterr()
+
+    assert _sync(home, *extra) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: home sync: " in err and "kaizen.toml and mw.toml" in err
+    assert "  fix: delete mw.toml\n" in err
+    assert _files(home) == before
+
+
+def test_a_home_with_both_markers_still_runs_after_sync_on_a_new_release(tmp_path, capsys):
+    home = cli_home(tmp_path, synced_version="0.0.1")
+    (home / "mw.toml").write_bytes((home / "kaizen.toml").read_bytes())
+
+    _sync(home)
+
+    said: list[str] = []
+    assert find_home(home, {}, said.append).synced_version == (0, 0, 1)
+    assert len(said) == 1 and "mw.toml" in said[0]
+
+
+def test_check_with_both_markers_passes_with_the_warning(tmp_path, capsys):
+    home = _with_old_marker_copy(tmp_path)
+    capsys.readouterr()
+
+    assert _sync(home, "--check") == 0
+
+    assert "warning: home: " in capsys.readouterr().err

@@ -38,7 +38,7 @@ from kaizen.shared.synced import (
     render,
     starter_overlay,
 )
-from kaizen.shared.version import Install, Version
+from kaizen.shared.version import Install, Version, recordable_version
 
 GITIGNORE = ".gitignore"
 
@@ -320,14 +320,7 @@ def init_home(
     checks += _check_not_inside_home(root, env, user_home)
     new = NewHome(root, *_origin_repo(root, run), user_home)
     checks.append(f"origin is the GitHub repo {new.github}")
-    version = Version.parse(install.version)
-    if version is None:
-        raise RefusalError(
-            f"home init: kaizen's version {install.version} is not X.Y.Z, so it can't be recorded"
-            " as the new home's synced version",
-            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run init"
-            " again",
-        )
+    version = recordable_version(install.version, "init")
     checks.append(f"kaizen's version {version} is X.Y.Z, so the marker can record it")
     steps = _steps(new, version)
     checks += [step.check() for step in steps]
