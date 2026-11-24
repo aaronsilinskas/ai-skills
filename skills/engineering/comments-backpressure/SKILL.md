@@ -53,6 +53,7 @@ log.warning("retrying upload: server dropped the connection mid-chunk")
 When a docstring survives, format it per the target language's conventions:
 
 - Python docstrings: [python-docstrings.md](python-docstrings.md)
+- Kotlin KDoc: [kotlin-kdoc.md](kotlin-kdoc.md)
 - TypeScript TSDoc: [typescript-tsdoc.md](typescript-tsdoc.md)
 
 ## Checklist
