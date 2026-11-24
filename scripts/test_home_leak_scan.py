@@ -1,6 +1,6 @@
 """Tests for home_leak_scan.py. Run by scripts/check.sh, or directly:
 
-    python3 -B -m unittest discover -s scripts -p 'test_*.py'
+    python3 -B -m unittest discover -s scripts -p test_home_leak_scan.py
 
 The home paths below are assembled at run time, so this file's own lines hold none and pass the
 scan they test.
@@ -32,51 +32,79 @@ def diff(*body: str, path: str = "notes.md") -> str:
     )
 
 
+def found_in(line: str) -> list[str]:
+    """The home paths scan() finds in one added *line*."""
+    return [finding.path for finding in scan(diff("@@ -0,0 +1 @@", f"+{line}"))]
+
+
 class ScanTest(unittest.TestCase):
     def test_tilde_path_in_an_added_line_is_found_with_its_file_and_line(self) -> None:
-        found = scan(diff("@@ -0,0 +7,2 @@", "+clean", f"+see {TILDE}/dev/project now"))
+        text = diff("@@ -0,0 +7,2 @@", "+clean", f"+see {TILDE}/dev/project now")
+
+        found = scan(text)
+
         self.assertEqual(found, [Finding("notes.md", 8, f"{TILDE}/dev/project")])
 
-    def test_absolute_home_paths_are_found(self) -> None:
-        for path in (f"{MAC_HOME}/dev", f"{LINUX_HOME}/src/app", WINDOWS_HOME):
+    def test_home_paths_are_found(self) -> None:
+        paths = [
+            f"{TILDE}alice/src",
+            f"{MAC_HOME}/dev",
+            f"{LINUX_HOME}/src/app",
+            WINDOWS_HOME,
+            WINDOWS_HOME.lower(),
+            WINDOWS_HOME.replace("\\", "\\\\"),
+            WINDOWS_HOME.replace("\\", "/"),
+        ]
+        for path in paths:
             with self.subTest(path=path):
-                found = scan(diff("@@ -0,0 +1 @@", f"+cd '{path}'"))
-                self.assertEqual([f.path for f in found], [path])
+                self.assertEqual(found_in(f"cd '{path}'"), [path])
 
     def test_text_naming_no_users_home_passes(self) -> None:
-        lines = [
-            "see the home directory, a bare ~/ or ~/… in prose",
-            "/".join(["", "Users", "<name>", "x"]) + " and /home/$USER/x are placeholders",
-            "https://example.com/home/alice and src/home/alice are not home directories",
-            "s.replace(/~(.*?)~/g, '$1')",
-            "$HOME/.config/tool",
-        ]
-        found = scan(diff("@@ -0,0 +1,5 @@", *(f"+{line}" for line in lines)))
-        self.assertEqual(found, [])
+        lines = {
+            "bare tilde-slash": "the home directory, a bare ~/ in prose",
+            "tilde-slash ellipsis": "see ~/… for the path",
+            "angle-bracket placeholder": "/".join(["", "Users", "<name>", "x"]),
+            "shell variable placeholder": "/home/$USER/x",
+            "URL path": "https://example.com/home/alice",
+            "relative path": "src/home/alice",
+            "macOS Shared folder": "/".join(["", "Users", "Shared", "x"]),
+            "tilde inside a regex": "s.replace(/~(.*?)~/g, '$1')",
+            "HOME variable": "$HOME/.config/tool",
+        }
+        for case, line in lines.items():
+            with self.subTest(case):
+                self.assertEqual(found_in(line), [])
 
     def test_removed_and_context_lines_are_not_scanned_but_still_count(self) -> None:
-        found = scan(
-            diff(
-                "@@ -1,3 +1,3 @@",
-                f" kept {TILDE}/old",
-                f"-gone {TILDE}/old",
-                f"+new {TILDE}/new",
-                " tail",
-            )
+        text = diff(
+            "@@ -1,3 +1,3 @@",
+            f" kept {TILDE}/old",
+            f"-gone {TILDE}/old",
+            f"+new {TILDE}/new",
+            " tail",
         )
+
+        found = scan(text)
+
         self.assertEqual(found, [Finding("notes.md", 2, f"{TILDE}/new")])
 
     def test_added_line_that_starts_with_plus_signs_is_scanned_not_taken_for_a_header(
         self,
     ) -> None:
-        found = scan(diff("@@ -0,0 +1 @@", f"+++ {TILDE}/x"))
+        text = diff("@@ -0,0 +1 @@", f"+++ {TILDE}/x")
+
+        found = scan(text)
+
         self.assertEqual(found, [Finding("notes.md", 1, f"{TILDE}/x")])
 
     def test_findings_name_the_file_of_each_diff(self) -> None:
         text = diff("@@ -0,0 +1 @@", "+fine", path="a.md") + diff(
             "@@ -4,0 +5 @@", f"+{MAC_HOME}/x", path="b.md"
         )
-        self.assertEqual(scan(text), [Finding("b.md", 5, f"{MAC_HOME}/x")])
+
+        found = scan(text)
+
+        self.assertEqual(found, [Finding("b.md", 5, f"{MAC_HOME}/x")])
 
 
 class MainTest(unittest.TestCase):
@@ -107,7 +135,7 @@ class MainTest(unittest.TestCase):
         self.git("commit", "-q", "-m", message)
         return self.git("rev-parse", "HEAD")
 
-    def run_main(self, *args: str) -> "tuple[int, str]":
+    def run_main(self, *args: str) -> tuple[int, str]:
         out = io.StringIO()
         cwd = os.getcwd()
         os.chdir(self.repo)
@@ -122,7 +150,9 @@ class MainTest(unittest.TestCase):
         self.write("old.md", f"already here {TILDE}/dev\n")
         self.write("new.md", f"one\ntwo\nthree {MAC_HOME}/x\n")
         head = self.commit("head")
+
         status, out = self.run_main(self.base, head)
+
         self.assertEqual(status, 1)
         self.assertIn(f"new.md:3: {MAC_HOME}/x", out)
         self.assertNotIn("old.md", out)
@@ -130,15 +160,19 @@ class MainTest(unittest.TestCase):
     def test_head_adding_no_home_path_passes(self) -> None:
         self.write("new.md", "nothing personal\n")
         head = self.commit("head")
+
         status, out = self.run_main(self.base, head)
+
         self.assertEqual(status, 0, out)
 
     def test_unknown_revision_is_an_error_not_a_pass(self) -> None:
         status, _ = self.run_main(self.base, "no-such-revision")
+
         self.assertEqual(status, 2)
 
     def test_wrong_argument_count_is_a_usage_error(self) -> None:
         status, out = self.run_main(self.base)
+
         self.assertEqual(status, 2)
         self.assertIn("usage", out)
 

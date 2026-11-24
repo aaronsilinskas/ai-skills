@@ -98,7 +98,7 @@ Use Matt's `writing-for-agents` skill (installed under `.claude/skills/`) when c
 
 ## Consistency check
 
-After adding, removing, or editing a skill, run the consistency guard:
+Before a PR, and after adding, removing, or editing a skill, run the check command:
 
 ```bash
 bash scripts/check.sh
