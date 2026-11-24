@@ -1,6 +1,6 @@
 # Embedded Python (CircuitPython / MicroPython)
 
-Rules for Python on microcontrollers and other constrained hardware, where GC pauses, allocations and CPU limits matter. Where they conflict with the general `code-quality` bar, these win. On a hot path they also win over `codebase-design`'s "return results, don't produce side effects": mutate state in place, and test it by asserting the state after the call. Cold paths keep following `codebase-design`.
+Rules for Python on microcontrollers and other constrained hardware, where GC pauses, allocations and CPU limits matter. Where they conflict with the general `code-quality` bar, these win. On a hot path they also win over `codebase-design`'s "return results, don't produce side effects": mutate state in place, and test it by asserting the public state after the call. Cold paths keep following `codebase-design`.
 
 ## Hot Path Definition
 
@@ -118,7 +118,7 @@ Prefer explicit, simple data structures (`list`, `dict`, plain classes with `__s
 
 ## Type Hint Exceptions
 
-Embedded targets often hit the concrete constraints behind `code-quality`'s typing exceptions, for example:
+Embedded targets often hit the concrete constraints behind the Type Coverage exceptions in `SKILL.md`, for example:
 
 - Board/runtime-provided objects that have incomplete or incorrect stubs
 - CircuitPython-specific APIs where stub types conflict with known runtime behavior
