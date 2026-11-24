@@ -27,8 +27,10 @@ from kaizen.shared.home import (
     settings_text,
 )
 from kaizen.shared.leak import LeakFoundError, leak_check
+from kaizen.shared.pre_commit import CONFIG, FRESH_CONFIG, runs_every_hook
 from kaizen.shared.registry import WORKTREES, resolve, starter_page, starter_readme
 from kaizen.shared.synced import (
+    HOOKS_DOC,
     OVERLAY,
     SETTINGS_SHAPE,
     SYNCED_FILES,
@@ -210,16 +212,7 @@ class IgnoreLine:
         return self.root / GITIGNORE
 
     def _text(self) -> str | None:
-        """The file's text, ``None`` when absent; refuses when it can't be read as text."""
-        if not self.path.exists():
-            return None
-        try:
-            return self.path.read_text()
-        except (OSError, UnicodeDecodeError) as exc:
-            raise RefusalError(
-                f"home init: {GITIGNORE} exists but can't be read as text",
-                f"fix or move {GITIGNORE} aside, then run init again",
-            ) from exc
+        return _optional_text(self.root, GITIGNORE)
 
     def _present(self, text: str) -> bool:
         # A leading or trailing slash doesn't change what a root .gitignore line ignores here.
@@ -247,6 +240,55 @@ class IgnoreLine:
         separator = "" if not text or text.endswith("\n") else "\n"
         self.path.write_text(f"{text}{separator}{self.line}\n")
         return f"added {self.line} to {GITIGNORE}"
+
+
+@dataclass(frozen=True)
+class HookConfig:
+    """The hook config, written with every hook entry when absent. An existing one is the home's
+    own and is kept, with a to-do when it lacks a hook entry."""
+
+    root: Path
+
+    def to_do(self) -> str | None:
+        """What is left to add by hand, or ``None`` when the config runs every hook."""
+        text = _optional_text(self.root, CONFIG)
+        if text is None or runs_every_hook(text):
+            return None
+        return f"add the kaizen hook entries {HOOKS_DOC} lists to {CONFIG}"
+
+    def check(self) -> str:
+        _optional_text(self.root, CONFIG)
+        return f"{CONFIG} is absent or readable"
+
+    def preview(self) -> str:
+        if _optional_text(self.root, CONFIG) is None:
+            return f"would write {CONFIG}:\n{FRESH_CONFIG}"
+        return f"would keep {CONFIG}: {self._kept()}"
+
+    def apply(self) -> str:
+        if _optional_text(self.root, CONFIG) is None:
+            (self.root / CONFIG).write_text(FRESH_CONFIG)
+            return f"wrote {CONFIG}"
+        return f"kept {CONFIG}: {self._kept()}"
+
+    def _kept(self) -> str:
+        to_do = self.to_do()
+        return "it already runs every kaizen hook" if to_do is None else f"the home's own; {to_do}"
+
+
+def _optional_text(root: Path, relative: str) -> str | None:
+    """The text of the file *relative* to *root*, ``None`` when absent; refuses when it can't be
+    read as text."""
+    path = root / relative
+    if not path.exists():
+        return None
+    try:
+        return path.read_text()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise RefusalError(
+            f"home init: {relative} exists but can't be read as text",
+            f"fix or move {relative} aside, then run init again",
+        ) from exc
 
 
 def init_home(
@@ -289,6 +331,8 @@ def init_home(
     say(f"{root} is now a home")
     _report_leaks(new, run, say)
     say("still to do, by you:")
+    if hook_to_do := HookConfig(new.root).to_do():
+        say(f"  - [ ] {hook_to_do}")
     for item in _checklist(str(new.root), new.name):
         say(f"  - [ ] {item}")
 
@@ -367,6 +411,7 @@ def _checklist(root: str, name: str) -> list[str]:
         f"settle the to-do fields on {REGISTRY}/{name}.md: public, check, code_paths",
         "run `kaizen project leak-check` again after the first commit, since it searches committed"
         " files only",
+        f"run `pre-commit install` in {root}, so the hooks in {CONFIG} run on every commit",
         "commit the result through a PR",
         "put this line in the home's AGENTS.md: \"kaizen must be on the PATH; if it is not, ask the"
         ' user to install it."',
@@ -388,6 +433,7 @@ def _steps(new: NewHome) -> list[Step]:
             for relative, text in render(fresh_home(new.root, new.github, new.path)).items()
         ],
         NewFile(new.root, OVERLAY, starter_overlay()),
+        HookConfig(new.root),
         NewFile(new.root, MARKER, fresh_marker(new.github, new.path)),
     ]
 
@@ -428,6 +474,9 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             f"  {OVERLAY}  the home overlay: a starter page for the home's own rules beside "
             "the synced files; init writes it whole, like the registry files, and it is the home's "
             "to edit, never rendered from a template\n"
+            f"  {CONFIG}  the hook config: a repo: local entry for each kaizen hook, as "
+            f"{HOOKS_DOC} lists them; an existing one is the home's own and is kept, with a "
+            "to-do when it lacks any of them\n"
             f"  {MARKER}  the home marker, written last so a failure partway leaves none: "
             f'registry = "{REGISTRY}", and a [leak] table whose own holds the home\'s '
             "owner/repo and path, and whose allow starts empty\n\n"

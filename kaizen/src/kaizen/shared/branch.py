@@ -109,6 +109,25 @@ def remote_default_branch(checkout: str, run: Runner) -> str:
     )
 
 
+def default_branch(run: Runner) -> str:
+    """The default branch of the checkout the command runs in: ``origin/HEAD`` as last fetched,
+    or asked of origin when the clone never recorded it; refuses when neither answers."""
+    try:
+        tracking = run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"]).strip()
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        return tracking.removeprefix("origin/")
+    try:
+        return remote_default_branch(".", run)
+    except subprocess.CalledProcessError as exc:
+        raise RefusalError(
+            f"could not read the default branch: origin/HEAD is unset and origin did not answer:"
+            f" {(exc.stderr or '').strip()}",
+            "run `git remote set-head origin --auto`, or name the branches with --branch",
+        ) from exc
+
+
 def origin_has_branch(checkout: str, branch: str, run: Runner) -> bool:
     """Whether ``origin`` has *branch*, asked of the remote itself rather than a tracking ref."""
     out = run(["git", "-C", checkout, "ls-remote", "--heads", "origin", branch])
