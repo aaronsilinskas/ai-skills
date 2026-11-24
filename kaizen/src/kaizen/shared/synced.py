@@ -15,10 +15,15 @@ from pathlib import Path
 
 from kaizen.shared.home import Home, SettingsError, read_settings, settings_text
 from kaizen.shared.labels import Label
+from kaizen.shared.pre_commit import LOCAL_REPO
 
 OVERLAY = "docs/agents/home-overlay.md"
 """The **home overlay**, relative to the home root: the home's own notes beside its synced files,
 which ``kaizen`` never renders."""
+
+
+HOOKS_DOC = "docs/agents/pre-commit-hooks.md"
+"""The synced file that lists the hook entries."""
 
 
 @dataclass(frozen=True)
@@ -35,6 +40,7 @@ SYNCED_FILES = (
     SyncedFile("docs/agents/implement-spec.md", "implement-spec.md"),
     SyncedFile("docs/agents/issue-conventions.md", "issue-conventions.md"),
     SyncedFile("docs/agents/workflow-labels.md", "workflow-labels.md"),
+    SyncedFile(HOOKS_DOC, "pre-commit-hooks.md"),
 )
 
 SYNCED_LINE = (
@@ -46,6 +52,7 @@ SYNCED_LINE = (
 _FACTS: dict[str, Callable[[Home], str]] = {
     "registry": lambda home: home.registry.relative_to(home.root).as_posix(),
     "workflow_labels": lambda home: _label_list(home.workflow_labels),
+    "hook_entries": lambda home: LOCAL_REPO,
 }
 """What a template may name: each fact, worked out from the home."""
 
