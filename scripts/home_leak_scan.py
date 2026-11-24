@@ -4,8 +4,9 @@
     python3 scripts/home_leak_scan.py <base> <head>
 
 Scans only the lines that <head> adds since its merge base with <base> (git diff base...head),
-never removed or unchanged ones. A home path is a tilde path with more after it (``~user/``
-included), or an absolute path under a macOS, Linux or Windows home directory that names a user.
+never removed or unchanged ones. A home path is a tilde path with more after it, a user name after the
+tilde included, or an absolute path under a macOS, Linux or Windows home directory that names a
+user.
 Placeholders such as a ``<name>`` or ``$USER`` segment name no user and pass, and so does the
 macOS ``Shared`` folder, which is no user's home.
 
