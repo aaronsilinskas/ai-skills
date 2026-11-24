@@ -13,7 +13,7 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 | Skill | Invoked by | Description |
 | --- | --- | --- |
 | [code-quality](skills/engineering/code-quality/SKILL.md) | You or model | General implementation-quality review bar (readability, public-API discipline, type coverage); platform specifics in reference files. |
-| [comments](skills/engineering/comments/SKILL.md) | You or model | Decide whether code needs a comment/docstring at all, and write the ones that survive; language formatting in reference files. |
+| [comments-backpressure](skills/engineering/comments-backpressure/SKILL.md) | You or model | Push back on comments: sort each into remove, design change, test, ADR or keep, and try those before writing one. Language formatting in reference files. |
 | [test-quality](skills/engineering/test-quality/SKILL.md) | You or model | Review and audit tests against a quality bar: test naming, one behavior per test, coverage planning, per-language mocking guides. Pairs with Matt's `tdd`, which owns the loop. |
 | [to-idea](skills/engineering/to-idea/SKILL.md) | You | Capture a discovery or new idea as a lightweight `idea`-labeled issue to revisit later: a stub, not a spec. |
 
@@ -28,7 +28,7 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 Each skill here fills a gap in Matt's skills. None of them shares a name with one of his.
 
 - **`code-quality`:** a language-neutral review bar for production code (readability, right-sized optimization, public-API discipline, type coverage). It judges against the project's `GLOSSARY.md`, ADRs and standards files, with platform rules in reference files.
-- **`comments`:** decides whether a symbol needs a comment or docstring at all, then writes the ones that earn their place.
+- **`comments-backpressure`:** pushes back on comments so the code itself carries intent. It sorts each comment into remove, design change, test, ADR or keep, and keeps only a non-obvious why.
 - **`test-quality`:** a quality bar for the tests themselves (naming, one behavior per test, coverage traced to guarantees) plus per-language mocking guides, run as its own review pass. Matt's `tdd` owns the red-green loop.
 - **`to-idea`:** captures a discovery as a lightweight `idea`-labeled issue, a stub to revisit rather than a spec. It reads the label from the project's triage-labels doc.
 - **`air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
