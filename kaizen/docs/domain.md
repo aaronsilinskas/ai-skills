@@ -25,14 +25,14 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `home init` is the one command that needs no home: its parser sets `needs_home=False`, and its handler gets the start directory and environment instead.
   `run`, `cwd` and `env` are the seams tests use to point kaizen at a fixture home with a recording runner.
   A `RefusalError` exits 1 with `refused:` (nothing changed); a failed git or gh command or a `StepFailedError` exits 1 with `error:` (the steps printed above are done); anything else is a crash with its traceback.
-  Every run that reaches its handler ends its stderr with `kaizen: exit <code>`, whichever name invoked it, so `kaizen ... 2>&1 | tail` keeps the outcome.
+  Every run that reaches its handler ends its stderr with `kaizen: exit <code>` (plus the outcome after a refusal, failure or crash), whichever name invoked it, so `kaizen ... 2>&1 | tail` keeps the outcome.
 - `shared/common.py`: what every command shares.
   `Runner` (argv in, stdout out, `CalledProcessError` on failure) is the seam tests replace.
   `RefusalError(check, fix)` is raised before anything mutating runs; `StepFailedError(step, detail)` is a failed step after earlier steps changed things.
 - `shared/home.py`: home discovery and the files that make a new home.
-  It is the only module that knows the home marker's name, its format and the environment variable that names a home.
+  It defines the home marker's name and the environment variable that names a home.
   `find_home(start, env)` returns a `Home` (root, registry folder, leak facts and the **home settings**) or refuses with a fix.
-  The marker is parsed with `tomllib`, the one place kaizen reads TOML.
+  It reads the marker with `tomllib`, the one place kaizen reads TOML.
   A linked worktree of the home counts as that home, so commands work the same from a ticket worktree.
   It also renders a new home's marker and merges the home's root into its Claude Code settings, keeping every other key.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
@@ -63,6 +63,7 @@ One module per command; each group's `--help` lists them.
 
 - `ticket/`: publish a spec's tickets, and start, ship, finish, abandon, diff or compare one ticket.
   `ticket ship` and `ticket finish` refuse a spec's ticket and point to `spec integrate` (ADR 0001).
+  `ticket/common.py` holds the `ticket` group's gh queries and its refusal of a closed issue.
 - `spec/`: publish a spec, and start, integrate, ship, finish or report the status of its integration branch.
   `spec integrate` merges in a scratch worktree and pushes only after the check command passes; the ticket branch is never pushed (ADR 0001).
   `spec/common.py` reads a spec's sub-issues and each ticket's blockers, for `spec status` and `ticket start --spec`.
@@ -81,4 +82,4 @@ One module per command; each group's `--help` lists them.
 - No command uses stored state: branches, worktrees and GitHub are read each time.
 - The import contracts in `pyproject.toml`: `shared/` imports no command group (the CLI excepted), and `spec/` imports nothing of `ticket/`.
 - Registry frontmatter is flat `key: value` lines (strings, `true`/`false`), parsed without a YAML dependency.
-- Nothing kaizen prints, writes or checks names another home, and its templates and tests name no real home, owner or project (ADR 0002).
+- Homes never reference each other (ADR 0002).

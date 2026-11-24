@@ -65,8 +65,7 @@ _Avoid_: agent worktree, scratch worktree (that is a command's temporary worktre
 
 **Docs ticket**:
 A change to docs only, which needs no issue.
-It is built in a ticket worktree on its own branch from the project's remote default branch, and its PR closes nothing.
-Shipping it is refused if it touches any of the project's declared code paths, and its PR auto-merges when every path it changes is under the project's declared auto-merge paths.
+It is built in a ticket worktree from the project's remote default branch, and may touch none of the project's declared code paths.
 _Avoid_: issue-less ticket, docs PR
 
 **Integration branch**:
@@ -105,5 +104,4 @@ _Avoid_: config, option, flag
 
 **Synced version**:
 The kaizen release a home was last synced with, recorded in its home marker by `kaizen home sync` and `kaizen home init`.
-Every command compares it with the running install: a newer install warns to sync, and an older one refuses.
 _Avoid_: pin, home version
