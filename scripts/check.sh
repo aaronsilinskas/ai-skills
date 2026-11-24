@@ -2,7 +2,7 @@
 #
 # check.sh: cross-skill consistency guard for this skills collection.
 #
-# Runs three checks and exits non-zero if ANY of them fails. All of them run
+# Runs five checks and exits non-zero if ANY of them fails. All of them run
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
 #   1. Conventions, adopted from Matt Pocock's skills (decided in #44):
@@ -22,6 +22,10 @@
 #   3. Script lint: skills/engineering/wizard/template.sh passes `bash -n`
 #      (and shellcheck too, when it is installed on the runner). Prints SKIP,
 #      not FAIL, when the template is absent.
+#   4. kaizen: kaizen/scripts/check.sh (lint, format, types, import contracts
+#      and tests of the kaizen package) exits 0.
+#   5. Home leak scan tests: scripts/test_home_leak_scan.py passes. CI runs
+#      scripts/home_leak_scan.py on the lines each PR adds.
 #
 # Run it after editing skills:
 #
@@ -268,6 +272,30 @@ else
   fi
   rm -f "$lint_err"
 fi
+
+# ── Check 4: kaizen ────────────────────────────────────────────────────────
+echo
+echo "== Check 4: kaizen (kaizen/scripts/check.sh) =="
+kaizen_report="$(mktemp)"
+if bash kaizen/scripts/check.sh >"$kaizen_report" 2>&1; then
+  pass "kaizen/scripts/check.sh"
+else
+  fail "kaizen/scripts/check.sh failed:"
+  indent <"$kaizen_report"
+fi
+rm -f "$kaizen_report"
+
+# ── Check 5: Home leak scan tests ──────────────────────────────────────────
+echo
+echo "== Check 5: home leak scan tests =="
+scan_report="$(mktemp)"
+if python3 -B -m unittest discover -s scripts -p 'test_*.py' >"$scan_report" 2>&1; then
+  pass "scripts/test_home_leak_scan.py"
+else
+  fail "scripts/test_home_leak_scan.py failed:"
+  indent <"$scan_report"
+fi
+rm -f "$scan_report"
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo

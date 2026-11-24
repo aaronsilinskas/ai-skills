@@ -109,6 +109,10 @@ It runs every check even after a failure, prints a PASS, FAIL or SKIP line for e
 1. **Conventions:** no em-dash in any git-tracked file outside `.claude/skills/` (Matt's copies, which this repo doesn't own); every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; and no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too).
 2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table, and the README lists no skill that isn't on disk.
 3. **Script lint:** `skills/engineering/wizard/template.sh` passes `bash -n` (and `shellcheck`, when installed). With no `wizard` skill in this repo, it reports SKIP.
+4. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's lint, format, types, import contracts and tests.
+5. **Home leak scan tests:** `scripts/test_home_leak_scan.py` passes.
+
+CI (`.github/workflows/check.yml`) runs the same command on every pull request and on pushes to `main`. On a pull request it also runs `scripts/home_leak_scan.py`, which fails when a line the PR adds holds a path under a user's home directory (a tilde path, or an absolute macOS, Linux or Windows home path) and lists each file and line. It needs no home's facts. Run it locally on a branch with `python3 scripts/home_leak_scan.py main HEAD`.
 
 ## Upstream
 
