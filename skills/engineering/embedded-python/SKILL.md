@@ -96,19 +96,24 @@ Minimize and isolate CircuitPython-specific dependencies so the same code can ru
 
 **Built-in generic subscripts are supported:**
 
-`list[X]`, `dict[K, V]`, `tuple[X, ...]`, and `X | Y` union syntax work at runtime in latest releases. Use them freely in annotations, with no string quoting or `try/except` guard needed.
+`list[X]`, `dict[K, V]`, `tuple[X, ...]`, and `X | Y` union syntax work at runtime in latest releases. Use them freely in annotations, with no string quoting or import guard needed.
 
-**Guard `typing` and `collections.abc` imports:**
+**Guard `typing` and `collections.abc` imports with `TYPE_CHECKING`:**
 
-Advanced `typing` constructs and `collections.abc` abstractions are still absent or incomplete. Guard any imports from these modules:
+Advanced `typing` constructs and `collections.abc` abstractions are still absent or incomplete. Import them for the type checker only, under a module-level `TYPE_CHECKING = False`. This is the one sanctioned form:
 
 ```python
-try:
+from __future__ import annotations
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, TypeAlias
-except ImportError:
-    pass  # Not available on all embedded runtimes
+    from typing import Any
 ```
+
+Define `TYPE_CHECKING` in the module rather than importing it, since `typing` is absent on the device. The device skips the block and never attempts the import, while type checkers treat the name as true and check the guarded imports. A `try:` around these imports is not used, because it still attempts the import on every boot.
+
+Guarded names appear only inside annotations, since they are unbound at runtime. A module whose annotations name one starts with `from __future__ import annotations`. CircuitPython and MicroPython never evaluate annotations, but CPython before 3.14 evaluates them eagerly, so host-side tests would hit an unbound name. CircuitPython builds `__future__` in; on MicroPython, install it from micropython-lib (`mip install __future__`).
 
 **Module count matters.** Import cost is paid at startup on-device. Keep related logic in the same file rather than splitting into many small modules when startup latency is a concern.
 
@@ -137,17 +142,18 @@ For board-provided attributes and pin objects (for example `board.TX`, `board.RX
 Annotate all class-level constants with `Final` to prevent accidental reassignment. Omit the type parameter, since Pylance infers it from the assigned value:
 
 ```python
-try:
+from __future__ import annotations
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
     from typing import Final
-except ImportError:
-    pass
 
 class MyConfig:
     MAX_PIXELS: Final = 117
     DEFAULT_BRIGHTNESS: Final = 0x33
 ```
 
-`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import must be guarded with `try/except ImportError` because `typing` may be absent on some embedded runtimes. The annotation itself must **never** be quoted. String-quoting `Final` is unnecessary for CircuitPython.
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard described above. The annotation itself must **never** be quoted. String-quoting `Final` is unnecessary for CircuitPython.
 
 ## State Object Lifecycle
 
@@ -184,6 +190,7 @@ class _Data:
 - [ ] Constants and math calls hoisted outside inner loops
 - [ ] State objects initialized once via a guard, mutated in place on subsequent frames
 - [ ] `__slots__` used on long-lived per-instance state objects
-- [ ] `typing` and `collections.abc` imports guarded with `try/except ImportError` (advanced constructs such as `TypeVar`, `Protocol` and `Callable` are still absent from latest releases)
-- [ ] Class-level constants annotated with `Final` (unquoted, no type parameter; import guarded with `try/except ImportError`)
+- [ ] `typing` and `collections.abc` imports only under `TYPE_CHECKING = False` / `if TYPE_CHECKING:`, never in a `try:` (advanced constructs such as `TypeVar`, `Protocol` and `Callable` are still absent from latest releases)
+- [ ] Modules whose annotations name a guarded import start with `from __future__ import annotations`
+- [ ] Class-level constants annotated with `Final` (unquoted, no type parameter; import under `if TYPE_CHECKING:`)
 - [ ] No imports from unavailable stdlib modules
