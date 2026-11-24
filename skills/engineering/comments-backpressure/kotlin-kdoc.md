@@ -16,6 +16,13 @@ fun validateBandMap(bands: Map<String, IntRange>, context: String) { ... }
 
 Document a primary-constructor property with `@property` on the class KDoc, once, rather than again on the property.
 
+```kotlin
+/**
+ * @property speed ring growth, in LEDs per second
+ */
+class Ripple(val center: Int, val speed: Float)
+```
+
 ## Symbol references
 
 Use `[Name]` to reference another class, function or property so it resolves to a link in generated docs. Use backticks for inline literals.

@@ -28,7 +28,7 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 Each skill here fills a gap in Matt's skills. None of them shares a name with one of his.
 
 - **`code-quality`:** a language-neutral review bar for production code (readability, right-sized optimization, public-API discipline, type coverage). It judges against the project's `GLOSSARY.md`, ADRs and standards files, with platform rules in reference files.
-- **`comments-backpressure`:** pushes back on comments. Names, types, tests and message strings document the code; it sorts each comment into remove, design change, test, ADR or keep, and keeps only a non-obvious why.
+- **`comments-backpressure`:** pushes back on comments so the code itself carries intent. It sorts each comment into remove, design change, test, ADR or keep, and keeps only a non-obvious why.
 - **`test-quality`:** a quality bar for the tests themselves (naming, one behavior per test, coverage traced to guarantees) plus per-language mocking guides, run as its own review pass. Matt's `tdd` owns the red-green loop.
 - **`to-idea`:** captures a discovery as a lightweight `idea`-labeled issue, a stub to revisit rather than a spec. It reads the label from the project's triage-labels doc.
 - **`air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
