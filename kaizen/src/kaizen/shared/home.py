@@ -1,43 +1,50 @@
 """Home discovery: which **home** ``kaizen`` serves, read from that home's own facts; and the files
 ``kaizen home init`` writes to make a new home.
 
-A home declares itself with ``mw.toml`` at its root::
+A home declares itself with ``kaizen.toml`` at its root::
 
     registry = "projects"            # the registry folder, relative to the home root
     pr_footer = "…"                  # optional: the last line of each PR kaizen opens; "" for none
     auto_merge_comment_only = false  # optional, default true: the comment-only check's switch
     [leak]
     own = ["owner/home-repo", "/path/to/home"]   # kept out of this home's public projects
-    allow = ["~/.claude", "owner/archived"]      # optional: outside paths and repos it allows
+    allow = ["/opt/tool", "owner/archived"]      # optional: outside paths and repos it allows
     [[workflow_labels]]          # optional: one table per label, replacing the default set
     name = "needs-triage"
     color = "fbca04"
     description = "Maintainer needs to evaluate this issue"
 
-and sets ``MW_HOME`` to its root in its ``.claude/settings.json`` ``env``, so ``kaizen`` run from a
-registered project's root outside the home's tree still finds it. This module is the only place
-that knows the marker's name, its format and ``MW_HOME``.
+and sets ``KAIZEN_HOME`` to its root in its ``.claude/settings.json`` ``env``, so ``kaizen`` run
+from a registered project's root outside the home's tree still finds it. This module is the only
+place that knows the marker's name, its format and ``KAIZEN_HOME``.
+
+It also reads the old names, ``mw.toml`` and ``MW_HOME``, each with a one-line warning naming
+the new one. Both markers at one root, or both variables, must agree: the same bytes, or
+the same root.
 """
 
 import json
 import re
+import sys
 import textwrap
 import tomllib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError
+from kaizen.shared.common import RefusalError, Say
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
 
-MARKER = "mw.toml"
-ENV_VAR = "MW_HOME"
+MARKER = "kaizen.toml"
+ENV_VAR = "KAIZEN_HOME"
+_OLD_MARKER = "mw.toml"
+_OLD_ENV_VAR = "MW_HOME"
 REGISTRY = "projects"
 """The registry folder a fresh marker names."""
 PR_FOOTER = "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 """The PR footer of a home whose marker sets none."""
 SETTINGS = ".claude/settings.json"
-"""The Claude Code settings file, relative to the home root, whose ``env`` sets ``MW_HOME``."""
+"""The Claude Code settings file, relative to the home root, whose ``env`` sets ``KAIZEN_HOME``."""
 
 _REPO = re.compile(r"[\w.-]+/[\w.-]+")
 _COLOR = re.compile(r"[0-9a-fA-F]{6}")
@@ -50,14 +57,21 @@ _MALFORMED_ALLOW = (
 
 
 class SettingsError(ValueError):
-    """The settings file can't take ``MW_HOME``: a problem with the file, said without naming the
-    command that asked or the fix, which are the caller's."""
+    """The settings file can't take ``KAIZEN_HOME``: a problem with the file, said without naming
+    the command that asked or the fix, which are the caller's."""
 
-    def __init__(self, problem: str, mw_home: str | None = None) -> None:
+    def __init__(self, problem: str, variable: str | None = None, value: str | None = None) -> None:
         super().__init__(f"{SETTINGS} {problem}")
-        self.mw_home = mw_home
-        """The ``MW_HOME`` value already there, when that is the problem. Never in the message: it
-        may be another home's root."""
+        self.variable = variable
+        """The variable already set to another value, ``KAIZEN_HOME`` or ``MW_HOME``, when that is
+        the problem."""
+        self.value = value
+        """That variable's value. Never in the message: it may be another home's root."""
+
+    @property
+    def names_old_variable(self) -> bool:
+        """Whether the variable set is ``MW_HOME``, the old name of ``KAIZEN_HOME``."""
+        return self.variable == _OLD_ENV_VAR
 
 
 @dataclass(frozen=True)
@@ -83,47 +97,94 @@ class Home:
     project still opts in on its registry page."""
 
 
-def find_home(start: Path, env: Mapping[str, str]) -> Home:
-    """The home ``MW_HOME`` in *env* names, or the nearest one upward from *start*.
+@dataclass(frozen=True)
+class EnvSetting:
+    """The root the environment names, and which variable, ``KAIZEN_HOME`` or else ``MW_HOME``,
+    named it."""
 
-    Refuses when neither finds a home, when they find different homes, or when the marker is
-    malformed. A linked git worktree of the ``MW_HOME`` home, such as a ticket worktree inside its
-    tree, counts as that home.
+    variable: str
+    value: str
+    root: Path
+    warnings: tuple[str, ...]
+    """The lines reading an old name owes."""
+
+
+def warn_on_stderr(line: str) -> None:
+    """Prints a ``warning:`` line on stderr, beside the outcome rather than the progress."""
+    print(f"warning: {line}", file=sys.stderr)
+
+
+def find_home(start: Path, env: Mapping[str, str], warn: Say = warn_on_stderr) -> Home:
+    """The home ``KAIZEN_HOME`` in *env* names, or the nearest one upward from *start*.
+
+    Refuses, before any other check, when ``KAIZEN_HOME`` and ``MW_HOME`` name different roots or
+    a root holds both markers with different bytes. Then refuses when neither finds a home, when
+    they find different homes, or when the marker is malformed. A linked git worktree of the
+    ``KAIZEN_HOME`` home, such as a ticket worktree inside its tree, counts as that home. Each old
+    name read is *warn*ed about in one line.
     """
+    setting = _env_setting(env, Path.home())
     found = _search_upward(start.resolve())
-    named = _named_by_env(env)
-    if named and found and found != named and not _is_worktree_of(found, named):
-        # Only MW_HOME's root is named: the other home's path must not reach this one's output.
-        raise RefusalError(
-            f"home: {ENV_VAR} names {named}, but kaizen runs inside the tree of a "
-            f"different {MARKER}",
-            f"run kaizen from inside {named} or one of its registered projects",
-        )
-    root = named or found
+    named = setting.root if setting else None
+    served = named or found
+    markers = {
+        root: _marker(root, str(root) if root == served else _unnamed_root(start))
+        for root in {found, named}
+        if root is not None
+    }
+    if setting:
+        for line in setting.warnings:
+            warn(line)
+        if markers[setting.root] is None:
+            raise RefusalError(
+                f"home: {setting.variable} is {setting.value}, which has no {MARKER}",
+                f"set {ENV_VAR} to the root of the home that holds {MARKER}",
+            )
+        if found and found != setting.root and not _is_worktree_of(found, setting.root):
+            # Only the variable's root is named: the other home's path must not reach this
+            # one's output.
+            raise RefusalError(
+                f"home: {setting.variable} names {setting.root}, but kaizen runs inside the tree"
+                f" of a different {MARKER}",
+                f"run kaizen from inside {setting.root} or one of its registered projects",
+            )
+    root = served
     if root is None:
         raise RefusalError(
             f"home: no home found: {ENV_VAR} is unset and no {MARKER} is in {start} or above it",
             f"run kaizen inside a home, or set {ENV_VAR} to the root of the home that "
             f"holds {MARKER}",
         )
-    return _read_marker(root)
+    marker = markers[root]
+    assert marker is not None, "the search and the variable's check each found a marker there"
+    if marker.warning:
+        warn(marker.warning)
+    return _read_marker(root, marker.path)
 
 
 def marker_at_or_above(start: Path) -> bool:
-    """Whether a marker is at *start* or in a directory above it. Only a yes or no, so a caller
-    can refuse without naming another home's root."""
+    """Whether a marker, under either name, is at *start* or in a directory above it. Only a yes
+    or no, so a caller can refuse without naming another home's root."""
     return _search_upward(start.resolve()) is not None
 
 
-def root_named_by_env(env: Mapping[str, str], user_home: Path) -> Path | None:
-    """The root ``MW_HOME`` in *env* names, with ``~`` taken as *user_home*, whether or not a home
-    is there; ``None`` when it is unset."""
-    value = env.get(ENV_VAR)
-    if not value:
+def root_named_by_env(
+    env: Mapping[str, str], user_home: Path, warn: Say = warn_on_stderr
+) -> EnvSetting | None:
+    """The root ``KAIZEN_HOME`` or ``MW_HOME`` in *env* names, with ``~`` taken as *user_home*,
+    whether or not a home is there; ``None`` when both are unset. Refuses when they name
+    different roots, and *warn*s about ``MW_HOME`` when it is read."""
+    setting = _env_setting(env, user_home)
+    if setting is None:
         return None
-    if value == "~" or value.startswith("~/"):
-        value = str(user_home) + value[1:]
-    return Path(value).expanduser().resolve()
+    for line in setting.warnings:
+        warn(line)
+    return setting
+
+
+def same_root(value: str, root: Path, user_home: Path) -> bool:
+    """Whether the variable value *value* names *root*, with ``~`` taken as *user_home*."""
+    return _expand(value, user_home) == root.resolve()
 
 
 def home_path(path: Path, user_home: Path) -> str:
@@ -164,7 +225,8 @@ registry = "{REGISTRY}"
 own = [{json.dumps(github)}, {json.dumps(path)}]
 # Text the leak check lets this home's projects mention although no registry page covers it:
 # local paths outside the home, written from ~ or /, such as a tool's settings folder, and
-# owner/repo names of archived repos. Add an entry here when the leak check finds one.
+# owner/repo names of archived repos. Default empty; add an entry here when the leak check finds
+# one.
 allow = []
 {_labels_comment()}"""
 
@@ -203,10 +265,11 @@ def _labels_comment() -> str:
 
 
 def settings_naming_home(root: Path, path: str) -> str | None:
-    """The text of *root*'s settings file with ``env.MW_HOME`` set to *path*, every other key kept
-    in its order; ``None`` when it already sets exactly *path*, so a rerun leaves it alone. An
-    absent file gives a new one. Raises ``SettingsError`` on a file that is not a JSON object,
-    whose ``env`` is not an object, or that sets a different ``MW_HOME``."""
+    """The text of *root*'s settings file with ``env.KAIZEN_HOME`` set to *path*, every other key
+    kept in its order; ``None`` when it already sets exactly *path*, so a rerun leaves it alone.
+    An absent file gives a new one, and an ``MW_HOME`` set to exactly *path* is renamed in its
+    place. Raises ``SettingsError`` on a file that is not a JSON object, whose ``env`` is not an
+    object, or that sets either variable to anything else."""
     settings = root / SETTINGS
     data: dict[str, object] = {}
     if settings.exists():
@@ -219,28 +282,97 @@ def settings_naming_home(root: Path, path: str) -> str | None:
     env = data.setdefault("env", {})
     if not isinstance(env, dict):
         raise SettingsError("has an env that is not a JSON object")
-    if ENV_VAR in env:
-        if env[ENV_VAR] == path:
+    for variable in (ENV_VAR, _OLD_ENV_VAR):
+        if variable in env and env[variable] != path:
+            raise SettingsError(
+                f"already sets {variable} to a value other than {path}",
+                variable,
+                str(env[variable]),
+            )
+    if _OLD_ENV_VAR not in env:
+        if ENV_VAR in env:
             return None
-        raise SettingsError(
-            f"already sets {ENV_VAR} to a value other than {path}", mw_home=str(env[ENV_VAR])
-        )
-    env[ENV_VAR] = path
+        env[ENV_VAR] = path
+    else:
+        renamed = {ENV_VAR if key == _OLD_ENV_VAR else key: value for key, value in env.items()}
+        data["env"] = renamed
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
-def _search_upward(start: Path) -> Path | None:
-    return next((d for d in (start, *start.parents) if (d / MARKER).is_file()), None)
+@dataclass(frozen=True)
+class _Marker:
+    """The marker file a root's home is read from, and the warning reading it owes."""
+
+    path: Path
+    warning: str | None
 
 
-def _named_by_env(env: Mapping[str, str]) -> Path | None:
-    root = root_named_by_env(env, Path.home())
-    if root is not None and not (root / MARKER).is_file():
+def _env_setting(env: Mapping[str, str], user_home: Path) -> EnvSetting | None:
+    """Refuses when ``KAIZEN_HOME`` and ``MW_HOME`` name different roots, naming neither: either
+    may be another home's root."""
+    new, old = env.get(ENV_VAR), env.get(_OLD_ENV_VAR)
+    if not old:
+        return EnvSetting(ENV_VAR, new, _expand(new, user_home), ()) if new else None
+    if not new:
+        warning = f"home: read {_OLD_ENV_VAR}, the old name of {ENV_VAR}; rename it {ENV_VAR}"
+        return EnvSetting(_OLD_ENV_VAR, old, _expand(old, user_home), (warning,))
+    root = _expand(new, user_home)
+    if root != _expand(old, user_home):
         raise RefusalError(
-            f"home: {ENV_VAR} is {env[ENV_VAR]}, which has no {MARKER}",
-            f"set {ENV_VAR} to the root of the home that holds {MARKER}",
+            f"home: {ENV_VAR} and {_OLD_ENV_VAR} name different roots",
+            f"keep {ENV_VAR}, set to the home's root, and unset {_OLD_ENV_VAR}, its old name, "
+            f"wherever it is set, such as the env of the home's {SETTINGS}",
         )
-    return root
+    warning = (
+        f"home: {ENV_VAR} and {_OLD_ENV_VAR}, its old name, both name the home; "
+        f"unset {_OLD_ENV_VAR}"
+    )
+    return EnvSetting(ENV_VAR, new, root, (warning,))
+
+
+def _expand(value: str, user_home: Path) -> Path:
+    if value == "~" or value.startswith("~/"):
+        value = str(user_home) + value[1:]
+    return Path(value).expanduser().resolve()
+
+
+def _unnamed_root(start: Path) -> str:
+    """How a refusal names a root the search found when the variable names another: the search
+    may have found another home, whose path must not reach this one's output."""
+    return f"a directory at or above {start}"
+
+
+def _marker(root: Path, where: str) -> _Marker | None:
+    """The marker to read at *root*, or ``None`` when it holds neither. Refuses when it holds
+    both with different bytes, naming the root as *where*."""
+    new, old = root / MARKER, root / _OLD_MARKER
+    if not old.is_file():
+        return _Marker(new, None) if new.is_file() else None
+    if not new.is_file():
+        return _Marker(
+            old, f"home: read {old}, the old name of the home marker; rename it {MARKER}"
+        )
+    if new.read_bytes() != old.read_bytes():
+        raise RefusalError(
+            f"home: {where} holds both {MARKER} and {_OLD_MARKER}, its old name, with different "
+            "contents",
+            f"keep {MARKER}: move into it what you need from {_OLD_MARKER}, then delete "
+            f"{_OLD_MARKER}",
+        )
+    return _Marker(
+        new, f"home: {root} holds {_OLD_MARKER}, the old name of {MARKER}, as a copy; delete it"
+    )
+
+
+def _search_upward(start: Path) -> Path | None:
+    return next(
+        (
+            d
+            for d in (start, *start.parents)
+            if (d / MARKER).is_file() or (d / _OLD_MARKER).is_file()
+        ),
+        None,
+    )
 
 
 def _is_worktree_of(path: Path, main: Path) -> bool:
@@ -256,9 +388,7 @@ def _is_worktree_of(path: Path, main: Path) -> bool:
     return git_dir.resolve().is_relative_to((main / ".git" / "worktrees").resolve())
 
 
-def _read_marker(root: Path) -> Home:
-    marker = root / MARKER
-
+def _read_marker(root: Path, marker: Path) -> Home:
     def refuse(problem: str) -> RefusalError:
         return RefusalError(f"home: {marker} {problem}", f"fix {marker}")
 

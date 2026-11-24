@@ -360,7 +360,7 @@ def _expand(path: str) -> Path:
 _STARTER_README = """\
 # Projects
 
-This folder is the home's project registry, the folder its `mw.toml` names as `registry`.
+This folder is the home's project registry, the folder its `kaizen.toml` names as `registry`.
 Each project the home's sessions work on, the home itself included, has one page here,
 `<name>.md`, and `<name>` is the name `kaizen` commands take for it.
 A page starts with a frontmatter block of `key: value` lines between two `---` lines, which `kaizen`
@@ -378,7 +378,7 @@ its page only points at them.
 - `public` (required): `true` or `false`, whether the repo is public. The leak check, which
   `kaizen ticket ship`, the `kaizen spec` commands, the publish commands and
   `kaizen project leak-check` run, keeps the home's own repo and path (`leak.own` in
-  `mw.toml`) out of a public project.
+  `kaizen.toml`) out of a public project.
 - `worktree_root` (optional): where `kaizen ticket start` puts the project's ticket worktrees;
   default `<path>/.claude/worktrees`. The commands that take a ticket worktree find its project
   by it, and the leak check lets the home's projects mention it.

@@ -57,7 +57,7 @@ def home_for(projects: Path) -> Home:
 def write_marker(root: Path, settings: str = "") -> None:
     """Writes the marker of a fixture home at *root*: its registry folder ``projects``, the
     *settings* (marker lines such as home settings, tables among them), then its leak table."""
-    (root / "mw.toml").write_text(f'registry = "projects"\n{settings}{_LEAK}')
+    (root / "kaizen.toml").write_text(f'registry = "projects"\n{settings}{_LEAK}')
 
 
 def cli_home(tmp_path: Path, settings: str = "") -> Path:

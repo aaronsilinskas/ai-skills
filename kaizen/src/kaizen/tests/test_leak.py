@@ -68,7 +68,7 @@ def test_a_tilde_path_outside_the_home_and_its_projects_is_refused_naming_file_l
     refusal = _refused(tmp_path, home, user, f"intro\nsee {TILDE}/dev/elsewhere/notes\n", public)
 
     assert f"notes.md:2: outside path {TILDE}/dev/elsewhere/notes" in refusal
-    assert "register the project that holds it, add it to leak.allow in the home's mw.toml" in (
+    assert "register the project that holds it, add it to leak.allow in the home's kaizen.toml" in (
         refusal
     )
 

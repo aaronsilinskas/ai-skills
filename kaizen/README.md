@@ -36,7 +36,7 @@ kaizen project leak-check
 `kaizen --help` lists the groups, and `kaizen <group> --help` lists each group's commands.
 Every command that changes anything checks its preconditions first and has a `--dry-run`.
 
-Run kaizen inside a home (the tree under a directory holding `mw.toml`), or from one of its projects' roots with `MW_HOME` set to the home's root.
+Run kaizen inside a home (the tree under a directory holding `kaizen.toml`), or from one of its projects' roots with `KAIZEN_HOME` set to the home's root.
 To make the git repo you are in a new home, run `kaizen home init`.
 
 Every run ends its stderr with `kaizen: exit <code>`, whichever name you invoked it by, so `kaizen ... 2>&1 | tail` always keeps the outcome.
