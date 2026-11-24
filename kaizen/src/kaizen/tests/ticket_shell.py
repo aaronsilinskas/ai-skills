@@ -5,6 +5,7 @@ import subprocess
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
+import kaizen
 from kaizen.shared.home import Home
 
 Reply = str | BaseException | Callable[[list[str]], str]
@@ -54,21 +55,28 @@ def home_for(projects: Path) -> Home:
     return Home(root=root, registry=projects, leak_own=LEAK_OWN)
 
 
-def write_marker(root: Path, settings: str = "") -> None:
-    """Writes the marker of a fixture home at *root*: its registry folder ``projects``, the
-    *settings* (marker lines such as home settings, tables among them), then its leak table."""
-    (root / "kaizen.toml").write_text(f'registry = "projects"\n{settings}{_LEAK}')
+def write_marker(
+    root: Path, settings: str = "", synced_version: str | None = kaizen.__version__
+) -> None:
+    """Writes the marker of a fixture home at *root*: its registry folder ``projects``, its
+    *synced_version* (none when ``None``; by default the running version, so no command warns),
+    the *settings* (marker lines such as home settings, tables among them), then its leak
+    table."""
+    version = "" if synced_version is None else f'synced_version = "{synced_version}"\n'
+    (root / "kaizen.toml").write_text(f'registry = "projects"\n{version}{settings}{_LEAK}')
 
 
-def cli_home(tmp_path: Path, settings: str = "") -> Path:
+def cli_home(
+    tmp_path: Path, settings: str = "", synced_version: str | None = kaizen.__version__
+) -> Path:
     """The root of a fixture home under *tmp_path*, for tests that run the CLI from it: its registry
     holds ``relay``, a private project at ``RELAY`` whose GitHub repo is ``acme/relay``, and
-    ``site``, a public one at ``SITE``. Its marker holds *settings*, as ``write_marker`` writes
-    them."""
+    ``site``, a public one at ``SITE``. Its marker holds *settings* and *synced_version*, as
+    ``write_marker`` writes them."""
     root = tmp_path / "cli-home"
     projects = root / "projects"
     projects.mkdir(parents=True)
-    write_marker(root, settings)
+    write_marker(root, settings, synced_version)
     relay = f"path: {RELAY}\ngithub: acme/relay\npublic: false\ncheck: bash scripts/check.sh\n"
     (projects / "relay.md").write_text(f"---\n{relay}---\n")
     site = f"path: {SITE}\ngithub: owner/site\npublic: true\ncheck: none\n"

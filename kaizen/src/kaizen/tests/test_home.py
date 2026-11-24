@@ -222,9 +222,10 @@ def test_a_configured_colour_is_read_lowercased(tmp_path):
 
 
 def test_fresh_home_is_the_home_find_home_reads_from_the_fresh_marker(tmp_path):
-    root = _home(tmp_path / "home", fresh_marker("acme/home", "/fixture/acme")).resolve()
+    marker = fresh_marker("acme/home", "/fixture/acme", "1.2.3")
+    root = _home(tmp_path / "home", marker).resolve()
 
-    assert fresh_home(root, "acme/home", "/fixture/acme") == find_home(root, {})
+    assert fresh_home(root, "acme/home", "/fixture/acme", "1.2.3") == find_home(root, {})
 
 
 @pytest.mark.parametrize(

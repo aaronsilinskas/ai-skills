@@ -77,12 +77,18 @@ def _shell(root: Path, origin: str | BaseException = HTTPS, grep: Reply = "") ->
     )
 
 
-def _init(tmp_path, root, *extra, shell=None, cwd=None, env=None):
+def _no_lookup() -> str | None:
+    raise AssertionError("home init looked up the latest release")
+
+
+def _init(tmp_path, root, *extra, shell=None, cwd=None, env=None, version="1.2.3"):
     return main(
         ["home", "init", *extra],
         run=shell or _shell(root),
         cwd=cwd or root,
         env=_env(tmp_path) if env is None else env,
+        version=version,
+        latest=_no_lookup,
     )
 
 
@@ -165,7 +171,7 @@ def test_the_marker_comments_every_key(tmp_path):
 
     lines = (root / "kaizen.toml").read_text().splitlines()
     keys = [i for i, line in enumerate(lines) if "=" in line and not line.startswith("#")]
-    assert [lines[i].split(" =")[0] for i in keys] == ["registry", "own", "allow"]
+    assert [lines[i].split(" =")[0] for i in keys] == ["registry", "synced_version", "own", "allow"]
     assert all(lines[i - 1].startswith("#") for i in keys)
 
 
@@ -979,7 +985,15 @@ def test_no_written_synced_file_or_overlay_holds_a_second_fixture_homes_facts(tm
     if command == "sync":
         for path in [*SYNCED, ".claude/settings.json"]:
             (root / path).unlink()
-        assert main(["home", "sync"], run=Shell({}), cwd=root, env=_env(tmp_path)) == 0
+        code = main(
+            ["home", "sync"],
+            run=Shell({}),
+            cwd=root,
+            env=_env(tmp_path),
+            version="1.2.3",
+            latest=lambda: None,
+        )
+        assert code == 0
 
     written = {path: (root / path).read_text() for path in [*DOCS, ".claude/settings.json"]}
     assert [(p, f) for p, text in written.items() for f in facts if f in text] == []
@@ -991,3 +1005,40 @@ def test_init_help_names_the_synced_files_and_the_overlay(tmp_path, capsys):
 
     out = " ".join(capsys.readouterr().out.split())
     assert [text for text in [*SYNCED, OVERLAY, "synced file"] if text not in out] == []
+
+
+def test_init_records_the_running_version_as_the_synced_version(tmp_path):
+    root = _repo(tmp_path)
+
+    assert _init(tmp_path, root, version="3.4.5") == 0
+
+    assert find_home(root, {}).synced_version == "3.4.5"
+    assert "uvx --from kaizen-kit==3.4.5 kaizen home sync --check" in (
+        (root / "docs/agents/workflows.md").read_text()
+    )
+
+
+def test_dry_run_lists_the_synced_version(tmp_path, capsys):
+    root = _repo(tmp_path)
+
+    _init(tmp_path, root, "--dry-run", version="3.4.5")
+
+    assert '\nsynced_version = "3.4.5"\n' in capsys.readouterr().out
+
+
+def test_a_new_homes_first_command_does_not_warn(tmp_path, capsys):
+    root = _repo(tmp_path)
+    _init(tmp_path, root, version="3.4.5")
+    capsys.readouterr()
+
+    code = main(
+        ["home", "sync", "--check"],
+        run=Shell({}),
+        cwd=root,
+        env={},
+        version="3.4.5",
+        latest=_no_lookup,
+    )
+
+    err = capsys.readouterr().err
+    assert (code, [line for line in err.splitlines() if line.startswith("warning:")]) == (0, [])

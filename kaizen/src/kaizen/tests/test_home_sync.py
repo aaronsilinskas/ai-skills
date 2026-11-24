@@ -20,7 +20,13 @@ DENY = ["Bash(git stash*)", "Bash(git -C * stash*)"]
 
 
 def _sync(home: Path, *extra: str, shell: Shell | None = None) -> int:
-    return main(["home", "sync", *extra], run=shell or Shell({}), cwd=home, env={})
+    return main(
+        ["home", "sync", *extra],
+        run=shell or Shell({}),
+        cwd=home,
+        env={},
+        latest=lambda: None,
+    )
 
 
 def _write(root: Path, relative: str, text: str) -> None:

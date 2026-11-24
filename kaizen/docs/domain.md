@@ -19,11 +19,14 @@ Paths below are relative to `kaizen/src/kaizen/`.
 
 ## Shared code
 
-- `shared/cli.py`: the CLI and its one entry point, `main(argv, run, cwd, env)`.
+- `shared/cli.py`: the CLI and its one entry point, `main(argv, run, cwd, env, version, latest)`.
   Commands are grouped noun then verb, and each command module registers its own subparser and handler, listed under its group in `GROUPS`.
   `main` resolves the home once, after argument parsing (so `--help` works anywhere) and before the handler, and passes the `Home` to it.
   `home init` is the one command that needs no home: its parser sets `needs_home=False`, and its handler gets the start directory and environment instead.
+  Before the handler, and after the home is found, it runs the **synced version** check, so `home init` and `--help` skip it.
   `run`, `cwd` and `env` are the seams tests use to point kaizen at a fixture home with a recording runner.
+  `version` (the running version, by default `__version__`) and `latest` (the latest-release lookup, by default a request to PyPI) are the seam for the synced version: tests pass both, so they need no install or network.
+  No command reads either for itself: `main` passes them as an `Install` to `home init` and to the one command whose parser sets `needs_install=True`, `home sync`, which alone calls `latest`.
   A `RefusalError` exits 1 with `refused:` (nothing changed); a failed git or gh command or a `StepFailedError` exits 1 with `error:` (the steps printed above are done); anything else is a crash with its traceback.
   Every run that reaches its handler ends its stderr with `kaizen: exit <code>` (plus the outcome after a refusal, failure or crash), whichever name invoked it, so `kaizen ... 2>&1 | tail` keeps the outcome.
 - `shared/common.py`: what every command shares.
@@ -35,6 +38,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   It reads the marker with `tomllib`, the one place kaizen reads TOML.
   A linked worktree of the home counts as that home, so commands work the same from a ticket worktree.
   It also renders a new home's marker, reads and writes the home's Claude Code settings, and sets the home's root in their env, keeping every other key.
+  The marker's one line kaizen writes after `home init`, the synced version, is written by text, keeping every other byte, since the standard library writes no TOML.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
   The registry folder always comes from the `Home`, never from a default path.
   It also holds the starter README and page a new home gets, beside the parser so the two change together.
@@ -45,10 +49,12 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `leak_check` searches a checkout's tracked files, a commit's tree or the index; `leak_check_text` searches text about to be sent to GitHub.
   Each rule is an allowlist built from the home's facts, so it holds no data of its own; a project's denied patterns are searched only in what is being published.
   Its refusal, `LeakFoundError`, lists each file, line, rule and fix.
+- `shared/version.py`: the **synced version** check, comparing the running version with the home's as integer triples, and the PyPI lookup `home sync` makes, which skips any failure silently.
 - `shared/synced.py`: the **synced files**.
   `SYNCED_FILES` is the manifest, each file's path in a home and its template in `shared/templates/`, shipped as package data.
   `render(home)` is the one entry point, giving every synced file's text for a `Home`, so every command that renders them renders the same.
   A template's placeholders take only facts worked out from the `Home`, and no template names a real home, owner, repo or path.
+  The synced version is one of those facts, so a `Home` is rendered with the version its marker records beside the files: `sync` sets the running version on it, and `--check` keeps the recorded one, which the home's CI installs.
   It also holds the **managed settings**, the git stash deny rule, which `home init` and `home sync` merge through the same function, so both write the same entries.
 - `shared/labels.py`: `Label` and the default **workflow labels**, which a home's marker may replace as a whole set.
 - `shared/issue_graph.py`: the issue reads and the parent and blocked-by edge writes the `issue`, `spec` and `ticket` groups share.

@@ -3,11 +3,11 @@ kaizen's templates, or, with ``--check``, fail on any difference."""
 
 import argparse
 import difflib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Runner, Say
-from kaizen.shared.home import SETTINGS, Home, SettingsError
+from kaizen.shared.home import MARKER, SETTINGS, Home, SettingsError, with_synced_version
 from kaizen.shared.synced import (
     OVERLAY,
     SETTINGS_SHAPE,
@@ -15,6 +15,7 @@ from kaizen.shared.synced import (
     managed_settings_text,
     render,
 )
+from kaizen.shared.version import UPGRADE, Install, newer_release, triple
 
 CHECK_FIX = "run `kaizen home sync`, and move home rules to the home overlay"
 """The fix a failed ``--check`` gives: a difference is either a template change the home hasn't
@@ -23,8 +24,9 @@ synced yet, or a hand edit that belongs in the home overlay."""
 
 @dataclass(frozen=True)
 class Change:
-    """One file of a home that is out of step: a synced file whose text is not its render, or the
-    settings file lacking part of the managed settings."""
+    """One file of a home that is out of step: a synced file whose text is not its render, the
+    settings file lacking part of the managed settings, or the marker not recording the synced
+    version."""
 
     relative: str
     """Its path relative to the home root."""
@@ -32,9 +34,9 @@ class Change:
     """Its text now, ``None`` when it is absent."""
     synced: str
     """Its text once synced."""
-    owned_part: str | None = None
-    """For a file the home owns but for one part that ``sync`` merges in, that part's name, as
-    the output line names it; ``None`` for a file ``sync`` renders whole."""
+    applied: str | None = None
+    """For a file the home owns but for one part that ``sync`` writes, the output line saying
+    what it wrote; ``None`` for a file ``sync`` renders whole."""
 
     def diff(self) -> str:
         """The difference from its text now to its synced text, as a unified diff."""
@@ -53,15 +55,17 @@ class Change:
         path = root / self.relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.synced, encoding="utf-8")
-        if self.owned_part is not None:
-            return f"merged {self.owned_part} into {self.relative}"
+        if self.applied is not None:
+            return self.applied
         return f"wrote {self.relative}" if self.current is None else f"rewrote {self.relative}"
 
 
 def changes(home: Home) -> list[Change]:
-    """Every file of *home* whose text differs from what ``sync`` writes: each synced file, in the
-    manifest's order, then the settings file. Reads only; refuses, before anything is written, on
-    a path that is not a file and on settings that can't take the managed settings."""
+    """Every file of *home* whose text differs from what ``sync`` writes for its synced version:
+    each synced file, in the manifest's order, then the settings file, then the marker. Reads
+    only; refuses, before anything is written, on a path that is not a file and on settings that
+    can't take the managed settings."""
+    assert home.synced_version is not None, "sync and --check each set the version first"
     found = []
     for relative, synced in render(home).items():
         current = _current(home.root, relative)
@@ -75,7 +79,25 @@ def changes(home: Home) -> list[Change]:
         ) from exc
     if settings is not None:
         current = _current(home.root, SETTINGS)
-        found.append(Change(SETTINGS, _text(current), settings, "the git stash deny rule"))
+        found.append(
+            Change(
+                SETTINGS,
+                _text(current),
+                settings,
+                f"merged the git stash deny rule into {SETTINGS}",
+            )
+        )
+    marker = (home.root / home.marker).read_text(encoding="utf-8")
+    recorded = with_synced_version(marker, home.synced_version)
+    if recorded != marker:
+        found.append(
+            Change(
+                home.marker,
+                marker,
+                recorded,
+                f"recorded synced version {home.synced_version} in {home.marker}",
+            )
+        )
     return found
 
 
@@ -97,10 +119,19 @@ def _text(current: bytes | None) -> str | None:
 IN_STEP = "every synced file and setting is in step"
 
 
-def sync_home(home: Home, *, dry_run: bool = False, say: Say = print) -> None:
-    """Writes each of *home*'s ``changes``, one line each, or says nothing changed. With
-    *dry_run*, prints each change's diff instead and writes nothing."""
-    found = changes(home)
+def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say = print) -> None:
+    """Writes each of *home*'s ``changes`` for the running version, which it records as the
+    synced version, one line each, or says nothing changed; then names a newer release when
+    there is one. With *dry_run*, prints each change's diff instead and writes nothing. Refuses
+    a running version that is not ``X.Y.Z``, which no home's CI could install."""
+    if triple(install.version) is None:
+        raise RefusalError(
+            f"home sync: kaizen's version {install.version} is not X.Y.Z, so it can't be recorded"
+            " as the home's synced version",
+            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run sync"
+            " again",
+        )
+    found = changes(replace(home, synced_version=install.version))
     if not found:
         say(f"nothing changed: {IN_STEP}")
     for change in found:
@@ -111,11 +142,18 @@ def sync_home(home: Home, *, dry_run: bool = False, say: Say = print) -> None:
         )
     if dry_run:
         say("dry run: nothing written")
+    if line := newer_release(install.version, install.latest):
+        say(line)
 
 
 def check_home(home: Home, *, say: Say = print) -> None:
     """Prints each of *home*'s ``changes`` as a diff and refuses, naming them all, when there is
-    any. Writes nothing."""
+    any. Writes nothing, and renders for the synced version *home* records, which the release
+    its CI runs is pinned to; refuses when it records none."""
+    if home.synced_version is None:
+        raise RefusalError(
+            f"home sync --check: {home.marker} records no synced version", "run `kaizen home sync`"
+        )
     found = changes(home)
     for change in found:
         say(f"differs: {change.relative}\n{change.diff()}")
@@ -143,14 +181,24 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             f"in order. It leaves the env's KAIZEN_HOME to `kaizen home init`, and never touches "
             f"the home overlay ({OVERLAY}), .pre-commit-config.yaml or any other file the home "
             "owns.\n\n"
-            f"It refuses, before writing anything, when {SETTINGS} is not a JSON object, its "
-            "permissions not an object or its permissions.deny not a list, and when a synced "
-            "file's path is not a file.\n\n"
+            "Last it records the running kaizen's version as synced_version in the home's "
+            f"{MARKER}, the release every kaizen command compares itself with; the synced files "
+            "show it in the home's CI step. That line is the only part of the marker it writes, "
+            "replacing it, or else inserting it above the first table.\n\n"
+            "It refuses, before writing anything: when the installed kaizen is older than the "
+            f"home's synced version, so a sync never rolls a home back (the fix is `{UPGRADE}`); "
+            "when kaizen's version is not X.Y.Z, such as a local build's; when "
+            f"{SETTINGS} is not a JSON object, its permissions not an object or its "
+            "permissions.deny not a list; and when a synced file's path is not a file.\n\n"
+            "Then it asks PyPI, once and briefly, for kaizen's latest release, and prints the "
+            "upgrade command when that is newer; a failed lookup prints nothing. No other kaizen "
+            "command uses the network.\n\n"
             "With --dry-run it prints each change as a diff and writes nothing.\n\n"
-            "With --check it compares instead: it passes when nothing would change, and "
-            "otherwise prints each difference and fails, naming every file, with the fix "
-            f'"{CHECK_FIX}". It writes nothing and makes no network call, so a home\'s CI can '
-            "run it."
+            "With --check it compares instead, rendering for the home's recorded synced version, "
+            "which is the release a home's CI runs it with: it passes when nothing would change, "
+            "and otherwise prints each difference and fails, naming every file, with the fix "
+            f'"{CHECK_FIX}". It also fails when the marker records no synced version. It writes '
+            "nothing and makes no network call, so a home's CI can run it."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -163,11 +211,11 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         action="store_true",
         help="fail, listing every difference, unless the home is in step; write nothing",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(handler=_command, needs_install=True)
 
 
-def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
+def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:
     if args.check:
         check_home(home)
     else:
-        sync_home(home, dry_run=args.dry_run)
+        sync_home(home, install, dry_run=args.dry_run)

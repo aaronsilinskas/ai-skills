@@ -4,6 +4,7 @@
 A home declares itself with ``kaizen.toml`` at its root::
 
     registry = "projects"            # the registry folder, relative to the home root
+    synced_version = "0.1.0"         # the release that last synced it; kaizen writes this line
     pr_footer = "…"                  # optional: the last line of each PR kaizen opens; "" for none
     auto_merge_comment_only = false  # optional, default true: the comment-only check's switch
     [leak]
@@ -34,6 +35,7 @@ from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Say
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
+from kaizen.shared.version import triple
 
 MARKER = "kaizen.toml"
 ENV_VAR = "KAIZEN_HOME"
@@ -95,6 +97,12 @@ class Home:
     auto_merge_comment_only: bool = True
     """Whether ``kaizen ticket ship`` may auto-merge a PR on the comment-only check at all; a
     project still opts in on its registry page."""
+    synced_version: str | None = None
+    """The release, ``X.Y.Z``, that last synced the home's synced files; ``None`` when the marker
+    records none."""
+    marker: str = MARKER
+    """The marker's file name, ``kaizen.toml`` or its old name, which ``kaizen home sync`` writes
+    the synced version into."""
 
 
 @dataclass(frozen=True)
@@ -197,11 +205,11 @@ def home_path(path: Path, user_home: Path) -> str:
     return str(path)
 
 
-def fresh_marker(github: str, path: str) -> str:
-    """The text of a new home's marker: its registry folder, each home setting commented out at
-    its default, and a leak table whose own patterns are the home's GitHub repo *github*
-    (``owner/repo``) and its root *path*, and that allows nothing yet. JSON's string escapes are
-    TOML's, so ``json.dumps`` quotes each value."""
+def fresh_marker(github: str, path: str, synced_version: str) -> str:
+    """The text of a new home's marker: its registry folder, its *synced_version*, each home
+    setting commented out at its default, and a leak table whose own patterns are the home's
+    GitHub repo *github* (``owner/repo``) and its root *path*, and that allows nothing yet.
+    JSON's string escapes are TOML's, so ``json.dumps`` quotes each value."""
     return f"""\
 # This file makes the repo it sits in a home for kaizen: kaizen serves the home whose root
 # holds it.
@@ -210,6 +218,9 @@ def fresh_marker(github: str, path: str) -> str:
 # sessions work on, the home itself included.
 registry = "{REGISTRY}"
 
+# The kaizen release that last synced this home's synced files. kaizen home sync writes it, and
+# every kaizen command compares it with the installed release, so don't edit it by hand.
+{_synced_version_line(synced_version)}
 # The line every PR kaizen opens in this home ends with, after a blank line. Set it to "" to open
 # PRs with no footer line.
 # pr_footer = {json.dumps(PR_FOOTER, ensure_ascii=False)}
@@ -231,10 +242,42 @@ allow = []
 {_labels_comment()}"""
 
 
-def fresh_home(root: Path, github: str, path: str) -> Home:
-    """The ``Home`` that ``find_home`` reads at *root* once ``fresh_marker(github, path)`` is
-    written there."""
-    return Home(root=root, registry=root / REGISTRY, leak_own=(github, path))
+def fresh_home(root: Path, github: str, path: str, synced_version: str) -> Home:
+    """The ``Home`` that ``find_home`` reads at *root* once
+    ``fresh_marker(github, path, synced_version)`` is written there."""
+    return Home(
+        root=root, registry=root / REGISTRY, leak_own=(github, path), synced_version=synced_version
+    )
+
+
+_TABLE = re.compile(r"\s*\[\[?[^\[\]]+\]\]?[ \t]*(#.*)?\s*")
+_SYNCED_VERSION = re.compile(r"\s*synced_version\s*=")
+
+
+def _synced_version_line(version: str) -> str:
+    return f"synced_version = {json.dumps(version)}\n"
+
+
+def with_synced_version(marker: str, version: str) -> str:
+    """The *marker* text recording *version* as the synced version: its top-level
+    ``synced_version`` line replaced, or, when it has none, one inserted above the first table and
+    the comment lines that head it. Every other byte is kept, which a TOML writer, had the
+    standard library one, would not promise."""
+    lines = marker.splitlines(keepends=True)
+    first_table = next((i for i, line in enumerate(lines) if _TABLE.fullmatch(line)), len(lines))
+    line = _synced_version_line(version)
+    for i in range(first_table):
+        if _SYNCED_VERSION.match(lines[i]):
+            ending = lines[i][len(lines[i].rstrip("\r\n")) :]
+            lines[i] = line.removesuffix("\n") + ending
+            return "".join(lines)
+    if first_table == len(lines):
+        separator = "" if not marker or marker.endswith("\n") else "\n"
+        return f"{marker}{separator}{line}"
+    at = first_table
+    while at > 0 and lines[at - 1].lstrip().startswith("#"):
+        at -= 1
+    return "".join([*lines[:at], line, "\n", *lines[at:]])
 
 
 def _labels_comment() -> str:
@@ -436,6 +479,11 @@ def _read_marker(root: Path, marker: Path) -> Home:
     pr_footer = _pr_footer(data, refuse)
     workflow_labels = _workflow_labels(data, refuse)
     auto_merge_comment_only = _auto_merge_comment_only(data, refuse)
+    synced_version = data.get("synced_version")
+    if synced_version is not None and (
+        not isinstance(synced_version, str) or triple(synced_version) is None
+    ):
+        raise refuse("is malformed: 'synced_version' must be a version X.Y.Z, such as \"0.1.0\"")
     return Home(
         root=root,
         registry=registry,
@@ -445,6 +493,8 @@ def _read_marker(root: Path, marker: Path) -> Home:
         pr_footer=pr_footer,
         workflow_labels=workflow_labels,
         auto_merge_comment_only=auto_merge_comment_only,
+        synced_version=synced_version,
+        marker=marker.name,
     )
 
 

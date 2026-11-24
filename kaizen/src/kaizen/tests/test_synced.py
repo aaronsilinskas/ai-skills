@@ -18,6 +18,7 @@ def _home(registry: str = "pages", labels: tuple[Label, ...] = DEFAULT_WORKFLOW_
         registry=ROOT / registry,
         leak_own=("owner/home", str(ROOT)),
         workflow_labels=labels,
+        synced_version="1.2.3",
     )
 
 

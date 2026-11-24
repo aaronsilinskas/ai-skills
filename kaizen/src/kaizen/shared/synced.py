@@ -46,6 +46,7 @@ SYNCED_LINE = (
 _FACTS: dict[str, Callable[[Home], str]] = {
     "registry": lambda home: home.registry.relative_to(home.root).as_posix(),
     "workflow_labels": lambda home: _label_list(home.workflow_labels),
+    "synced_version": lambda home: _synced_version(home),
 }
 """What a template may name: each fact, worked out from the home."""
 
@@ -57,11 +58,20 @@ def _label_list(labels: tuple[Label, ...]) -> str:
     )
 
 
+def _synced_version(home: Home) -> str:
+    """The version the files are rendered for, which the marker records beside them."""
+    if home.synced_version is None:
+        raise ValueError("synced files render only for a home with a synced version")
+    return home.synced_version
+
+
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 
 
 def render(home: Home) -> dict[str, str]:
-    """Every synced file's text for *home*, keyed by its path relative to the home root."""
+    """Every synced file's text for *home*, keyed by its path relative to the home root. The
+    files show *home*'s synced version, so the caller sets the one the marker records with
+    them."""
     facts = {name: fact(home) for name, fact in _FACTS.items()}
     return {synced.path: _render(synced.template, facts) for synced in SYNCED_FILES}
 
