@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# check.sh: cross-skill consistency guard for this skills collection.
+# check.sh: this repo's one check command, for the skills collection and the
+# kaizen package alike.
 #
-# Runs three checks and exits non-zero if ANY of them fails. All of them run
+# Runs five checks and exits non-zero if ANY of them fails. All of them run
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
 #   1. Conventions, adopted from Matt Pocock's skills (decided in #44):
@@ -22,8 +23,12 @@
 #   3. Script lint: skills/engineering/wizard/template.sh passes `bash -n`
 #      (and shellcheck too, when it is installed on the runner). Prints SKIP,
 #      not FAIL, when the template is absent.
+#   4. kaizen: kaizen/scripts/check.sh (lint, format, types, import contracts
+#      and tests of the kaizen package) exits 0.
+#   5. Home leak scan tests: scripts/test_home_leak_scan.py passes. CI runs
+#      scripts/home_leak_scan.py on the lines each PR adds.
 #
-# Run it after editing skills:
+# Run it before a PR, and after editing skills:
 #
 #   bash scripts/check.sh
 #
@@ -268,6 +273,32 @@ else
   fi
   rm -f "$lint_err"
 fi
+
+# Runs a command, printing PASS with *label* when it exits 0, or FAIL with its
+# output when it doesn't.
+run_quiet() {
+  local label="$1" report_file
+  shift
+  report_file="$(mktemp)"
+  if "$@" >"$report_file" 2>&1; then
+    pass "$label"
+  else
+    fail "$label failed:"
+    indent <"$report_file"
+  fi
+  rm -f "$report_file"
+}
+
+# ── Check 4: kaizen ────────────────────────────────────────────────────────
+echo
+echo "== Check 4: kaizen (kaizen/scripts/check.sh) =="
+run_quiet "kaizen/scripts/check.sh" bash kaizen/scripts/check.sh
+
+# ── Check 5: Home leak scan tests ──────────────────────────────────────────
+echo
+echo "== Check 5: home leak scan tests =="
+run_quiet "scripts/test_home_leak_scan.py" \
+  python3 -B -m unittest discover -s scripts -p test_home_leak_scan.py
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo
