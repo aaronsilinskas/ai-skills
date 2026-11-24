@@ -20,7 +20,6 @@ LINE_PREFIX = {
     **dict.fromkeys((".sh", ".bash", ".zsh", ".yaml", ".yml", ".toml"), "#"),
     **dict.fromkeys(
         (
-            # C-family, JavaScript and TypeScript
             *(".c", ".h", ".cc", ".cpp", ".cxx", ".hh", ".hpp", ".cs", ".java", ".go", ".swift"),
             *(".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"),
             *(".kt", ".kts", ".rs"),
@@ -29,7 +28,13 @@ LINE_PREFIX = {
     ),
     **dict.fromkeys((".sql", ".lua"), "--"),
 }
-"""Each known language's line-comment prefix, by file suffix."""
+
+LANGUAGES = (
+    "Python's through its tokenizer, and whole-line comments by their prefix in shell, YAML and "
+    "TOML (#), C-family languages, JavaScript, TypeScript, Kotlin and Rust (//), and SQL and Lua "
+    "(--). Files of other languages are skipped."
+)
+"""Which comments the comment hooks read, for their help."""
 
 
 @dataclass(frozen=True)

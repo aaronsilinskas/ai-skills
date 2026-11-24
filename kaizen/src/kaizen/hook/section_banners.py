@@ -5,7 +5,7 @@ import argparse
 import re
 from collections.abc import Iterator
 
-from kaizen.hook.comments import Comment, comment_findings
+from kaizen.hook.comments import LANGUAGES, Comment, comment_findings
 from kaizen.hook.common import add_files_argument, refuse
 from kaizen.shared.common import Runner
 from kaizen.shared.home import Home
@@ -15,7 +15,7 @@ _RULE = re.compile(r"[-=]{10,}")
 _TITLED = re.compile(r"[-=]{3,}\s*[^-=\s].*?\s*[-=]{3,}")
 """A one-line titled banner, such as ``--- name ---``."""
 
-FIX = "delete the banner; if the file needs sections, split it into modules or functions"
+_FIX = "delete the banner; if the file needs sections, split it into modules or functions"
 
 
 def _banner(comment: Comment) -> Iterator[str]:
@@ -35,10 +35,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         description=(
             "Refuse each comment in the files given that is only a rule of ten or more - or =, "
             "or a titled one-line banner such as `--- name ---`, naming its file and line. Only "
-            "comments are read, never strings or code: Python's through its tokenizer, and "
-            "whole-line comments by their prefix in shell, YAML and TOML (#), C-family, "
-            "JavaScript, TypeScript, Kotlin and Rust (//), and SQL and Lua (--). Files of other "
-            "languages are skipped."
+            f"comments are read, never strings or code: {LANGUAGES}"
         ),
     )
     add_files_argument(parser)
@@ -46,4 +43,4 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    refuse("section-banners", comment_findings(args.files, "section banner", _banner), FIX)
+    refuse("section-banners", comment_findings(args.files, "section banner", _banner), _FIX)

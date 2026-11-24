@@ -17,7 +17,7 @@ from kaizen.shared.home import find_home
 from kaizen.shared.labels import Label
 from kaizen.shared.registry import all_projects, resolve
 from kaizen.shared.synced import OVERLAY, SYNCED_FILES, render
-from kaizen.tests.hook_config import HOOK_ENTRIES
+from kaizen.tests.hook_config import KAIZEN_REPO_ITEM
 from kaizen.tests.ticket_shell import (
     FOOTER,
     LEAK_OWN,
@@ -1002,7 +1002,7 @@ def test_a_fresh_repo_gets_a_hook_config_running_every_kaizen_hook(tmp_path):
 
     _init(tmp_path, root)
 
-    assert (root / ".pre-commit-config.yaml").read_text() == f"repos:\n{HOOK_ENTRIES}"
+    assert (root / ".pre-commit-config.yaml").read_text() == f"repos:\n{KAIZEN_REPO_ITEM}"
 
 
 def test_dry_run_lists_the_hook_entries(tmp_path, capsys):
@@ -1010,37 +1010,44 @@ def test_dry_run_lists_the_hook_entries(tmp_path, capsys):
 
     _init(tmp_path, root, "--dry-run")
 
-    assert f"would write .pre-commit-config.yaml:\nrepos:\n{HOOK_ENTRIES}" in (
+    assert f"would write .pre-commit-config.yaml:\nrepos:\n{KAIZEN_REPO_ITEM}" in (
         capsys.readouterr().out
     )
 
 
-def test_an_existing_hook_config_is_kept_and_the_entries_left_to_add_by_hand(tmp_path, capsys):
+def test_an_existing_hook_config_is_kept_unchanged(tmp_path, capsys):
     root = _repo(tmp_path)
     _write(root, ".pre-commit-config.yaml", "repos: []\n")
 
     assert _init(tmp_path, root) == 0
 
     assert (root / ".pre-commit-config.yaml").read_text() == "repos: []\n"
-    out = capsys.readouterr().out
+    assert "kept .pre-commit-config.yaml: the home's own;" in capsys.readouterr().out
+
+
+def test_an_existing_hook_config_without_the_hook_entries_gets_a_to_do_to_add_them(
+    tmp_path, capsys
+):
+    root = _repo(tmp_path)
+    _write(root, ".pre-commit-config.yaml", "repos: []\n")
+
+    _init(tmp_path, root)
+
+    checklist = capsys.readouterr().out.split("still to do, by you:")[1]
     assert (
-        "kept .pre-commit-config.yaml, the home's own: add the kaizen hook entries"
-        " docs/agents/pre-commit-hooks.md lists" in out
-    )
-    assert (
-        "add the kaizen hook entries docs/agents/pre-commit-hooks.md lists"
-        in out.split("still to do, by you:")[1]
+        "add the kaizen hook entries docs/agents/pre-commit-hooks.md lists to"
+        " .pre-commit-config.yaml" in checklist
     )
 
 
 def test_an_existing_hook_config_with_every_kaizen_hook_is_kept_without_a_to_do(tmp_path, capsys):
     root = _repo(tmp_path)
-    _write(root, ".pre-commit-config.yaml", f"repos:\n{HOOK_ENTRIES}  - repo: other\n")
+    _write(root, ".pre-commit-config.yaml", f"repos:\n{KAIZEN_REPO_ITEM}  - repo: other\n")
 
     assert _init(tmp_path, root) == 0
 
     out = capsys.readouterr().out
-    assert "kept .pre-commit-config.yaml, it already runs every kaizen hook" in out
+    assert "kept .pre-commit-config.yaml: it already runs every kaizen hook" in out
     assert "pre-commit-hooks.md" not in out.split("still to do, by you:")[1]
 
 

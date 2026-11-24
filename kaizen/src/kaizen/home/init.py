@@ -212,16 +212,7 @@ class IgnoreLine:
         return self.root / GITIGNORE
 
     def _text(self) -> str | None:
-        """The file's text, ``None`` when absent; refuses when it can't be read as text."""
-        if not self.path.exists():
-            return None
-        try:
-            return self.path.read_text()
-        except (OSError, UnicodeDecodeError) as exc:
-            raise RefusalError(
-                f"home init: {GITIGNORE} exists but can't be read as text",
-                f"fix or move {GITIGNORE} aside, then run init again",
-            ) from exc
+        return _optional_text(self.root, GITIGNORE)
 
     def _present(self, text: str) -> bool:
         # A leading or trailing slash doesn't change what a root .gitignore line ignores here.
@@ -253,53 +244,51 @@ class IgnoreLine:
 
 @dataclass(frozen=True)
 class HookConfig:
-    """The hook config, written with every kaizen hook entry when absent. An existing one is the
-    home's own and is kept, with a to-do when it lacks a kaizen hook."""
+    """The hook config, written with every hook entry when absent. An existing one is the home's
+    own and is kept, with a to-do when it lacks a hook entry."""
 
     root: Path
 
-    @property
-    def path(self) -> Path:
-        return self.root / CONFIG
-
-    def _text(self) -> str | None:
-        """The file's text, ``None`` when absent; refuses when it can't be read as text."""
-        if not self.path.exists():
-            return None
-        try:
-            return self.path.read_text()
-        except (OSError, UnicodeDecodeError) as exc:
-            raise RefusalError(
-                f"home init: {CONFIG} exists but can't be read as text",
-                f"fix or move {CONFIG} aside, then run init again",
-            ) from exc
-
     def to_do(self) -> str | None:
         """What is left to add by hand, or ``None`` when the config runs every hook."""
-        text = self._text()
+        text = _optional_text(self.root, CONFIG)
         if text is None or runs_every_hook(text):
             return None
         return f"add the kaizen hook entries {HOOKS_DOC} lists to {CONFIG}"
 
     def check(self) -> str:
-        self._text()
+        _optional_text(self.root, CONFIG)
         return f"{CONFIG} is absent or readable"
 
     def preview(self) -> str:
-        if self._text() is None:
+        if _optional_text(self.root, CONFIG) is None:
             return f"would write {CONFIG}:\n{FRESH_CONFIG}"
-        return f"would keep {CONFIG}, the home's own{self._kept()}"
+        return f"would keep {CONFIG}: {self._kept()}"
 
     def apply(self) -> str:
-        if self._text() is None:
-            self.path.write_text(FRESH_CONFIG)
+        if _optional_text(self.root, CONFIG) is None:
+            (self.root / CONFIG).write_text(FRESH_CONFIG)
             return f"wrote {CONFIG}"
-        return f"kept {CONFIG}{self._kept()}"
+        return f"kept {CONFIG}: {self._kept()}"
 
     def _kept(self) -> str:
-        if self.to_do() is None:
-            return ", it already runs every kaizen hook"
-        return f", the home's own: add the kaizen hook entries {HOOKS_DOC} lists by hand"
+        to_do = self.to_do()
+        return "it already runs every kaizen hook" if to_do is None else f"the home's own; {to_do}"
+
+
+def _optional_text(root: Path, relative: str) -> str | None:
+    """The text of the file *relative* to *root*, ``None`` when absent; refuses when it can't be
+    read as text."""
+    path = root / relative
+    if not path.exists():
+        return None
+    try:
+        return path.read_text()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise RefusalError(
+            f"home init: {relative} exists but can't be read as text",
+            f"fix or move {relative} aside, then run init again",
+        ) from exc
 
 
 def init_home(
@@ -342,8 +331,9 @@ def init_home(
     say(f"{root} is now a home")
     _report_leaks(new, run, say)
     say("still to do, by you:")
-    hook_to_do = HookConfig(new.root).to_do()
-    for item in [*([hook_to_do] if hook_to_do else []), *_checklist(str(new.root), new.name)]:
+    if hook_to_do := HookConfig(new.root).to_do():
+        say(f"  - [ ] {hook_to_do}")
+    for item in _checklist(str(new.root), new.name):
         say(f"  - [ ] {item}")
 
 

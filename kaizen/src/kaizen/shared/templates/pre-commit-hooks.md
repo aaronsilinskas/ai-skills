@@ -16,6 +16,6 @@ repos:
 - `kaizen hook section-banners`: refuses a comment that is only a rule of ten or more `-` or `=`, or a titled one-line banner such as `--- name ---`.
 - `kaizen hook work-tracking`: refuses "later ticket", "slice N", "issue N" and a bare issue number in a comment; `owner/repo#N` and issue URLs pass.
 
-The two comment hooks read only comments: Python's through its tokenizer, and whole-line comments by their prefix in shell, YAML, TOML, C-family languages, TypeScript, Kotlin, Rust, SQL and Lua.
+The two comment hooks read only comments: Python's through its tokenizer, and whole-line comments by their prefix in shell, YAML, TOML, C-family languages, JavaScript, TypeScript, Kotlin, Rust, SQL and Lua.
 They skip files of any other language.
 Each refusal names the file, line and rule, and each hook refuses when run outside a home: set `KAIZEN_HOME` to the home's root when committing in a project outside its tree.

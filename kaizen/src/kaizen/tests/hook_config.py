@@ -1,7 +1,7 @@
 """The kaizen hook entries as a home's ``.pre-commit-config.yaml`` holds them, written out by hand
 so the tests check the synced doc and ``home init`` against a literal."""
 
-HOOK_ENTRIES = """\
+KAIZEN_REPO_ITEM = """\
   - repo: local
     hooks:
       - id: kaizen-leak-check

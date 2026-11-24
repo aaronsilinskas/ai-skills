@@ -9,9 +9,9 @@ from kaizen.hook.common import Finding, add_files_argument, read_text, refuse
 from kaizen.shared.common import Runner
 from kaizen.shared.home import Home
 
-MARKDOWN = (".md", ".markdown")
+_MARKDOWN = (".md", ".markdown")
 
-MARKS = {
+_MARKS = {
     "\u2014": "em dash",
     "\u2018": "left single quote",
     "\u2019": "right single quote",
@@ -19,7 +19,7 @@ MARKS = {
     "\u201d": "right double quote",
 }
 
-FIX = (
+_FIX = (
     "replace each mark with a plain one: a comma, colon, parentheses or a hyphen for an em dash,"
     " straight quotes for curly ones"
 )
@@ -28,10 +28,10 @@ FIX = (
 def prose_mark_findings(names: list[str]) -> Iterator[Finding]:
     """Each line of the Markdown files among *names* holding a refused mark, once per mark."""
     for name in names:
-        if PurePath(name).suffix.lower() not in MARKDOWN or (text := read_text(name)) is None:
+        if PurePath(name).suffix.lower() not in _MARKDOWN or (text := read_text(name)) is None:
             continue
         for number, line in enumerate(text.splitlines(), start=1):
-            for mark, label in MARKS.items():
+            for mark, label in _MARKS.items():
                 if mark in line:
                     yield Finding(name, number, "prose mark", f"{label} (U+{ord(mark):04X})")
 
@@ -51,4 +51,4 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    refuse("prose-marks", prose_mark_findings(args.files), FIX)
+    refuse("prose-marks", prose_mark_findings(args.files), _FIX)

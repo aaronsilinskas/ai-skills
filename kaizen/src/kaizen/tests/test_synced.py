@@ -5,7 +5,7 @@ from pathlib import Path
 from kaizen.shared.home import Home
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
 from kaizen.shared.synced import render
-from kaizen.tests.hook_config import HOOK_ENTRIES
+from kaizen.tests.hook_config import KAIZEN_REPO_ITEM
 
 ROOT = Path("/fixture/home")
 
@@ -98,4 +98,4 @@ def test_the_workflows_doc_tells_agents_when_to_run_home_sync():
 def test_the_hooks_doc_lists_every_kaizen_hook_entry_exactly():
     hooks_doc = render(_home())["docs/agents/pre-commit-hooks.md"]
 
-    assert f"```yaml\nrepos:\n{HOOK_ENTRIES}```\n" in hooks_doc
+    assert f"```yaml\nrepos:\n{KAIZEN_REPO_ITEM}```\n" in hooks_doc

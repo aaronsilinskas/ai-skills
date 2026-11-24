@@ -5,7 +5,7 @@ import argparse
 import subprocess
 
 from kaizen.hook.common import add_files_argument
-from kaizen.shared.branch import remote_default_branch
+from kaizen.shared.branch import default_branch
 from kaizen.shared.common import RefusalError, Runner
 from kaizen.shared.home import Home
 
@@ -17,20 +17,11 @@ def refuse_protected_branch(run: Runner, branches: list[str] | None) -> None:
         current = run(["git", "symbolic-ref", "--short", "HEAD"]).strip()
     except subprocess.CalledProcessError:
         return
-    if current in (branches or [_default_branch(run)]):
+    if current in (branches or [default_branch(run)]):
         raise RefusalError(
             f"hook no-commit-to-branch: the commit is on {current}, which takes no direct commits",
             "commit on a branch of its own (`git switch -c <name>`) and land it through a PR",
         )
-
-
-def _default_branch(run: Runner) -> str:
-    """The default branch as last fetched, or asked of origin when the clone never recorded it."""
-    try:
-        tracking = run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"]).strip()
-    except subprocess.CalledProcessError:
-        return remote_default_branch(".", run)
-    return tracking.removeprefix("origin/")
 
 
 def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:

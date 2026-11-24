@@ -250,6 +250,24 @@ def test_the_default_branch_is_asked_of_origin_when_the_clone_never_recorded_it(
 
     assert kaizen(["hook", "no-commit-to-branch"], shell) == 1
 
+    assert shell.ran("ls-remote", "--symref", "origin", "HEAD")
+
+
+def test_a_clone_whose_default_branch_cant_be_read_is_refused_with_the_fix(kaizen, capsys):
+    shell = Shell(
+        {
+            ("symbolic-ref", "--short", "HEAD"): "main\n",
+            ("refs/remotes/origin/HEAD",): failed("git symbolic-ref"),
+            ("ls-remote",): failed("git ls-remote", "fatal: 'origin' does not appear to be"),
+        }
+    )
+
+    assert kaizen(["hook", "no-commit-to-branch"], shell) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: could not read the default branch" in err
+    assert "git remote set-head origin --auto" in err
+
 
 def test_the_branches_named_replace_the_default_branch(kaizen):
     on_release = Shell({**BRANCHES, ("symbolic-ref", "--short", "HEAD"): "release\n"})

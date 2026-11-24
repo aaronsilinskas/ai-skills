@@ -108,13 +108,13 @@ A value in the home marker that changes kaizen's behaviour for that home, with a
 _Avoid_: config, option, flag
 
 **Hook**:
-A `kaizen hook` command that a home's or project's pre-commit config runs on each commit: the leak check on the staged files, no commits to the default branch, prose marks in Markdown, and the two comment checks, section banners and work-tracking references.
+A `kaizen hook` command that a home's or project's pre-commit config runs on each commit: the leak check on the staged files, no commits to the default branch, prose marks in Markdown, and the two comment hooks, section banners and work-tracking references.
 A hook refuses with the file, line and rule of each finding, and refuses outright when run outside a home.
 _Avoid_: pre-commit script, check (a check command is something else)
 
-**Hook entries**:
-The `repo: local` item of a pre-commit config that runs every hook through `kaizen` with `language: system`.
-A synced file lists them, and `kaizen home init` writes them into a new home's hook config once; the hook config itself is the home's own, and syncing never edits it.
+**Hook entry**:
+One hook's stanza in the `repo: local` item of a pre-commit config, running it through `kaizen` with `language: system`.
+A synced file lists every hook entry, and `kaizen home init` writes them into a new home's hook config once; the hook config itself is the home's own, and syncing never edits it.
 _Avoid_: hook config (that is the whole file), hook manifest
 
 **Synced version**:

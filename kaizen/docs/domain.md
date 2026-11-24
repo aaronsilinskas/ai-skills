@@ -80,7 +80,7 @@ One module per command; each group's `--help` lists them.
   It never touches the home overlay, the hook config or any other file the home owns.
   `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.
 - `hook/`: the pre-commit **hooks**, each run on the file names pre-commit passes and needing a home like any command.
-  `hook leak-check` is `project leak-check --staged`; `hook no-commit-to-branch` reads the default branch from `origin/HEAD`, asking origin only when the clone never recorded it.
+  `hook leak-check` is `project leak-check --staged`; `hook no-commit-to-branch` reads the default branch through `shared/branch.py`: `origin/HEAD`, asking origin only when the clone never recorded it.
   The comment hooks read comments through `hook/comments.py`: Python's through `tokenize`, other languages' as whole-line comments by their prefix, keyed by file suffix.
   A comment after code on the same line is read only in Python, since telling it from a string needs the language's tokenizer; a file of an unknown language is skipped.
   `hook/common.py` holds the one refusal every file hook raises, listing each finding's file, line and rule.

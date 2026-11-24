@@ -5,7 +5,7 @@ import argparse
 import re
 from collections.abc import Iterator
 
-from kaizen.hook.comments import Comment, comment_findings
+from kaizen.hook.comments import LANGUAGES, Comment, comment_findings
 from kaizen.hook.common import add_files_argument, refuse
 from kaizen.shared.common import Runner
 from kaizen.shared.home import Home
@@ -16,7 +16,7 @@ _REFERENCE = re.compile(
 """"later ticket", "slice N", "issue N" and a bare issue number; ``owner/repo#N`` and an issue
 URL's ``/issues/N`` don't match."""
 
-FIX = (
+_FIX = (
     "say what the code does now, and keep the history in the commit or PR; where a link is "
     "needed, use owner/repo#N or the issue's URL"
 )
@@ -35,10 +35,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         description=(
             'Refuse each comment in the files given that says "later ticket", "slice N", '
             '"issue N" or a bare issue number such as #12, naming its file, line and match. '
-            "owner/repo#N and issue URLs pass. Only comments are read, never strings or code: "
-            "Python's through its tokenizer, and whole-line comments by their prefix in shell, "
-            "YAML and TOML (#), C-family, JavaScript, TypeScript, Kotlin and Rust (//), and SQL "
-            "and Lua (--). Files of other languages are skipped."
+            "owner/repo#N and issue URLs pass. Only "
+            f"comments are read, never strings or code: {LANGUAGES}"
         ),
     )
     add_files_argument(parser)
@@ -47,5 +45,5 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
     refuse(
-        "work-tracking", comment_findings(args.files, "work-tracking reference", _references), FIX
+        "work-tracking", comment_findings(args.files, "work-tracking reference", _references), _FIX
     )
