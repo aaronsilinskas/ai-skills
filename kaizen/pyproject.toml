@@ -1,0 +1,101 @@
+[project]
+name = "kaizen-kit"
+version = "0.1.0"
+description = "The deterministic parts of agent workflows: tickets, specs, the leak check and synced files for every project a home registers"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+kaizen = "kaizen.shared.cli:main"
+kz = "kaizen.shared.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "kaizen"
+# The tests sit inside the package for the import contracts; the wheel ships without them.
+wheel-exclude = ["kaizen/tests"]
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.16",
+    # Pinned exactly, so a new mypy release never changes what the check reports.
+    "mypy==2.4.1",
+    "pytest>=9.0.2",
+    "ruff>=0.15.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+addopts = "-p no:debugging"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # isort (import ordering)
+    "N",   # pep8-naming conventions
+    "UP",  # pyupgrade (modernise syntax)
+    "B",   # flake8-bugbear (likely bugs and design issues)
+    "C4",  # flake8-comprehensions (cleaner list/dict/set expressions)
+    "SIM", # flake8-simplify (redundant code patterns)
+    "RUF", # ruff-native rules
+]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "scripts"]
+mypy_path = "src"
+explicit_package_bases = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_unused_ignores = true
+enable_error_code = ["ignore-without-code"]
+
+# Test functions and fixtures need no annotations; their bodies stay checked.
+[[tool.mypy.overrides]]
+module = ["*.tests.*"]
+disallow_untyped_defs = false
+
+# lint-imports keeps the layers acyclic: kaizen's shared code sits below every command group,
+# and spec sits below ticket.
+[tool.importlinter]
+root_package = "kaizen"
+
+[[tool.importlinter.contracts]]
+name = "kaizen's shared code imports none of the command groups"
+type = "forbidden"
+source_modules = ["kaizen.shared"]
+forbidden_modules = [
+    "kaizen.ticket",
+    "kaizen.spec",
+    "kaizen.project",
+    "kaizen.pr",
+    "kaizen.issue",
+    "kaizen.home",
+    "kaizen.hook",
+]
+ignore_imports = [
+    # The CLI is the entry point: it registers every group's commands.
+    "kaizen.shared.cli -> kaizen.ticket.*",
+    "kaizen.shared.cli -> kaizen.spec.*",
+    "kaizen.shared.cli -> kaizen.project.*",
+    "kaizen.shared.cli -> kaizen.pr.*",
+    "kaizen.shared.cli -> kaizen.issue.*",
+    "kaizen.shared.cli -> kaizen.home.*",
+    "kaizen.shared.cli -> kaizen.hook.*",
+]
+
+[[tool.importlinter.contracts]]
+name = "spec does not import ticket"
+type = "forbidden"
+source_modules = ["kaizen.spec"]
+forbidden_modules = ["kaizen.ticket"]
