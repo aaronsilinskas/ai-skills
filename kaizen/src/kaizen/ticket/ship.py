@@ -14,11 +14,11 @@ from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.pr import (
     auto_merge_on,
-    check_pr_text,
     create_pr,
     disable_auto_merge,
     enable_auto_merge,
     open_pr,
+    pr_body,
     read_body,
     update_pr,
 )
@@ -66,11 +66,12 @@ def ship(
     are both on and the change is comment-only (``kaizen.shared.comment_only``). Where a ship could
     have enabled auto-merge but does not, it turns auto-merge off on the open PR.
     """
-    body = read_body(body_file)
+    text = read_body(body_file)
     ticket = resolve_ticket_worktree(worktree, run, home.registry)
     refuse_spec_ticket(ticket)
     project, branch, issue = ticket.project, ticket.branch, ticket.issue
-    check_pr_text(title, body, project, home)
+    closes = [] if issue is None or _closes(text, project.github, issue) else [issue]
+    body = pr_body(title, text, project, home, closes=closes)
     say(f"{project.name} ticket worktree on {branch}")
     refuse_uncommitted(
         ticket, run, fix="commit them (or discard them) so the PR holds everything you tested"
@@ -87,12 +88,10 @@ def ship(
         changed = changed_paths(ticket, run)
         refuse_code_changes(ticket, changed)
         say("docs ticket: the change touches no code path")
-        prefix = ""
         auto_merge = _auto_merge(project, changed)
     else:
         open_issue_title(project.github, issue, run)
         say(f"issue #{issue} is open")
-        prefix = "" if _closes(body, issue) else f"Closes #{issue}\n\n"
         auto_merge = _comment_only_auto_merge(ticket, home, run)
     reusable = open_pr(project.github, branch, run)
     stale = (
@@ -127,22 +126,11 @@ def ship(
     _push(ticket, run)
     say(f"pushed {branch} to origin")
     if reusable:
-        update_pr(
-            project.github, reusable, title, body_file, run, footer=home.pr_footer, prefix=prefix
-        )
+        update_pr(project.github, reusable, title, body, run)
         say(f"updated the open PR's title and body: {reusable}")
         url = reusable
     else:
-        url = create_pr(
-            project.github,
-            ticket.default_branch,
-            branch,
-            title,
-            body_file,
-            run,
-            footer=home.pr_footer,
-            prefix=prefix,
-        )
+        url = create_pr(project.github, ticket.default_branch, branch, title, body, run)
         say(f"opened PR: {url}")
     if auto_merge.enabled:
         enable_auto_merge(url, run)
@@ -160,14 +148,16 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         description=(
             "Work out the project and issue from the ticket worktree's path and its "
             "fix-<issue>-<slug> branch (or docs-<slug> for a docs ticket, which has no issue), "
-            "check it is safe to publish (the PR title and body, before any gh call, and the "
-            "committed files pass the leak check), push the branch with -u "
+            "check it is safe to publish (the PR title and the exact body it sends, Closes line "
+            "and footer included, before any gh call, and the committed files pass the leak "
+            "check), push the branch with -u "
             "(never forced; a push rejected because the branch diverged from origin's is "
             "refused, naming the merges that fix it), and open a PR into the default branch, "
             "or reuse the open one and "
             "update its title and body from --title and --body-file. "
-            "Prepends 'Closes #<issue>' unless the body already closes the issue with a GitHub "
-            "closing keyword (such as 'Fixes #<issue>'), and ends it with the home's PR "
+            "Prepends 'Closes #<issue>' (or 'Closes <owner>/<repo>#<issue>' when a leak_deny "
+            "pattern matches the short form) unless the body already closes the issue with a "
+            "GitHub closing keyword (such as 'Fixes #<issue>'), and ends it with the home's PR "
             "footer unless it already does or the footer is empty. A docs ticket gets no "
             "'Closes' line, and "
             "is refused when its diff against the default branch touches the project's "
@@ -247,7 +237,9 @@ def _push(ticket: TicketWorktree, run: Runner) -> None:
         ) from exc
 
 
-def _closes(body: str, issue: int) -> bool:
-    """Whether *body* already closes *issue* with one of GitHub's closing keywords."""
+def _closes(body: str, github: str, issue: int) -> bool:
+    """Whether *body* already closes *issue* of *github* with one of GitHub's closing keywords,
+    by its short or its full reference."""
     keyword = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
-    return re.search(rf"\b{keyword}:?\s+#{issue}\b", body, re.IGNORECASE) is not None
+    ref = rf"(?:{re.escape(github)})?#{issue}"
+    return re.search(rf"\b{keyword}:?\s+{ref}\b", body, re.IGNORECASE) is not None

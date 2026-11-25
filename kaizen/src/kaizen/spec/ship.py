@@ -13,7 +13,7 @@ from kaizen.shared.branch import (
 from kaizen.shared.common import RefusalError, Runner, Say
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
-from kaizen.shared.pr import check_pr_text, create_pr, open_pr, read_body, update_pr
+from kaizen.shared.pr import create_pr, open_pr, pr_body, read_body, update_pr
 from kaizen.shared.registry import resolve_current
 from kaizen.spec.common import SubIssue, spec_sub_issues
 
@@ -38,9 +38,10 @@ def ship(
 
     Every open sub-issue must be integrated; every check runs before the PR is opened.
     """
-    body = read_body(body_file)
+    text = read_body(body_file)
     project = resolve_current(run, home.registry)
-    check_pr_text(title, body, project, home)
+    # Checks all but the tickets' Closes lines before any gh call; the sub-issues name those.
+    pr_body(title, text, project, home, closes=[spec])
     checkout = project.main_checkout
     say(f"{project.name} project at {checkout}")
     branch = integration_branch(spec)
@@ -77,6 +78,7 @@ def ship(
         base=f"origin/{default}",
     )
     say(f"leak check found nothing in {tip}")
+    body = pr_body(title, text, project, home, closes=[spec, *closes])
     reusable = open_pr(project.github, branch, run)
 
     if dry_run:
@@ -86,23 +88,11 @@ def ship(
             say(f"would open a ready PR from {branch} into {default}: {title}")
         return Shipped(reusable)
 
-    prefix = "".join(f"Closes #{n}\n" for n in [spec, *closes]) + "\n"
     if reusable:
-        update_pr(
-            project.github, reusable, title, body_file, run, footer=home.pr_footer, prefix=prefix
-        )
+        update_pr(project.github, reusable, title, body, run)
         say(f"updated the open PR's title and body: {reusable}")
         return Shipped(reusable)
-    url = create_pr(
-        project.github,
-        default,
-        branch,
-        title,
-        body_file,
-        run,
-        footer=home.pr_footer,
-        prefix=prefix,
-    )
+    url = create_pr(project.github, default, branch, title, body, run)
     say(f"opened PR: {url}")
     return Shipped(url)
 
@@ -115,11 +105,15 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "Run from the project's root, after code-review of the integration branch. Check "
             "that origin has spec-<N> and that every open sub-issue of the spec has an "
             "integration merge in origin/spec-<N>'s history (sub-issues closed as not planned "
-            "are skipped), run the leak check on the PR title and body before any gh call and on "
+            "are skipped), run the leak check on the PR title and the exact body it sends, "
+            "Closes lines and footer included (all but the tickets' Closes lines before any gh "
+            "call, and the whole body again once the sub-issues name them), and on "
             "the integration branch's tip, then open a PR, ready for "
             "review, from spec-<N> into the default branch, or reuse the open one and update its "
             "title and body from --title and --body-file. The body "
-            "starts with 'Closes #<spec>' and a 'Closes #<ticket>' line per integrated ticket, "
+            "starts with 'Closes #<spec>' and a 'Closes #<ticket>' line per integrated ticket "
+            "(each as 'Closes <owner>/<repo>#<n>' when a leak_deny pattern matches the short "
+            "form), "
             "and ends with the home's PR footer unless it already does or the footer is empty."
         ),
     )

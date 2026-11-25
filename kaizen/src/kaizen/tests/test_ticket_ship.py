@@ -182,7 +182,7 @@ def test_ship_passes_a_body_that_already_closes_the_issue_and_ends_with_attribut
 
     ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
-    assert shell.body_files == [body]
+    assert shell.bodies == [f"Writes the state once.\n\nCloses #1358\n\n{FOOTER}\n"]
     assert body.read_text() == f"Writes the state once.\n\nCloses #1358\n\n{FOOTER}\n"
 
 
@@ -964,7 +964,7 @@ def test_ship_refuses_a_pr_body_pointing_outside_the_home_before_any_gh_call(tmp
     body.write_text(f"Why.\nsee {TILDE}/dev/elsewhere/notes\n")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body line 2: "):
+    with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body line 4: "):
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("gh")
@@ -975,7 +975,7 @@ def test_ship_refuses_a_pr_body_with_an_own_reference_for_a_public_project(tmp_p
     body.write_text("part of /fixture/home/docs\n")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match="PR body line 1: own reference /fixture/home"):
+    with pytest.raises(RefusalError, match="PR body line 3: own reference /fixture/home"):
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("gh")
@@ -1025,7 +1025,7 @@ def test_ship_refuses_a_pr_body_holding_a_denied_pattern(tmp_path, dry_run):
     body.write_text(f"Fixes the {DENIED.title()} board.\n")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match=f"PR body line 1: denied pattern {DENIED.title()}"):
+    with pytest.raises(RefusalError, match=f"PR body line 3: denied pattern {DENIED.title()}"):
         ship(
             worktree,
             "Fix the board",
@@ -1133,3 +1133,59 @@ def test_a_malformed_footer_is_refused_naming_the_marker_before_any_command(
     assert f"{home / 'kaizen.toml'} is malformed: {problem}" in err
     assert f"fix {home / 'kaizen.toml'}" in err
     assert shell.calls == []
+
+
+def _gh_calls(shell: Shell) -> list[list[str]]:
+    return [cmd for cmd in shell.calls if cmd[0] == "gh"]
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
+@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
+def test_a_denied_pattern_matching_only_the_footer_refuses_before_any_gh_call(
+    tmp_path, dry_run, prs
+):
+    projects, worktree, body = _setup(tmp_path)
+    deny(projects, denied="Generated with")
+    shell = _shell(prs=prs)
+
+    with pytest.raises(RefusalError, match="PR body line 5: denied pattern Generated with"):
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
+
+    assert _gh_calls(shell) == []
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
+def test_a_denied_pattern_matching_both_forms_of_the_closes_line_refuses_before_any_gh_call(
+    tmp_path, dry_run
+):
+    projects, worktree, body = _setup(tmp_path)
+    deny(projects, denied="closes")
+    shell = _shell()
+
+    with pytest.raises(RefusalError, match=r"match both forms of the line that closes #1358"):
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
+
+    assert _gh_calls(shell) == []
+
+
+@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
+def test_a_denied_short_closes_line_is_written_with_the_full_reference(tmp_path, prs):
+    projects, worktree, body = _setup(tmp_path)
+    deny(projects, denied=r"\s#1358")
+    shell = _shell(prs=prs)
+
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+
+    assert shell.bodies == [
+        f"Closes owner/proto#1358\n\nWrites the state once per Reboot.\n\n{FOOTER}\n"
+    ]
+
+
+def test_a_body_closing_the_issue_by_its_full_reference_gets_no_closes_line(tmp_path):
+    projects, worktree, body = _setup(tmp_path)
+    body.write_text("Writes the state once.\n\nFixes owner/proto#1358\n")
+    shell = _shell()
+
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+
+    assert shell.bodies == [f"Writes the state once.\n\nFixes owner/proto#1358\n\n{FOOTER}\n"]

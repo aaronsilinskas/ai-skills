@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TypedDict
 
@@ -110,43 +111,50 @@ def read_body(body_file: Path, what: str = "PR body") -> str:
         ) from exc
 
 
-def create_pr(
-    github: str,
-    base: str,
-    head: str,
-    title: str,
-    body_file: Path,
-    run: Runner,
-    *,
-    footer: str,
-    prefix: str = "",
-) -> str:
-    """Opens a ready PR from *head* into *base* and returns its URL.
-
-    The body is built by ``_run_with_body``.
-    """
+def create_pr(github: str, base: str, head: str, title: str, body: str, run: Runner) -> str:
+    """Opens a ready PR from *head* into *base* with *body*, as ``pr_body`` built it, and returns
+    its URL."""
     create = ["gh", "-R", github, "pr", "create", "--base", base, "--head", head]
-    cmd = [*create, "--title", title, "--body-file"]
-    out = _run_with_body(cmd, body_file, prefix, footer, run)
+    out = _run_with_body([*create, "--title", title, "--body-file"], body, run)
     return out.strip().splitlines()[-1]
 
 
-def update_pr(
-    github: str,
-    url: str,
-    title: str,
-    body_file: Path,
-    run: Runner,
-    *,
-    footer: str,
-    prefix: str = "",
-) -> None:
-    """Replaces the title and body of the open PR at *url*.
-
-    The body is built by ``_run_with_body``.
-    """
+def update_pr(github: str, url: str, title: str, body: str, run: Runner) -> None:
+    """Replaces the title and body of the open PR at *url*; *body* is as ``pr_body`` built it."""
     edit = ["gh", "-R", github, "pr", "edit", url, "--title", title, "--body-file"]
-    _run_with_body(edit, body_file, prefix, footer, run)
+    _run_with_body(edit, body, run)
+
+
+def pr_body(
+    title: str, text: str, project: Project, home: Home, *, closes: Sequence[int] = ()
+) -> str:
+    """The exact PR body a ship sends for *project*, refused before it is sent when it or the
+    *title* points outside *home*.
+
+    The body is a ``Closes`` line per issue in *closes* and a blank line, then *text* (the body
+    file's) ending with the home's PR footer (``with_footer``). It is the one place a ship's
+    body is built, so the text the leak check reads is the text GitHub gets.
+    """
+    lines = "".join(f"{closing_line(project, issue)}\n" for issue in closes)
+    body = (f"{lines}\n" if lines else "") + with_footer(text, home.pr_footer)
+    check_pr_text(title, body, project, home)
+    return body
+
+
+def closing_line(project: Project, issue: int) -> str:
+    """The line that closes *issue*: ``Closes #<issue>``, or ``Closes <owner>/<repo>#<issue>``
+    when one of the project's denied patterns matches the short form; refuses when one matches
+    both, since no body could then close the issue."""
+    forms = (f"Closes #{issue}", f"Closes {project.github}#{issue}")
+    for line in forms:
+        denied = [p.pattern for p in project.leak_deny if p.search(line)]
+        if not denied:
+            return line
+    raise RefusalError(
+        f"the project's denied pattern(s) {', '.join(denied)} match both forms of the line"
+        f" that closes #{issue}: {' and '.join(forms)}",
+        f"narrow leak_deny on {project.page} so it allows one of them, then rerun",
+    )
 
 
 def with_footer(text: str, footer: str) -> str:
@@ -157,18 +165,10 @@ def with_footer(text: str, footer: str) -> str:
     return f"{text.rstrip()}\n\n{footer}\n"
 
 
-def _run_with_body(cmd: list[str], body_file: Path, prefix: str, footer: str, run: Runner) -> str:
-    """Runs *cmd* with the path of the PR body built from *body_file* appended.
-
-    The body is *prefix* (such as ``Closes`` lines), then the body file's text ending with
-    *footer* (``with_footer``). An amended body goes to a temporary file outside any worktree,
-    since the caller's worktree must stay clean.
-    """
-    text = read_body(body_file)
-    body = prefix + with_footer(text, footer)
-    if body == text:
-        return run([*cmd, str(body_file)])
+def _run_with_body(cmd: list[str], body: str, run: Runner) -> str:
+    """Runs *cmd* with the path of a file holding *body* appended. The file is temporary and
+    outside any worktree, since the caller's worktree must stay clean."""
     with tempfile.TemporaryDirectory() as tmp:
-        amended = Path(tmp) / "body.md"
-        amended.write_text(body)
-        return run([*cmd, str(amended)])
+        path = Path(tmp) / "body.md"
+        path.write_text(body)
+        return run([*cmd, str(path)])

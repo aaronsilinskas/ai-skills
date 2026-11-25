@@ -340,7 +340,7 @@ def test_ship_refuses_a_pr_body_pointing_outside_the_home_before_any_gh_call(tmp
     body.write_text(f"Why.\nsee {TILDE}/dev/elsewhere/notes\n")
     shell = _shell(tmp_path)
 
-    with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body line 2: "):
+    with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body line 4: "):
         ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("gh")
@@ -351,7 +351,7 @@ def test_ship_refuses_a_pr_body_with_an_own_reference_for_a_public_project(tmp_p
     body.write_text("part of owner/home\n")
     shell = _shell(tmp_path)
 
-    with pytest.raises(RefusalError, match="PR body line 1: own reference owner/home"):
+    with pytest.raises(RefusalError, match="PR body line 3: own reference owner/home"):
         ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("gh")
@@ -393,7 +393,7 @@ def test_ship_refuses_a_pr_body_holding_a_denied_pattern(tmp_path):
     body.write_text(f"Adds the {DENIED} lifecycle.\n")
     shell = _shell(tmp_path)
 
-    with pytest.raises(RefusalError, match=f"PR body line 1: denied pattern {DENIED}"):
+    with pytest.raises(RefusalError, match=f"PR body line 3: denied pattern {DENIED}"):
         ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=True)
 
 
@@ -458,3 +458,49 @@ def test_reshipping_a_spec_with_an_empty_footer_updates_the_body_without_a_foote
 
     assert shell.ran("pr", "edit")
     assert shell.bodies == [CLOSES + "Adds the spec lifecycle.\n"]
+
+
+def _gh_writes(shell: Shell) -> list[list[str]]:
+    return shell.ran("pr", "list") + shell.ran("pr", "create") + shell.ran("pr", "edit")
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
+@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
+def test_a_denied_pattern_matching_only_the_footer_refuses_before_any_gh_call(
+    tmp_path, dry_run, prs
+):
+    projects, body = _setup(tmp_path)
+    deny(projects, denied="Generated with")
+    shell = _shell(tmp_path, prs=prs)
+
+    with pytest.raises(RefusalError, match="denied pattern Generated with"):
+        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
+
+    assert [cmd for cmd in shell.calls if cmd[0] == "gh"] == []
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
+@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
+def test_a_denied_pattern_matching_both_forms_of_a_tickets_closes_line_refuses_before_the_pr(
+    tmp_path, dry_run, prs
+):
+    projects, body = _setup(tmp_path)
+    deny(projects, denied=r"#29\b")
+    shell = _shell(tmp_path, prs=prs)
+
+    with pytest.raises(RefusalError, match=r"match both forms of the line that closes #29"):
+        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
+
+    assert _gh_writes(shell) == []
+
+
+@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
+def test_a_denied_short_closes_line_is_written_with_the_full_reference(tmp_path, prs):
+    projects, body = _setup(tmp_path)
+    deny(projects, denied=r"\s#28\b")
+    shell = _shell(tmp_path, prs=prs)
+
+    ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
+
+    (sent,) = shell.bodies
+    assert sent.startswith("Closes #25\nCloses owner/proto#28\nCloses #29\n\n")
