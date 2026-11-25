@@ -156,16 +156,15 @@ test('the default autoOpen leaves the panel closed at session start', async ($, 
 
 // --- gating hooks: the plugin's own faults never change what they gate -------
 
-/** Makes every write the plugin makes to its state fail. */
 const failStateWrites = (on: On) => on('state.set', () => ({ deny: 'disk full' }) as never)
 
-const typedPrompt = { text: 'hi', wait: false, origin: { kind: 'composer' } } as never
+const composerPrompt = { text: 'hi', wait: false, origin: { kind: 'composer' } } as never
 
 test('a prompt goes through when the plugin cannot store its state', async ($, on) => {
   core(on)
   failStateWrites(on)
   on('prompt.submit', (_$, e) => ({ text: e.text }))
-  expect(await $.prompt.submit(typedPrompt)).toEqual({ text: 'hi' })
+  expect(await $.prompt.submit(composerPrompt)).toEqual({ text: 'hi' })
 })
 
 test('a subagent starts as the engine started it, once, when the plugin cannot store its state', async ($, on) => {
@@ -173,6 +172,12 @@ test('a subagent starts as the engine started it, once, when the plugin cannot s
   failStateWrites(on)
   expect(await spawn($, 'Read the parser')).toEqual({ model: 'claude-opus-5-5', agentId: 'agent-1' })
   expect(prompts).toHaveLength(1)
+})
+
+test('a subagent is still asked to report steps when the plugin cannot store its state', async ($, on) => {
+  const { prompts } = core(on)
+  failStateWrites(on)
+  await spawn($, 'Read the parser')
   expect(prompts[0]).toContain(STEP)
 })
 
@@ -194,5 +199,11 @@ test('a step report the plugin cannot store gets the engine answer for the call'
 test('an error beneath a gating hook still reaches the caller', async ($, on) => {
   core(on)
   // Nothing beneath answers the prompt, so the engine's dispatch fails.
-  await expect($.prompt.submit(typedPrompt)).rejects.toThrow('no implementation for prompt.submit')
+  await expect($.prompt.submit(composerPrompt)).rejects.toThrow('no implementation for prompt.submit')
+})
+
+test("an error beneath a gating hook still reaches the caller after the plugin's own fault", async ($, on) => {
+  core(on)
+  failStateWrites(on)
+  await expect($.prompt.submit(composerPrompt)).rejects.toThrow('no implementation for prompt.submit')
 })
