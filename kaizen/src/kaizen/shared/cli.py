@@ -96,7 +96,8 @@ def main(
 ) -> int:
     """Runs one command in the home found from *cwd* and *env* (default: the current directory
     and the process environment), as the install whose *version* is running and whose *latest*
-    looks up the latest release (default: the package metadata and PyPI). ``--help`` exits
+    looks up the latest release (default: the package metadata, read at each call so the tests'
+    fixture can replace it, and PyPI). ``--help`` exits
     before the home is looked for, and a command that needs no home skips the search and the
     synced version check."""
     parser = argparse.ArgumentParser(

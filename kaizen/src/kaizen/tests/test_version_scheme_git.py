@@ -1,5 +1,6 @@
 """Tests for how kaizen's build works out its version from the ``kaizen-v*`` git tags, building
-real wheels with ``uv build`` from kaizen's own ``pyproject.toml`` in a temporary repo."""
+real wheels with ``uv build`` from kaizen's own ``pyproject.toml`` in a temporary repo. The build
+needs ``uv`` and fetches ``hatchling`` and ``hatch-vcs`` unless ``uv``'s cache holds them."""
 
 import shutil
 import subprocess
@@ -8,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.version import Version
-from kaizen.tests.test_release_check import KAIZEN_DIR, release_check
+from kaizen.tests.release_script import KAIZEN_DIR, release_check
 
 
 def _git(repo: Path, *args: str) -> None:

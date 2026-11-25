@@ -1,24 +1,15 @@
-"""Tests for ``scripts/release_check.py``, the release workflow's checks, loaded by path since the
-script sits outside the package. Each wheel is a zip built in a temporary directory."""
+"""Tests for ``scripts/release_check.py``, the release workflow's checks. Each wheel is a zip
+built in a temporary directory."""
 
-import importlib.util
-import sys
 import zipfile
 from pathlib import Path
 
 import pytest
 
-KAIZEN_DIR = Path(__file__).resolve().parents[3]
-_spec = importlib.util.spec_from_file_location(
-    "release_check", KAIZEN_DIR / "scripts" / "release_check.py"
-)
-assert _spec is not None and _spec.loader is not None
-release_check = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = release_check
-_spec.loader.exec_module(release_check)
+from kaizen.tests.release_script import release_check
 
 
-def _built(tmp_path: Path, version: str) -> str:
+def _fake_wheel(tmp_path: Path, version: str) -> str:
     """A wheel whose metadata says *version*."""
     path = tmp_path / f"kaizen_kit-{version}-py3-none-any.whl"
     with zipfile.ZipFile(path, "w") as wheel:
@@ -30,11 +21,11 @@ def _built(tmp_path: Path, version: str) -> str:
 
 
 def test_a_tag_matching_the_built_wheels_version_passes(tmp_path):
-    assert release_check.version_problems("kaizen-v1.2.3", _built(tmp_path, "1.2.3")) == []
+    assert release_check.version_problems("kaizen-v1.2.3", _fake_wheel(tmp_path, "1.2.3")) == []
 
 
 def test_a_tag_whose_version_differs_from_the_built_wheel_is_refused_naming_both(tmp_path):
-    wheel = _built(tmp_path, "1.2.4.dev1+gabc1234")
+    wheel = _fake_wheel(tmp_path, "1.2.4.dev1+gabc1234")
 
     assert release_check.version_problems("kaizen-v1.2.3", wheel) == [
         "tag 'kaizen-v1.2.3' is version 1.2.3, but the built wheel is 1.2.4.dev1+gabc1234"
@@ -42,7 +33,7 @@ def test_a_tag_whose_version_differs_from_the_built_wheel_is_refused_naming_both
 
 
 def test_a_tag_without_the_prefix_is_refused(tmp_path):
-    assert release_check.version_problems("v1.2.3", _built(tmp_path, "1.2.3")) == [
+    assert release_check.version_problems("v1.2.3", _fake_wheel(tmp_path, "1.2.3")) == [
         "tag 'v1.2.3' does not start with 'kaizen-v'"
     ]
 

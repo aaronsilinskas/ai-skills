@@ -10,7 +10,6 @@ Each prints what it found and exits 1 on a refusal, or 2 on a usage error.
 
 import sys
 import zipfile
-from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
 KAIZEN_DIR = Path(__file__).resolve().parent.parent
@@ -67,22 +66,26 @@ def check_wheel(wheel_path: str) -> list[str]:
     return wheel_problems(names)
 
 
-CHECKS: dict[str, Callable[..., list[str]]] = {"version": version_problems, "wheel": check_wheel}
-ARITY = {"version": 2, "wheel": 1}
+def run_check(argv: list[str]) -> list[str] | None:
+    """The problems the check *argv* names finds, or ``None`` when *argv* names no check."""
+    match argv:
+        case ["version", tag, wheel]:
+            return version_problems(tag, wheel)
+        case ["wheel", wheel]:
+            return check_wheel(wheel)
+    return None
 
 
 def main(argv: list[str]) -> int:
-    if not argv or argv[0] not in CHECKS or len(argv) - 1 != ARITY[argv[0]]:
+    problems = run_check(argv)
+    if problems is None:
         print(__doc__, file=sys.stderr)
         return 2
-    check, *targets = argv
-    target = " ".join(targets)
-    problems = CHECKS[check](*targets)
     for problem in problems:
         print(f"refused: {problem}", file=sys.stderr)
     if problems:
         return 1
-    print(f"{check} check passed: {target}")
+    print(f"{argv[0]} check passed: {' '.join(argv[1:])}")
     return 0
 
 
