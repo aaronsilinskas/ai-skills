@@ -85,12 +85,12 @@ def _issue_api(cmd: list[str]) -> str:
 @dataclass(frozen=True)
 class DryRun:
     """A command's arguments, given the fixture folder, a line of its plan, and the replies to its
-    queries that take it past every check, on top of ``_DEFAULT_ANSWERS``. It runs from the fixture home, or from an
-    empty folder when *outside_a_home*."""
+    queries that take it past every check, on top of ``_DEFAULT_ANSWERS``. It runs from the
+    fixture home, or from an empty folder when *outside_a_home*."""
 
     args: Callable[[Path], list[str]]
     plan: str
-    """A line near the end of the plan the dry run prints, so it is known to have run every check."""
+    """A line near the end of the plan the dry run prints, showing it ran every check."""
     answers: dict[tuple[str, ...], Reply] = field(default_factory=dict)
     outside_a_home: bool = False
 
