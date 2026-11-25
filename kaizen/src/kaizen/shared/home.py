@@ -28,7 +28,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError
+from kaizen.shared.common import RefusalError, Say
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
 from kaizen.shared.registry import GITHUB_REPO
 from kaizen.shared.version import Version
@@ -88,12 +88,15 @@ class Home:
     records none."""
 
 
-def find_home(start: Path, env: Mapping[str, str]) -> Home:
+def find_home(start: Path, env: Mapping[str, str], warn: Say = lambda _: None) -> Home:
     """The home ``KAIZEN_HOME`` in *env* names, or the nearest one upward from *start*.
 
+    Inside a linked git worktree of the ``KAIZEN_HOME`` home, such as one of its ticket
+    worktrees, the worktree is the home, so a command run there reads and writes the worktree's
+    files rather than the main checkout's; *warn* gets one line naming both roots.
+
     Refuses when ``KAIZEN_HOME`` names a root with no marker, when neither finds a home, when
-    they find different homes, or when the marker is malformed. A linked git worktree of the
-    ``KAIZEN_HOME`` home, such as a ticket worktree inside its tree, counts as that home.
+    they find different homes, or when the marker is malformed.
     """
     value = env.get(ENV_VAR)
     named = _expand(value, Path.home()) if value else None
@@ -113,6 +116,9 @@ def find_home(start: Path, env: Mapping[str, str]) -> Home:
                 f"run kaizen from inside {named} or one of its registered projects",
             )
     root = named or found
+    if named and found and found != named:
+        warn(f"home: using the worktree {found}; {ENV_VAR} names {named}")
+        root = found
     if root is None:
         raise RefusalError(
             f"home: no home found: {ENV_VAR} is unset and no {MARKER} is in {start} or above it",
