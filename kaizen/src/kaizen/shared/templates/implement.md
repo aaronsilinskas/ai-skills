@@ -95,7 +95,10 @@ Mark such a finding **blocking** in the report, so the orchestrator settles it b
 
 Work lands through a PR, never straight on the default branch; the PR is the hand-off.
 The skill's "commit your work to the current branch" lands on the ticket branch.
-Before each commit, run the repo's checks on the files you changed: `uv run pre-commit run --files <changed files>`, or the project's equivalent.
+Before each commit, run the project's checks from the ticket worktree's root.
+When the worktree has a `.pre-commit-config.yaml`, run `uv run pre-commit run --files <changed files>`.
+Otherwise run the project's check command, the `check:` field of its `{{registry}}/` page, which checks the whole project.
+When that field is `none` or missing, skip this step and report the check as not run.
 That surfaces lint and type errors while the change is fresh, not one commit attempt at a time.
 Then write the PR body with the `pr` skill, using the Write tool, to a file outside the ticket worktree (`ship` refuses a worktree with untracked files), and run:
 

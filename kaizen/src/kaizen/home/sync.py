@@ -248,7 +248,7 @@ def add_parser(subparsers: Subparsers) -> None:
             "permissions.deny not a list; and when a synced file's path is not a file.\n\n"
             "Then it asks PyPI, once and briefly, for kaizen's latest release, and prints the "
             "upgrade command when that is newer; a failed lookup prints nothing. No other kaizen "
-            "command uses the network.\n\n"
+            "command looks up releases.\n\n"
             "With --dry-run it prints each change as a diff and writes nothing.\n\n"
             "With --dry-run --allow-dev, a local build, whose version is not X.Y.Z, previews "
             "what it would sync: this is the way to check a template change against a real home "
