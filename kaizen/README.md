@@ -36,6 +36,7 @@ kaizen project leak-check
 ```
 
 `kaizen --help` lists the groups, and `kaizen <group> --help` lists each group's commands.
+`kaizen ticket diff <worktree> --base` prints the review base for a ticket: the merge base of its base branch and `HEAD`, as a SHA that stays put while other tickets integrate.
 Every command that changes anything checks its preconditions first and has a `--dry-run`.
 
 `kaizen spec start <N>` pushes a spec's integration branch, `spec-<N>`, to `origin` at once.

@@ -79,7 +79,8 @@ When the two calls disagree, or one says **passes**, the verdict is **flaky**.
 
 Commit before you review. The skill runs `code-review` before its commit step, but `code-review` reviews commits, so it can't see uncommitted work.
 Build and commit, run `code-review` on the commits, then fix its findings in new commits.
-Run `code-review` from the base `kaizen ticket diff <worktree> --base` prints, never a base picked by hand;
+Run `code-review` from the commit `kaizen ticket diff <worktree> --base` prints, never a base picked by hand.
+It is the merge base of the ticket's base and `HEAD`, a SHA that stays put while other tickets integrate, where a ref such as `origin/spec-<N>` moves on and would take in their work.
 `kaizen ticket diff <worktree>` shows the commits, stat and diff it will review, and says when the base is not an ancestor of `HEAD`.
 
 Fix every `code-review` finding in this ticket, including judgement calls and doc or GLOSSARY wording a reviewer marks optional.
