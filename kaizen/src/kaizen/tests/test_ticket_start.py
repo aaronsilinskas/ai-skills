@@ -517,7 +517,7 @@ def _docs_proto(tmp_path: Path) -> Path:
     return _proto(tmp_path, extra="code_paths: src/\n")
 
 
-def test_without_an_issue_start_adds_a_docs_ticket_worktree_from_the_remote_default_branch(
+def test_without_an_issue_start_adds_a_docs_change_worktree_from_the_remote_default_branch(
     tmp_path,
 ):
     shell = _shell()

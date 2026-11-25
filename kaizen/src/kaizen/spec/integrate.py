@@ -41,7 +41,7 @@ def integrate(
     """Merge, check and push the spec ticket at *worktree*, then remove its worktree and branch."""
     ticket = resolve_ticket_worktree(worktree, run, home.registry)
     if ticket.spec is None:
-        kind = "a docs ticket's" if ticket.issue is None else "a lone ticket's"
+        kind = "a docs change's" if ticket.issue is None else "a lone ticket's"
         raise RefusalError(
             f"{ticket.path} is {kind} worktree (on {ticket.branch}), not a spec's",
             f"ship it with `kaizen ticket ship {ticket.path}`",

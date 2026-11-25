@@ -68,12 +68,12 @@ def _assert_nothing_changed(shell: Shell) -> None:
     ("check", "overrides", "reason"),
     [
         ("make check", {"branch": "fix-32-lone-ticket\n"}, "lone ticket's worktree"),
-        ("make check", {"branch": "docs-fix-typos\n"}, "docs ticket's worktree"),
+        ("make check", {"branch": "docs-fix-typos\n"}, "docs change's worktree"),
         ("make check", {"status": " M app.py\n"}, "uncommitted changes:\n M app.py"),
         ("make check", {"ahead": "0\n"}, "no commits ahead of origin/spec-25"),
         (None, {}, "declares no check command"),
     ],
-    ids=["lone ticket", "docs ticket", "uncommitted changes", "nothing ahead", "no check key"],
+    ids=["lone ticket", "docs change", "uncommitted changes", "nothing ahead", "no check key"],
 )
 def test_integrate_refuses_before_changing_anything(tmp_path, check, overrides, reason):
     projects = _setup(tmp_path, check=check)

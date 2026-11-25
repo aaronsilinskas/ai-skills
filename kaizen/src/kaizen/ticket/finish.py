@@ -84,7 +84,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "then remove the ticket worktree, force-delete its local branch and prune its "
             "remote-tracking ref once origin no longer has the branch; then "
             f"{FAST_FORWARD_HELP}. Never deletes the remote branch. Works for a "
-            "docs ticket's docs-<slug> branch too. Refuses a spec's ticket worktree "
+            "docs change's docs-<slug> branch too. Refuses a spec's ticket worktree "
             "(spec-<N>-fix-<issue>-<slug>), which `kaizen spec integrate` cleans up."
         ),
     )

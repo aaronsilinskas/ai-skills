@@ -60,7 +60,7 @@ def ship(
 ) -> Shipped:
     """Push the ticket branch, then open its PR or update the open one; every check runs first.
 
-    A docs ticket (no issue) gets no ``Closes`` line, and is refused if it touches code. Its PR
+    A docs change (no issue) gets no ``Closes`` line, and is refused if it touches code. Its PR
     gets auto-merge when every path it changes is under the project's ``auto_merge_paths``.
     A ticket closing an issue gets it when the home's and the project's ``auto_merge_comment_only``
     are both on and the change is comment-only (``kaizen.shared.comment_only``). Where a ship could
@@ -87,7 +87,7 @@ def ship(
     if issue is None:
         changed = changed_paths(ticket, run)
         refuse_code_changes(ticket, changed)
-        say("docs ticket: the change touches no code path")
+        say("docs change: it touches no code path")
         auto_merge = _auto_merge(project, changed)
     else:
         open_issue_title(project.github, issue, run)
@@ -140,7 +140,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         help="check a ticket worktree, push its branch and open (or update) its PR",
         description=(
             "Work out the project and issue from the ticket worktree's path and its "
-            "fix-<issue>-<slug> branch (or docs-<slug> for a docs ticket, which has no issue), "
+            "fix-<issue>-<slug> branch (or docs-<slug> for a docs change, which has no issue), "
             "check it is safe to publish (the PR title and the exact body it sends, Closes line "
             "and footer included, before any gh call, and the committed files pass the leak "
             "check), push the branch with -u "
@@ -150,10 +150,10 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "update its title and body from --title and --body-file. "
             "Prepends 'Closes #<issue>' unless the body already closes the issue with a "
             "GitHub closing keyword (such as 'Fixes #<issue>'), and ends it with the home's PR "
-            "footer unless it already does or the footer is empty. A docs ticket gets no "
+            "footer unless it already does or the footer is empty. A docs change gets no "
             "'Closes' line, and "
             "is refused when its diff against the default branch touches the project's "
-            "code_paths. When every path a docs ticket changes is under the project's "
+            "code_paths. When every path in a docs change is under the project's "
             "auto_merge_paths, enables auto-merge on its PR (gh pr merge --auto --merge). "
             "A ticket closing an issue gets auto-merge when the project sets "
             "auto_merge_comment_only, the home's marker does not set it to false, and every "
@@ -177,7 +177,7 @@ def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
 
 
 def _auto_merge(project: Project, changed: list[str]) -> _AutoMerge:
-    """Whether a docs ticket changing *changed* gets auto-merge, and the line saying why."""
+    """Whether a docs change to *changed* gets auto-merge, and the line saying why."""
     if project.auto_merge_paths is None:
         return _AutoMerge(
             False, f"no auto-merge: project {project.name} declares no auto_merge_paths"

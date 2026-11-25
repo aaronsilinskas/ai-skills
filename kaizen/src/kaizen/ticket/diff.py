@@ -80,7 +80,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             " while the base branch moves on, which --base prints alone), whether it is an"
             " ancestor of HEAD (and the merge that fixes it when not), the commits ahead"
             " (base..HEAD), the stat and the diff (base...HEAD), and a note listing any"
-            " uncommitted changes. Works for spec, lone and docs tickets. Only queries: never"
+            " uncommitted changes. Works for a spec's ticket, a lone ticket or a docs change."
+            " Only queries: never"
             " resets or changes the worktree."
         ),
     )

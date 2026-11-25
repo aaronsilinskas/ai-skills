@@ -2,7 +2,7 @@
 
 A spec's **integration branch** is ``spec-<N>``. A ticket of that spec is built on
 ``spec-<N>-fix-<issue>-<slug>``, and a ticket with no spec on ``fix-<issue>-<slug>``.
-A **docs ticket**, a change to docs only that needs no issue, is built on ``docs-<slug>``.
+A **docs change**, a change to docs only that needs no issue, is built on ``docs-<slug>``.
 Integrating a ticket records its branch in the merge commit's subject, so the integration
 branch's history alone says which tickets are in it.
 """
@@ -26,7 +26,7 @@ MAIN_CHECKOUT_NOTE = (
 @dataclass(frozen=True)
 class TicketBranch:
     issue: int | None
-    """The issue the ticket closes; ``None`` for a docs ticket."""
+    """The issue the ticket closes; ``None`` for a docs change."""
     spec: int | None
     """The spec whose integration branch the ticket integrates into; ``None`` for a lone ticket."""
 

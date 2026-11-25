@@ -35,7 +35,7 @@ Every worktree shares one hook, so an install there points it at that worktree's
 
 After a `warning:` from `start` about a missing `worktree_links` path, or when a check needs a git-ignored tool the worktree lacks, report the check as not run; never pass over it.
 
-### Docs tickets: no issue
+### Docs changes: no issue
 
 A change only to docs needs no issue (**Sizing** in `docs/agents/workflows.md`). Start it without one:
 

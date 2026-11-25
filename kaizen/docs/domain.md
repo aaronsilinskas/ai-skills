@@ -52,7 +52,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
   The registry folder always comes from the `Home`, never from a default path.
   It also holds the starter README and page a new home gets, beside the parser so the two change together.
-- `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>` and a **docs ticket**'s `docs-<slug>`) and the merge subject that **integrates** a ticket.
+- `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>` and a **docs change**'s `docs-<slug>`) and the merge subject that **integrates** a ticket.
   Names are worked out from numbers, so the integration branch's history alone records which tickets are integrated.
   `find_integration_branch` says where a started spec's integration branch is: on `origin`, or only local, as `spec start --local` leaves it until the spec's first integration pushes it.
   Every command that reads an integration branch prefers `origin`'s, so a local copy matters only while `origin` lacks the branch, and the push that publishes it deletes the local copy, which `spec finish` would otherwise refuse as unmerged.
