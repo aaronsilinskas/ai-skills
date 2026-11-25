@@ -120,7 +120,16 @@ def test_the_synced_doc_shows_the_homes_ci_step_with_the_recorded_version(tmp_pa
 
     workflows = (home / "docs/agents/workflows.md").read_text()
 
-    assert "`uvx --from kaizen-kit==4.5.6 kaizen home sync --check`" in workflows
+    step = "`uvx --refresh-package kaizen-kit --from kaizen-kit==4.5.6 kaizen home sync --check`"
+    assert step in workflows
+
+
+def test_the_synced_doc_names_the_upgrade_that_moves_a_pinned_install(tmp_path):
+    home = _synced(tmp_path, "4.5.6")
+
+    workflows = (home / "docs/agents/workflows.md").read_text()
+
+    assert "an older one refuses until `uv tool install kaizen-kit@latest` runs" in workflows
 
 
 def test_sync_refuses_to_record_a_running_version_that_is_not_x_y_z(tmp_path, capsys):
@@ -130,9 +139,9 @@ def test_sync_refuses_to_record_a_running_version_that_is_not_x_y_z(tmp_path, ca
 
     assert _kaizen(home, "home", "sync", version="1.3.0.dev0") == 1
 
-    assert "refused: home sync: kaizen's version 1.3.0.dev0 is not X.Y.Z" in (
-        capsys.readouterr().err
-    )
+    err = capsys.readouterr().err
+    assert "refused: home sync: kaizen's version 1.3.0.dev0 is not X.Y.Z" in err
+    assert "(`uv tool install kaizen-kit@latest`)" in err
     assert _marker(home) == before
 
 
@@ -182,7 +191,7 @@ def test_an_older_install_is_refused_with_the_upgrade_fix_before_the_command_run
     assert captured.out == ""
     assert captured.err.startswith(
         "refused: kaizen 1.9.9 is older than this home's synced version 1.10.0\n"
-        "  fix: uv tool upgrade kaizen-kit\n"
+        "  fix: uv tool install kaizen-kit@latest\n"
     )
 
 
@@ -281,7 +290,7 @@ def test_sync_names_a_newer_release_and_the_upgrade_command(tmp_path, capsys):
     assert _kaizen(home, "home", "sync", version="1.2.3", latest=lambda: "1.3.0") == 0
 
     assert capsys.readouterr().out.splitlines()[-1] == (
-        "kaizen 1.3.0 is out (this is 1.2.3): run `uv tool upgrade kaizen-kit`"
+        "kaizen 1.3.0 is out (this is 1.2.3): run `uv tool install kaizen-kit@latest`"
     )
 
 

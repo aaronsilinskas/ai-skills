@@ -48,6 +48,8 @@ Run `kaizen home sync` from the home's root after `kaizen` is upgraded, or when 
 It rewrites each synced file that differs and adds the git stash deny rule to `.claude/settings.json`; commit what it changed.
 When the check fails on a hand edit to a synced file, move that rule to the home overlay before syncing, or the sync drops it.
 It also records the release it ran as `synced_version` in `kaizen.toml`: these files were rendered by {{synced_version}}.
-The home's CI step is `uvx --from kaizen-kit=={{synced_version}} kaizen home sync --check`, so CI judges the synced files by the release that wrote them, whatever a machine has installed.
+The home's CI step is `uvx --refresh-package kaizen-kit --from kaizen-kit=={{synced_version}} kaizen home sync --check`.
+CI judges the synced files by the release that wrote them, whatever a machine has installed.
+`--refresh-package` makes uv ask PyPI again rather than trust a cached package list, which may predate a release made minutes earlier.
 When a sync changes the synced version, put the new one in that step, in the same commit.
 Every `kaizen` command compares the installed release with the synced version: a newer install warns to sync, and an older one refuses until `{{upgrade}}` runs.

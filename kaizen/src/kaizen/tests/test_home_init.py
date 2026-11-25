@@ -1019,7 +1019,7 @@ def test_init_records_the_running_version_as_the_synced_version(tmp_path):
     assert _init(tmp_path, root, version="3.4.5") == 0
 
     assert str(find_home(root, {}).synced_version) == "3.4.5"
-    assert "uvx --from kaizen-kit==3.4.5 kaizen home sync --check" in (
+    assert "uvx --refresh-package kaizen-kit --from kaizen-kit==3.4.5 kaizen home sync --check" in (
         (root / "docs/agents/workflows.md").read_text()
     )
 

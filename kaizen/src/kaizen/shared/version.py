@@ -28,7 +28,8 @@ class Install:
     latest: LatestRelease
 
 
-UPGRADE = "uv tool upgrade kaizen-kit"
+UPGRADE = "uv tool install kaizen-kit@latest"
+"""Moves any install to the latest release; ``uv tool upgrade`` leaves one pinned with ``==``."""
 _PYPI = "https://pypi.org/pypi/kaizen-kit/json"
 _TIMEOUT = 3
 """Seconds before the lookup gives up, so ``home sync`` never hangs offline."""
@@ -58,10 +59,7 @@ def recordable_version(running: str, command: str, *, alternative: str | None = 
     could install, naming the *alternative* fix when there is one."""
     version = Version.parse(running)
     if version is None:
-        fix = (
-            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run"
-            f" `kaizen {command}` again"
-        )
+        fix = f"install a release of kaizen (`{UPGRADE}`), then run `kaizen {command}` again"
         raise RefusalError(
             f"{command}: kaizen's version {running} is not X.Y.Z, so it can't be recorded"
             " as the home's synced version",

@@ -16,6 +16,10 @@ Install the latest release from PyPI:
 uv tool install kaizen-kit
 ```
 
+Leave the version unpinned.
+`uv tool upgrade` never moves an install made with `kaizen-kit==X.Y.Z`, so a pin turns every later upgrade into a reinstall.
+To move to the latest release, pinned or not, run `uv tool install kaizen-kit@latest`.
+
 To run an unreleased change, install a local build from a checkout of this repo, at its root:
 
 ```sh
@@ -53,8 +57,10 @@ Run kaizen inside a home (the tree under a directory holding `kaizen.toml`), or 
 To make the git repo you are in a new home, run `kaizen home init`.
 After upgrading kaizen, run `kaizen home sync` in each home to bring its synced files back in step.
 A home records the release that last synced it as its synced version, in `kaizen.toml`.
-Every command compares the two: a newer install warns to run `kaizen home sync`, and an older one refuses until you run `uv tool upgrade kaizen-kit`.
-A home's CI runs `uvx --from kaizen-kit==<synced version> kaizen home sync --check`, which fails on a hand edit to a synced file, and the synced docs show that step with the home's version.
+Every command compares the two: a newer install warns to run `kaizen home sync`, and an older one refuses until you run `uv tool install kaizen-kit@latest`.
+A home's CI runs `uvx --refresh-package kaizen-kit --from kaizen-kit==<synced version> kaizen home sync --check`, which fails on a hand edit to a synced file, and the synced docs show that step with the home's version.
+`--refresh-package` makes uv ask PyPI again, since a CI cache's package list may predate a release made minutes earlier.
+PyPI can also take a few minutes to serve a new release, so after one, wait until `uvx --refresh --from kaizen-kit==X.Y.Z kaizen --help` resolves before opening a home's sync PR.
 It also validates the home marker and every registry page, so a malformed page fails CI rather than the next command that reads it.
 The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
 
@@ -63,10 +69,10 @@ The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commi
 A home made before kaizen's first release uses the old names, `mw.toml` and `MW_HOME`.
 The first release reads them with a warning, so the home keeps working while you move it:
 
-1. Install the release: `uv tool install kaizen-kit`.
+1. Install the release: `uv tool install kaizen-kit@latest`.
 2. Rename the home marker `mw.toml` to `kaizen.toml`, and the variable `MW_HOME` to `KAIZEN_HOME`, wherever it is set, such as the env of the home's `.claude/settings.json`.
 3. Run `kaizen home sync` from the home's root, and commit what it changed.
-4. Add `uvx --from kaizen-kit==<synced version> kaizen home sync --check` to the home's CI, with the version `kaizen.toml` now records.
+4. Add `uvx --refresh-package kaizen-kit --from kaizen-kit==<synced version> kaizen home sync --check` to the home's CI, with the version `kaizen.toml` now records.
 
 The release after the first refuses the old names.
 
@@ -107,7 +113,8 @@ To release:
 
 1. Tag a commit on `main` `kaizen-vX.Y.Z` and push the tag.
 2. Approve the `pypi` environment's deployment when the run asks.
-3. Check the release by hand: `uvx --from kaizen-kit==X.Y.Z kaizen --help`.
+3. Check the release by hand: `uvx --refresh --from kaizen-kit==X.Y.Z kaizen --help`.
+   Wait until it resolves before opening any home's sync PR, or that PR's CI fails to find the release.
 
 ### Maintainer setup for the first release
 
