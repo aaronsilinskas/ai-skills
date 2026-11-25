@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kaizen.tests.ticket_shell import DENIED, RELAY, SITE, TILDE, Shell, deny, failed
+from kaizen.tests.ticket_shell import RELAY, SITE, TILDE, Shell, failed
 
 URL = "https://github.com/acme/relay/issues/42"
 
@@ -104,16 +104,6 @@ def test_a_public_projects_title_with_an_own_reference_is_refused(kaizen, tmp_pa
     assert kaizen(_argv(tmp_path, title="Move /fixture/home/docs"), run=shell) == 1
 
     assert "issue title line 1: own reference /fixture/home" in capsys.readouterr().err
-    assert not shell.ran("gh")
-
-
-def test_a_body_holding_the_projects_denied_pattern_is_refused(kaizen, tmp_path, capsys):
-    deny(tmp_path / "cli-home" / "projects", "relay")
-    shell = _shell()
-
-    assert kaizen(_argv(tmp_path, body=f"Why the {DENIED} goes.\n"), run=shell) == 1
-
-    assert f"issue body line 1: denied pattern {DENIED}" in capsys.readouterr().err
     assert not shell.ran("gh")
 
 

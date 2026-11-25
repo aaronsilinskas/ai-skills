@@ -13,7 +13,6 @@ A page starts with::
     auto_merge_paths: docs/                  # optional
     auto_merge_comment_only: true            # optional; default false
     worktree_links: tools/mpy-cross          # optional
-    leak_deny: acme, internal/               # optional
     ---
 
 ``check`` is a shell command run from the root of a fresh worktree, so it installs what it needs
@@ -37,15 +36,9 @@ home's marker turns the comment-only check off.
 ``worktree_links`` lists, comma-separated, git-ignored paths relative to the project root, such as
 a downloaded tool: ``kaizen ticket start`` symlinks each one from the main checkout into the new
 ticket worktree, which would otherwise lack it. Each is linked by name, so a glob is refused.
-
-``leak_deny`` lists, comma-separated, regular expressions the **leak check** refuses in this
-project only, public or private, matched case-insensitively on what a commit, push or GitHub text
-publishes (see ``kaizen.shared.leak``). An entry can't hold a comma, and one that doesn't compile is
-refused naming the page. The list stays on the page, home data no command publishes.
 """
 
 import re
-import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -58,7 +51,6 @@ from kaizen.shared.branch import (
 )
 from kaizen.shared.comment_only import FileChange
 from kaizen.shared.common import RefusalError, Runner, run_or_refuse
-from kaizen.shared.home import Home
 
 NO_CHECK = "none"
 WORKTREES = ".claude/worktrees"
@@ -98,9 +90,6 @@ class Project:
     worktree."""
     page: Path
     """The registry page these facts were read from."""
-    leak_deny: tuple[re.Pattern[str], ...] = ()
-    """The regular expressions, compiled case-insensitive, the leak check refuses in what this
-    project publishes."""
 
     def is_code(self, path: str) -> bool:
         """Whether the repo-relative *path* is under one of the project's code paths."""
@@ -179,47 +168,6 @@ def github_remote(url: str) -> tuple[str, str] | None:
     return None
 
 
-def resolve_home_checkout(run: Runner, path: Path, home: Home) -> tuple[Project, Path]:
-    """The home's own project, and the checkout's root, for the git checkout at *path*, which
-    must be the root of *home*, the home kaizen serves, wherever that is, such as a CI clone.
-    The project is the page whose ``github`` is the checkout's ``origin`` repo, which the home's
-    ``leak.own`` must also list as its own, so its registered path is not needed. Refuses any
-    other checkout, and an origin no page registers or ``leak.own`` doesn't list."""
-    root = _toplevel(run, path.expanduser())
-    if root.resolve() != home.root.resolve():
-        raise RefusalError(
-            f"{root.resolve()} is not the root of the home kaizen serves, {home.root}",
-            "pass the home's root, from inside it, with KAIZEN_HOME unset or set to it",
-        )
-    url = run_or_refuse(
-        ["git", "-C", str(root), "remote", "get-url", "origin"],
-        run,
-        f"{root} has no origin remote",
-        "check out the home from its GitHub repo",
-    ).strip()
-    # The URL itself is not printed: an HTTPS remote can carry a token.
-    remote = github_remote(url)
-    repo = "/".join(remote) if remote else None
-    project = next(
-        (p for p in all_projects(home.registry) if repo and p.github.lower() == repo.lower()),
-        None,
-    )
-    if project is None:
-        named = f"repo {repo}" if repo else "URL, which names no GitHub repo"
-        raise RefusalError(
-            f"no registry page's github is origin's {named}",
-            "register the home's own page with its GitHub repo as github, or run in a clone"
-            " of that repo",
-        )
-    if project.github.lower() not in {own.lower() for own in home.leak_own}:
-        raise RefusalError(
-            f"origin's repo {project.github} is {project.name}'s, which leak.own in the home's"
-            " marker doesn't list as the home's own repo",
-            "run in a clone of the home's own repo, or add that repo to leak.own",
-        )
-    return project, root
-
-
 def _main_checkout_owner(root: Path, projects: list[Project]) -> Project | None:
     """The project whose main checkout is *root*, if any."""
     return next((p for p in projects if p.path.resolve() == root.resolve()), None)
@@ -295,7 +243,6 @@ def _parse(name: str, page: Path) -> Project:
         page, fields, "auto_merge_comment_only", bool
     )
     worktree_links = _worktree_links(page, fields)
-    leak_deny = _leak_deny(page, fields)
     return Project(
         name,
         path,
@@ -308,7 +255,6 @@ def _parse(name: str, page: Path) -> Project:
         auto_merge_comment_only,
         worktree_links,
         page,
-        leak_deny,
     )
 
 
@@ -335,28 +281,6 @@ def _worktree_links(page: Path, fields: dict[str, str | bool]) -> tuple[str, ...
                 "list each path to link by name, with no '*' or '?'",
             )
     return entries
-
-
-def _leak_deny(page: Path, fields: dict[str, str | bool]) -> tuple[re.Pattern[str], ...]:
-    """The page's ``leak_deny`` patterns, compiled case-insensitive; refuses one that doesn't
-    compile."""
-    return tuple(
-        _denied_pattern(page, entry) for entry in _comma_list(page, fields, "leak_deny") or ()
-    )
-
-
-def _denied_pattern(page: Path, entry: str) -> re.Pattern[str]:
-    try:
-        # A warning, such as for a POSIX class like ``[[:alpha:]]``, marks a pattern that
-        # wouldn't match what it says.
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            return re.compile(entry, re.IGNORECASE)
-    except (re.error, FutureWarning) as exc:
-        raise RefusalError(
-            f"{page}: leak_deny entry {entry!r} is not a regular expression ({exc})",
-            "fix or remove the entry; use Python's syntax, such as \\w for [[:alnum:]_]",
-        ) from exc
 
 
 def _covers(entries: tuple[str, ...] | None, path: str) -> bool:
@@ -491,13 +415,6 @@ its page only points at them.
 - `worktree_links` (optional): comma-separated git-ignored paths relative to the project root,
   such as a downloaded tool, with no globs. `kaizen ticket start` and `kaizen ticket compare`
   symlink each one from the main checkout into the worktrees they make.
-- `leak_deny` (optional): comma-separated regular expressions, in Python's syntax and with no
-  commas, that the leak check refuses in this project only, public or private, matched
-  case-insensitively. They are searched only in what is published: the lines a commit, ship or
-  `kaizen project leak-check` adds against its base, and the issue and PR text `kaizen` sends. Text
-  already in the project's tree passes. A pattern that doesn't compile is refused naming the
-  page. The list stays here, home data no command publishes.
-
 ## Pages
 
 {pages}

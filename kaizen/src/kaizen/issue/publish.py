@@ -30,7 +30,7 @@ def publish(
     body = read_body(body_file, "issue body")
     project, _ = resolve_checkout(run, None, home.registry)
     texts = {"issue title": title, "issue body": body}
-    leak_check_text(texts, home, public=project.public, denied=project.leak_deny)
+    leak_check_text(texts, home, public=project.public)
     labels = list(dict.fromkeys(labels))
     if labels:
         _check_labels(project.github, labels, run)
@@ -63,9 +63,9 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         description=(
             "Create an issue in the repo of the project whose main checkout or ticket worktree "
             "it runs from, and print its URL. The title and body must pass the leak check's "
-            "rules for that project (its leak_deny patterns included), and each --label must "
-            "exist in its repo; any failure refuses before the issue is created, dry runs "
-            "included. Use it for every issue filed by hand, such as an idea from to-idea."
+            "rules for that project, and each --label must exist in its repo; any failure "
+            "refuses before the issue is created, dry runs included. Use it for every issue "
+            "filed by hand, such as an idea from to-idea."
         ),
     )
     parser.add_argument("--title", required=True, help="the issue's title")

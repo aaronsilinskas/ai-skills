@@ -33,13 +33,7 @@ from pathlib import Path
 
 from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
 from kaizen.shared.home import Home
-from kaizen.shared.leak import (
-    added_lines,
-    leak_check,
-    leak_check_denied,
-    leak_check_text,
-    numbered_lines,
-)
+from kaizen.shared.leak import leak_check, leak_check_text
 from kaizen.shared.pr import enable_auto_merge, with_footer
 from kaizen.shared.registry import Project, resolve_current
 
@@ -61,17 +55,15 @@ def split_spec(text: str) -> tuple[str, str]:
     raise RefusalError("the spec has no title", "start the spec with a non-blank '# ' title line")
 
 
-def changed_domain_docs(run: Runner) -> tuple[list[str], set[str]]:
-    """Modified or untracked paths under the domain docs (glossary, ADRs), and the untracked
-    ones among them."""
+def changed_domain_docs(run: Runner) -> list[str]:
+    """Modified or untracked paths under the domain docs (glossary, ADRs)."""
     out = run_or_refuse(
         ["git", "status", "--porcelain", "--untracked-files=all", "--", *DOMAIN_DOC_PATHS],
         run,
         "could not read the domain docs' git status",
         OUTSIDE_CHECKOUT_FIX,
     )
-    statuses = [(line[:2], line[3:]) for line in out.splitlines() if line.strip()]
-    return [path for _, path in statuses], {path for status, path in statuses if status == "??"}
+    return [line[3:] for line in out.splitlines() if line.strip()]
 
 
 def check_preconditions(run: Runner) -> None:
@@ -100,24 +92,15 @@ def check_text(title: str, body: str, project: Project, home: Home) -> None:
     """Refuses when the spec issue's *title* or *body* points outside *home*, judged for
     *project*."""
     texts = {"issue title": title, "issue body": body}
-    leak_check_text(texts, home, public=project.public, denied=project.leak_deny)
+    leak_check_text(texts, home, public=project.public)
 
 
-def check_domain_docs(
-    docs: list[str], untracked: set[str], project: Project, home: Home, run: Runner
-) -> None:
+def check_domain_docs(docs: list[str], project: Project, home: Home) -> None:
     """Refuses when a changed domain doc that still exists points outside *home*, judged for
-    *project*, or adds a line *project* denies, so a leak in one refuses before the spec issue
-    is created. Only an *untracked* doc is searched whole for denied patterns."""
+    *project*, so a leak in one refuses before the spec issue is created."""
     root = Path(project.path)
     texts = {doc: (root / doc).read_text() for doc in docs if (root / doc).is_file()}
     leak_check_text(texts, home, public=project.public)
-    if not project.leak_deny or not texts:
-        return
-    tracked = tuple(doc for doc in texts if doc not in untracked)
-    lines = added_lines(root, run, ["HEAD"], tracked) if tracked else []
-    lines += numbered_lines({doc: text for doc, text in texts.items() if doc in untracked}, ":")
-    leak_check_denied(lines, project.leak_deny, "domain-doc text")
 
 
 def prepare(spec: Path, run: Runner, home: Home) -> tuple[str, str, list[str], Project]:
@@ -128,8 +111,8 @@ def prepare(spec: Path, run: Runner, home: Home) -> tuple[str, str, list[str], P
     check_preconditions(run)
     project = resolve_current(run, home.registry)
     check_text(title, body, project, home)
-    docs, untracked = changed_domain_docs(run)
-    check_domain_docs(docs, untracked, project, home, run)
+    docs = changed_domain_docs(run)
+    check_domain_docs(docs, project, home)
     return title, body, docs, project
 
 
@@ -195,15 +178,7 @@ def publish(
     run(["git", "add", "--", *docs])
     run(["git", "commit", "-m", message + trailer])
     say(f"committed the domain docs on {branch}")
-    leak_check(
-        Path(project.path),
-        home,
-        run,
-        "HEAD",
-        public=project.public,
-        denied=project.leak_deny,
-        base="origin/main",
-    )
+    leak_check(Path(project.path), home, run, "HEAD", public=project.public)
     run(["git", "push", "-u", "origin", branch])
     pr_body = with_footer(
         f"Domain-doc edits from grilling spec #{number}.\n\nRefs #{number}\n", home.pr_footer

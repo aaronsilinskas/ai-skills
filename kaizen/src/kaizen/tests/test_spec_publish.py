@@ -12,14 +12,11 @@ from kaizen.shared.common import RefusalError
 from kaizen.shared.home import Home
 from kaizen.spec.publish import publish, split_spec
 from kaizen.tests.ticket_shell import (
-    ADDED_DENIED,
-    DENIED,
     FOOTER,
     HOME_FOOTER,
     RELAY,
     TILDE,
     cli_home,
-    deny,
     home_for,
 )
 
@@ -38,12 +35,8 @@ class _Shell:
         status: str = "",
         grep: str = "",
         toplevel: str = TOPLEVEL,
-        added: str = "",
-        docs_added: str = "",
     ) -> None:
         self.toplevel = toplevel
-        self.added = added
-        self.docs_added = docs_added
         self.calls: list[list[str]] = []
         self.bodies: list[str] = []
         self._answers: dict[tuple[str, ...], str] = {
@@ -59,10 +52,6 @@ class _Shell:
         self.calls.append(cmd)
         if cmd[0] == "git" and "grep" in cmd:
             return self._answers[("git", "grep")]
-        if cmd[0] == "git" and "--merge-base" in cmd:
-            return self.added
-        if cmd[0] == "git" and "--no-color" in cmd:
-            return self.docs_added
         if "--show-toplevel" in cmd:
             return self.toplevel + "\n"
         if cmd[1:3] == ["issue", "create"]:
@@ -240,80 +229,11 @@ def test_the_domain_doc_commit_is_leak_checked_before_it_is_pushed(tmp_path):
     assert not shell.ran("git", "push")
 
 
-def test_a_spec_holding_a_denied_pattern_is_refused_before_any_gh_call(tmp_path):
-    shell = _Shell()
-    home = _home(tmp_path)
-    deny(home.registry)
-    spec = _spec(tmp_path, f"# Retire things\n\nWhy the {DENIED} goes.\n")
-
-    with pytest.raises(RefusalError, match=f"issue body line 1: denied pattern {DENIED}"):
-        publish(spec, None, None, shell, _quiet, home=home)
-
-    assert not shell.ran("gh")
-
-
-def test_a_denied_pattern_the_domain_doc_commit_adds_is_refused_before_it_is_pushed(tmp_path):
-    shell = _Shell(status=" M GLOSSARY.md\n", grep="", added=ADDED_DENIED)
-    home = _home(tmp_path)
-    deny(home.registry)
-
-    with pytest.raises(RefusalError, match=rf"docs/a\.md:4: denied pattern {DENIED}"):
-        publish(_spec(tmp_path), None, None, shell, _quiet, home=home)
-
-    (diff,) = [cmd for cmd in shell.ran("git", "-C", TOPLEVEL) if "diff" in cmd]
-    assert diff[diff.index("--merge-base") :][:3] == ["--merge-base", "origin/main", "HEAD"]
-    assert not shell.ran("git", "push")
-
-
-GLOSSARY_ADDS_DENIED = (
-    f"diff --git a/GLOSSARY.md b/GLOSSARY.md\n+++ b/GLOSSARY.md\n@@ -1,0 +2 @@\n+the {DENIED}\n"
-)
-"""``git diff -U0 HEAD`` output whose one added line, ``GLOSSARY.md:2``, names ``DENIED``."""
-
-
 def _docs_checkout(tmp_path: Path, doc: str, text: str) -> Path:
     checkout = tmp_path / "proto"
     (checkout / doc).parent.mkdir(parents=True, exist_ok=True)
     (checkout / doc).write_text(text)
     return checkout
-
-
-def test_a_denied_pattern_a_changed_domain_doc_adds_is_refused_before_any_gh_call(tmp_path):
-    checkout = _docs_checkout(tmp_path, "GLOSSARY.md", f"# Glossary\nthe {DENIED}\n")
-    shell = _Shell(
-        status=" M GLOSSARY.md\n", toplevel=str(checkout), docs_added=GLOSSARY_ADDS_DENIED
-    )
-    home = _home(tmp_path, toplevel=str(checkout))
-    deny(home.registry)
-
-    with pytest.raises(RefusalError, match=rf"GLOSSARY\.md:2: denied pattern {DENIED}"):
-        publish(_spec(tmp_path), None, None, shell, _quiet, home=home)
-
-    assert not shell.ran("gh")
-
-
-def test_a_denied_word_a_changed_domain_doc_already_held_passes(tmp_path):
-    checkout = _docs_checkout(tmp_path, "GLOSSARY.md", f"# Glossary\nthe {DENIED}\nmore\n")
-    shell = _Shell(status=" M GLOSSARY.md\n", toplevel=str(checkout))
-    home = _home(tmp_path, toplevel=str(checkout))
-    deny(home.registry)
-
-    publish(_spec(tmp_path), None, None, shell, _quiet, home=home)
-
-    assert shell.ran("git", "push")
-
-
-def test_a_new_domain_doc_is_searched_whole_for_denied_patterns_before_any_gh_call(tmp_path):
-    doc = "docs/adr/0009-thing.md"
-    checkout = _docs_checkout(tmp_path, doc, f"# Thing\nthe {DENIED}\n")
-    shell = _Shell(status=f"?? {doc}\n", toplevel=str(checkout))
-    home = _home(tmp_path, toplevel=str(checkout))
-    deny(home.registry)
-
-    with pytest.raises(RefusalError, match=rf"0009-thing\.md:2: denied pattern {DENIED}"):
-        publish(_spec(tmp_path), None, None, shell, _quiet, home=home)
-
-    assert not shell.ran("gh")
 
 
 DOCS_PR_BODY = "Domain-doc edits from grilling spec #300.\n\nRefs #300\n"

@@ -59,7 +59,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   It also fast-forwards the **main checkout** after a finish, only when that is safe, and prints a skip otherwise.
 - `shared/leak.py`: the **leak check**, for every command that pushes, opens a PR or publishes an issue (ADR 0002).
   `leak_check` searches a checkout's tracked files, a commit's tree or the index; `leak_check_text` searches text about to be sent to GitHub.
-  Each rule is an allowlist built from the home's facts, so it holds no data of its own; a project's denied patterns are searched only in what is being published.
+  Each rule is an allowlist built from the home's facts, so it holds no data of its own.
   Its refusal, `LeakFoundError`, lists each file, line, rule and fix.
 - `shared/version.py`: the **synced version** check, comparing the running version with the home's as integer triples, and the PyPI lookup `home sync` makes, which skips any failure silently.
 - `shared/synced.py`: the **synced files**.
@@ -75,8 +75,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/issue_graph.py`: the issue reads and the parent and blocked-by edge writes the `issue`, `spec` and `ticket` groups share.
   It refuses an issue reference to a repo outside the home.
 - `shared/pr.py`: the GitHub PR steps the ship and finish commands share, ending each PR body with the home's PR footer unless that setting is empty.
-  A ship leak-checks the exact body it sends, `Closes` lines and footer included, since a denied pattern or leak rule must see every line GitHub gets.
-  A `Closes #<n>` line kaizen writes that a denied pattern matches is written as `Closes <owner>/<repo>#<n>` instead, which GitHub also accepts, rather than refused: kaizen wrote the line, so the user can't fix it in the body file, and only a pattern denying both forms is refused.
+  A ship leak-checks the exact title and body it sends, `Closes` lines and footer included, so the leak rules see every line GitHub gets.
 - `shared/worktree.py`: worktree listing, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
 - `shared/command.py`: runs a project's shell command and maps the ticket's and base's outcomes to one of `kaizen ticket compare`'s verdicts.
 - `shared/comment_only.py`: the check that a change only deletes or shrinks Python comments and docstrings, which lets `ticket ship` auto-merge a comment-only ticket when the home and the project both turn that on.
@@ -92,7 +91,6 @@ One module per command; each group's `--help` lists them.
   `spec integrate` merges in a scratch worktree and pushes only after the check command passes; the ticket branch is never pushed (ADR 0001).
   `spec/common.py` reads a spec's sub-issues and each ticket's blockers, for `spec status` and `ticket start --spec`.
 - `project/`: `project leak-check`, the leak check on its own for a push no other command makes, and `project labels`, which creates the workflow labels a project's repo lacks and never edits or deletes one.
-  `project leak-check --root`, the CI form, takes only the home's own root, finding its page by origin's repo through `registry.resolve_home_checkout`, and runs the same rules from the same `Home` with its root set to that page's path, so the clone's path widens no allowlist (ADR 0002).
 - `issue/`: `issue show`, `issue link` and `issue publish`, built on the issue graph.
 - `pr/`: `pr wait`, which waits for a PR's checks and exits by their outcome.
 - `home/`: `home init`, which makes the git repo it runs in a new home, and needs no home itself.

@@ -30,21 +30,7 @@ the home holding this package, for that home's own leak check to refuse."""
 LEAK_OWN = ("owner/home", "/fixture/home")
 """The own leak patterns of every fixture home."""
 
-DENIED = "zephyr"
-"""A word a fixture project's ``leak_deny`` names."""
-
-ADDED_DENIED = (
-    f"diff --git a/docs/a.md b/docs/a.md\n+++ b/docs/a.md\n@@ -3,0 +4 @@\n+the {DENIED} board\n"
-)
-"""``git diff -U0`` output whose one added line, ``docs/a.md:4``, names ``DENIED``."""
-
 _LEAK = '[leak]\nown = ["owner/home", "/fixture/home"]\n'
-
-
-def deny(projects: Path, name: str = "proto", denied: str = DENIED) -> None:
-    """Adds ``leak_deny: <denied>`` to the frontmatter of the registry page *name*."""
-    page = projects / f"{name}.md"
-    page.write_text(page.read_text().replace("---\n", f"---\nleak_deny: {denied}\n", 1))
 
 
 RELEASE = "1.0.0"

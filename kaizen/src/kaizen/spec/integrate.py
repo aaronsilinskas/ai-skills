@@ -98,7 +98,7 @@ def integrate(
         else:
             _run_check(check, scratch, run)
             say(f"check passed: {check}")
-        leak_check(scratch, home, run, public=project.public, denied=project.leak_deny, base=base)
+        leak_check(scratch, home, run, public=project.public)
         say("leak check found nothing")
         _push(scratch, target, run)
         say(f"pushed the merge to {target}" + (", creating it on origin" if local_ref else ""))

@@ -100,14 +100,7 @@ def ship(
         and not auto_merge.enabled
         and auto_merge_on(reusable, run)
     )
-    leak_check(
-        ticket.path,
-        home,
-        run,
-        public=project.public,
-        denied=project.leak_deny,
-        base=ticket.base_ref,
-    )
+    leak_check(ticket.path, home, run, public=project.public)
     say("leak check found nothing")
     say(auto_merge.reason)
 
@@ -155,8 +148,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "refused, naming the merges that fix it), and open a PR into the default branch, "
             "or reuse the open one and "
             "update its title and body from --title and --body-file. "
-            "Prepends 'Closes #<issue>' (or 'Closes <owner>/<repo>#<issue>' when a leak_deny "
-            "pattern matches the short form) unless the body already closes the issue with a "
+            "Prepends 'Closes #<issue>' unless the body already closes the issue with a "
             "GitHub closing keyword (such as 'Fixes #<issue>'), and ends it with the home's PR "
             "footer unless it already does or the footer is empty. A docs ticket gets no "
             "'Closes' line, and "

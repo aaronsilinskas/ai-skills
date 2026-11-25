@@ -68,15 +68,7 @@ def ship(
         run(["git", "-C", checkout, "fetch", "origin"])
         say(f"fetched origin in {checkout}")
     closes = _integrated_tickets(project.github, spec, checkout, tip, run, say)
-    leak_check(
-        project.path,
-        home,
-        run,
-        tip,
-        public=project.public,
-        denied=project.leak_deny,
-        base=f"origin/{default}",
-    )
+    leak_check(project.path, home, run, tip, public=project.public)
     say(f"leak check found nothing in {tip}")
     body = pr_body(title, text, project, home, closes=[spec, *closes])
     reusable = open_pr(project.github, branch, run)
@@ -112,8 +104,6 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "review, from spec-<N> into the default branch, or reuse the open one and update its "
             "title and body from --title and --body-file. The body "
             "starts with 'Closes #<spec>' and a 'Closes #<ticket>' line per integrated ticket "
-            "(each as 'Closes <owner>/<repo>#<n>' when a leak_deny pattern matches the short "
-            "form), "
             "and ends with the home's PR footer unless it already does or the footer is empty."
         ),
     )
