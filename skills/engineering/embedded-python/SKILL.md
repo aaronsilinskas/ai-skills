@@ -153,7 +153,7 @@ class MyConfig:
     DEFAULT_BRIGHTNESS: Final = 0x33
 ```
 
-`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard described above. Write the annotation unquoted, as above.
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard described above. Write the annotation bare, as above.
 
 ## State Object Lifecycle
 

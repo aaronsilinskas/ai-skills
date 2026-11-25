@@ -20,6 +20,8 @@ Test names are the primary communication surface. They should read like a statem
 
 **Goal:** a failing test's name alone should tell you what broke, not just which line. Use the domain terms from the project's `GLOSSARY.md` when it has one.
 
+A source comment that states behavior is a missing test: the **test** bucket of `comments-backpressure` turns it into one, named by this **Test naming** section.
+
 ### Good names
 
 ```python
@@ -56,8 +58,6 @@ def test_zero_acceleration_yields_zero_progress():
 ```
 
 If the name says "X causes Y", the test must change X and observe Y.
-
-A source comment that states behavior becomes a test through the **test** bucket of `comments-backpressure`, which owns that rule; name the test by this section.
 
 ## Test structure
 
