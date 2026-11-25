@@ -24,8 +24,8 @@ kaizen spec start <N>
 ```
 
 It pushes `spec-<N>` to `origin` at the tip of `origin`'s default branch, adding no commit, so a hook or permission rule that reviews each push can approve this one in advance.
-`kaizen ticket start --spec` refuses until `spec-<N>` exists on `origin`, so no implementer can start before this push lands.
-Where a push gate would hold that push, run `kaizen spec start <N> --local` instead: it creates `spec-<N>` as a local branch from `origin`'s default branch and pushes nothing.
+`kaizen ticket start --spec` refuses until `spec-<N>` exists, on `origin` or as the local branch `--local` below creates, so no implementer can start before it does.
+Where such a hook or rule would hold that push, run `kaizen spec start <N> --local` instead: it creates `spec-<N>` as a local branch from `origin`'s default branch and pushes nothing.
 `kaizen ticket start --spec`, `ticket diff` and `ticket compare` then use that local branch while `origin` lacks it, and the spec's first `kaizen spec integrate` pushes it.
 
 There is no draft PR: `kaizen spec ship` opens the PR, ready for review, once the review is done.
