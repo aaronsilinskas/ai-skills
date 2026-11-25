@@ -503,13 +503,14 @@ def test_home_init_is_the_only_command_that_runs_without_a_home():
 
 
 def test_only_the_query_only_commands_lack_a_dry_run():
+    commands = _commands()
     without_dry_run = {
         name
-        for name, command in _commands().items()
+        for name, command in commands.items()
         if not any("--dry-run" in action.option_strings for action in command._actions)
     }
 
-    hooks = {name for name in _commands() if name.startswith("hook ")}
+    hooks = {name for name in commands if name.startswith("hook ")}
     query_only = {"project leak-check", "pr wait", "issue show", "spec status", "ticket diff"}
     assert without_dry_run == hooks | query_only
 
