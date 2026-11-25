@@ -8,17 +8,19 @@ Each command's `--help` says what it checks and does; this map holds only what `
 
 - `kaizen/`: the package's own folder, with a `src` layout, its own `pyproject.toml` and lock file.
   The distribution is `kaizen-kit`, the module `kaizen`, and both console scripts, `kaizen` and `kz`, run the same entry point.
+  The LICENSE sits at the repo root, outside `kaizen/`, so the sdist copies it in.
+  A wheel built from that sdist ships it, as `uv build` and the release workflow build one; a wheel built straight from `kaizen/` (`uv build --wheel`) has none.
 - `kaizen/src/kaizen/`: the module: its shared code (`shared/`), its command groups (`ticket/`, `spec/`, `project/`, `pr/`, `issue/`, `home/`, `hook/`) and their tests (`tests/`).
 - `kaizen/src/kaizen/__init__.py`: `__version__`, the running version, read from the package metadata.
   The build works it out from the latest `kaizen-v*` git tag through `hatch-vcs`, a build requirement only: `X.Y.Z` at a tag, a dev version past one, so a local build is never taken for a release.
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
-  git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo and never touch GitHub.
+  git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo, through `real_git.py`, and never touch GitHub.
   Fixtures use generic homes, owners and paths.
 - `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pytest and `line_length_check.py`, all through `uv`.
 - `kaizen/src/kaizen/tests/scripts.py`: loads each Python script in `kaizen/scripts/` by path for its tests, since the scripts sit outside the package.
 - `kaizen/scripts/release_check.py`: the release workflow's version and wheel checks, also runnable by hand.
   Its tests sit with the package's, in `kaizen/src/kaizen/tests/test_release_check.py`.
-  `test_version_scheme_git.py` builds real wheels in a temporary repo to check the version the tags give, so it also needs `uv`, which fetches the build requirements unless its cache holds them.
+  `test_version_scheme_git.py` builds real wheels in a temporary repo to check the version the tags give and that both artifacts ship the LICENSE, so it also needs `uv`, which fetches the build requirements unless its cache holds them.
   The workflow itself is `.github/workflows/release.yml` at the repo root, run only by `kaizen-v*` tags.
 - `kaizen/scripts/line_length_check.py`: refuses a prose line over 200 characters in any synced file as a generic home renders it, header line included.
   A home that holds its docs to that width can't edit a synced file, so kaizen's templates keep to it.
@@ -79,6 +81,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/worktree.py`: worktree listing, adding a **ticket worktree**, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
   `ticket start` and `ticket compare` both link a project's `worktree_links` through it.
 - `shared/command.py`: runs a project's shell command and maps the ticket's and base's outcomes to one of `kaizen ticket compare`'s verdicts.
+- `shared/python_comments.py`: the one reader of a Python source's comments, through `tokenize`, for the comment hooks and the comment-only check; a source the tokenizer can't read has none.
 - `shared/comment_only.py`: the check that a change only deletes or shrinks Python comments and docstrings, which lets `ticket ship` auto-merge a comment-only ticket when the home and the project both turn that on.
 
 ## Command groups
@@ -104,7 +107,7 @@ One module per command; each group's `--help` lists them.
   `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.
 - `hook/`: the pre-commit **hooks**, each run on the file names pre-commit passes and needing a home like any command.
   `hook leak-check` is `project leak-check --staged`; `hook no-commit-to-branch` reads the default branch through `shared/branch.py`: `origin/HEAD`, asking origin only when the clone never recorded it.
-  The comment hooks read comments through `hook/comments.py`: Python's through `tokenize`, other languages' as whole-line comments by their prefix, keyed by file suffix.
+  The comment hooks read comments through `hook/comments.py`: Python's through `shared/python_comments.py`, other languages' as whole-line comments by their prefix, keyed by file suffix.
   A comment after code on the same line is read only in Python, since telling it from a string needs the language's tokenizer; a file of an unknown language is skipped.
   `hook/common.py` holds the one refusal every file hook raises, listing each finding's file, line and rule.
 

@@ -6,21 +6,17 @@
 from pathlib import Path
 
 from kaizen.shared.cli import main
-from kaizen.shared.common import run_subprocess
+from kaizen.tests.real_git import git
 from kaizen.tests.ticket_shell import TILDE
-
-
-def _git(*args: str | Path) -> str:
-    return run_subprocess(["git", *map(str, args)])
 
 
 def _fresh_repo(tmp_path: Path) -> Path:
     root = tmp_path / "user" / "work" / "newhome"
     root.mkdir(parents=True)
-    _git("init", "-q", "-b", "main", root)
-    _git("-C", root, "config", "user.name", "Test")
-    _git("-C", root, "config", "user.email", "test@example.com")
-    _git("-C", root, "remote", "add", "origin", "https://github.com/acme/newhome.git")
+    git("init", "-q", "-b", "main", root)
+    git("-C", root, "config", "user.name", "Test")
+    git("-C", root, "config", "user.email", "test@example.com")
+    git("-C", root, "remote", "add", "origin", "https://github.com/acme/newhome.git")
     return root
 
 
@@ -31,8 +27,8 @@ def _init(tmp_path: Path, root: Path) -> int:
 def test_a_committed_outside_path_is_reported_as_a_to_do(tmp_path, capsys):
     root = _fresh_repo(tmp_path)
     (root / "notes.md").write_text(f"# Notes\n\nsee {TILDE}/elsewhere/plans\n")
-    _git("-C", root, "add", "notes.md")
-    _git("-C", root, "commit", "-q", "-m", "Add notes")
+    git("-C", root, "add", "notes.md")
+    git("-C", root, "commit", "-q", "-m", "Add notes")
 
     assert _init(tmp_path, root) == 0
 

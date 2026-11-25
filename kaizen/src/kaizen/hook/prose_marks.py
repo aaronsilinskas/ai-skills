@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from pathlib import PurePath
 
 from kaizen.hook.common import Finding, add_files_argument, read_text, refuse
-from kaizen.shared.common import Runner
+from kaizen.shared.common import Runner, Subparsers
 from kaizen.shared.home import Home
 
 _MARKDOWN = (".md", ".markdown")
@@ -36,7 +36,7 @@ def prose_mark_findings(names: list[str]) -> Iterator[Finding]:
                     yield Finding(name, number, "prose mark", f"{label} (U+{ord(mark):04X})")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "prose-marks",
         help="refuse em dashes and curly quotes in Markdown",

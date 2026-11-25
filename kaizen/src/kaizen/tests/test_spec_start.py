@@ -10,7 +10,7 @@ import pytest
 
 from kaizen.shared.common import RefusalError
 from kaizen.spec.start import start
-from kaizen.tests.ticket_shell import Shell, failed, home_for, proto_projects
+from kaizen.tests.ticket_shell import Shell, failed, home_for, proto_projects, quiet
 
 SPEC_OPEN = '{"state": "OPEN", "title": "One CLI for relay", "labels": [{"name": "spec"}]}'
 REMOTE_HEAD = "ref: refs/heads/main\tHEAD\nabc123\tHEAD\n"
@@ -31,12 +31,8 @@ def _shell(tmp_path: Path, **overrides: str | BaseException) -> Shell:
     )
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def _start(tmp_path: Path, shell: Shell, public: bool = True, **kwargs) -> None:
-    start(25, shell, home=home_for(proto_projects(tmp_path, public)), say=_quiet, **kwargs)
+    start(25, shell, home=home_for(proto_projects(tmp_path, public)), say=quiet, **kwargs)
 
 
 def test_start_pushes_the_integration_branch_from_the_remote_default_branch(tmp_path):

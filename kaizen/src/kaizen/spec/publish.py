@@ -31,7 +31,7 @@ import argparse
 import tempfile
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check, leak_check_text
 from kaizen.shared.pr import enable_auto_merge, with_footer
@@ -192,7 +192,7 @@ def publish(
     return number
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "publish",
         help="publish a grilled local spec and ship its domain-doc edits",

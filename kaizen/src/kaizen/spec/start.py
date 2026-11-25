@@ -10,7 +10,7 @@ from kaizen.shared.branch import (
     integration_branch,
     remote_default_branch,
 )
-from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.registry import Project, resolve_current
@@ -117,7 +117,7 @@ def _push_local(
     say(f"deleted the local {branch}, which origin now holds")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "start",
         help="create a spec's integration branch, pushed or (--local) local only",

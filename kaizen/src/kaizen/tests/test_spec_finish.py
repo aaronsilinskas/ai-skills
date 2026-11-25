@@ -18,6 +18,7 @@ from kaizen.tests.ticket_shell import (
     Shell,
     failed,
     home_for,
+    quiet,
     sub_issue_json,
 )
 
@@ -57,12 +58,8 @@ def _shell(tmp_path: Path, **overrides: Reply) -> Shell:
     )
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def _finish(tmp_path: Path, shell: Shell, **kwargs) -> None:
-    finish(25, shell, home=home_for(_setup(tmp_path)), say=_quiet, **kwargs)
+    finish(25, shell, home=home_for(_setup(tmp_path)), say=quiet, **kwargs)
 
 
 def test_finish_deletes_the_local_integration_branch_then_prunes_its_stale_tracking_ref(tmp_path):

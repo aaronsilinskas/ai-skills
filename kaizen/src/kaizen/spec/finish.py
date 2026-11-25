@@ -11,7 +11,7 @@ from kaizen.shared.branch import (
     origin_has_branch,
     prune_tracking_ref,
 )
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, merged_pr
 from kaizen.shared.registry import resolve_current
@@ -64,7 +64,7 @@ def finish(
     say(MAIN_CHECKOUT_NOTE)
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "finish",
         help="delete a spec's local integration branch once its PR has merged",
