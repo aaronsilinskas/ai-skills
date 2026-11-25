@@ -3,7 +3,6 @@
 git and gh are replaced by a recording runner, so no repo, network or GitHub is touched.
 """
 
-import argparse
 import json
 import os
 import subprocess
@@ -13,8 +12,9 @@ from pathlib import Path
 import pytest
 
 import kaizen
-from kaizen.shared.cli import GROUPS, main
+from kaizen.shared.cli import main
 from kaizen.shared.version import Version
+from kaizen.tests.commands import command_parsers
 from kaizen.tests.ticket_shell import (
     RELAY,
     SITE,
@@ -483,36 +483,14 @@ def test_a_malformed_marker_is_refused_before_any_command_runs(tmp_path, capsys)
     assert shell.calls == []
 
 
-def _commands() -> dict[str, argparse.ArgumentParser]:
-    """Every command's parser, keyed by its group and name, such as ``"ticket start"``."""
-    parsers: dict[str, argparse.ArgumentParser] = {}
-    for group, (_, commands) in GROUPS.items():
-        subparsers = argparse.ArgumentParser().add_subparsers()
-        for module in commands:
-            module.add_parser(subparsers)
-        parsers |= {f"{group} {name}": command for name, command in subparsers.choices.items()}
-    return parsers
-
-
 def test_home_init_is_the_only_command_that_runs_without_a_home():
     exempt = [
-        name for name, command in _commands().items() if command.get_default("needs_home") is False
+        name
+        for name, command in command_parsers().items()
+        if command.get_default("needs_home") is False
     ]
 
     assert exempt == ["home init"]
-
-
-def test_only_the_query_only_commands_lack_a_dry_run():
-    commands = _commands()
-    without_dry_run = {
-        name
-        for name, command in commands.items()
-        if not any("--dry-run" in action.option_strings for action in command._actions)
-    }
-
-    hooks = {name for name in commands if name.startswith("hook ")}
-    query_only = {"project leak-check", "pr wait", "issue show", "spec status", "ticket diff"}
-    assert without_dry_run == hooks | query_only
 
 
 def test_kaizen_help_lists_the_home_group(tmp_path, capsys):
