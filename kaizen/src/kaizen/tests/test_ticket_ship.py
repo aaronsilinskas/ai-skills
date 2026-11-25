@@ -964,7 +964,7 @@ def test_ship_refuses_a_pr_body_pointing_outside_the_home_before_any_gh_call(tmp
     body.write_text(f"Why.\nsee {TILDE}/dev/elsewhere/notes\n")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body line 4: "):
+    with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body as sent line 4: "):
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("gh")
@@ -975,7 +975,7 @@ def test_ship_refuses_a_pr_body_with_an_own_reference_for_a_public_project(tmp_p
     body.write_text("part of /fixture/home/docs\n")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match="PR body line 3: own reference /fixture/home"):
+    with pytest.raises(RefusalError, match="PR body as sent line 3: own reference /fixture/home"):
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("gh")
@@ -1025,7 +1025,9 @@ def test_ship_refuses_a_pr_body_holding_a_denied_pattern(tmp_path, dry_run):
     body.write_text(f"Fixes the {DENIED.title()} board.\n")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match=f"PR body line 3: denied pattern {DENIED.title()}"):
+    with pytest.raises(
+        RefusalError, match=f"PR body as sent line 3: denied pattern {DENIED.title()}"
+    ):
         ship(
             worktree,
             "Fix the board",
@@ -1148,7 +1150,7 @@ def test_a_denied_pattern_matching_only_the_footer_refuses_before_any_gh_call(
     deny(projects, denied="Generated with")
     shell = _shell(prs=prs)
 
-    with pytest.raises(RefusalError, match="PR body line 5: denied pattern Generated with"):
+    with pytest.raises(RefusalError, match="PR body as sent line 5: denied pattern Generated with"):
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []
@@ -1162,7 +1164,7 @@ def test_a_denied_pattern_matching_both_forms_of_the_closes_line_refuses_before_
     deny(projects, denied="closes")
     shell = _shell()
 
-    with pytest.raises(RefusalError, match=r"match both forms of the line that closes #1358"):
+    with pytest.raises(RefusalError, match=r"deny both forms of the line that closes #1358"):
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []
@@ -1189,3 +1191,11 @@ def test_a_body_closing_the_issue_by_its_full_reference_gets_no_closes_line(tmp_
     ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\nFixes owner/proto#1358\n\n{FOOTER}\n"]
+
+
+def test_a_refusal_names_every_pattern_denying_either_form_of_the_closes_line(tmp_path):
+    projects, worktree, body = _setup(tmp_path)
+    deny(projects, denied=r"\s#1358, proto#1358")
+
+    with pytest.raises(RefusalError, match=r"pattern\(s\) \\s#1358, proto#1358 deny both"):
+        ship(worktree, TITLE, body, _shell(), home=home_for(projects), say=_quiet)

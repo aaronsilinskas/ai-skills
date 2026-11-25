@@ -2,7 +2,6 @@
 PR."""
 
 import argparse
-import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +13,7 @@ from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.pr import (
     auto_merge_on,
+    closes_issue,
     create_pr,
     disable_auto_merge,
     enable_auto_merge,
@@ -70,7 +70,7 @@ def ship(
     ticket = resolve_ticket_worktree(worktree, run, home.registry)
     refuse_spec_ticket(ticket)
     project, branch, issue = ticket.project, ticket.branch, ticket.issue
-    closes = [] if issue is None or _closes(text, project.github, issue) else [issue]
+    closes = [] if issue is None or closes_issue(text, project.github, issue) else [issue]
     body = pr_body(title, text, project, home, closes=closes)
     say(f"{project.name} ticket worktree on {branch}")
     refuse_uncommitted(
@@ -235,11 +235,3 @@ def _push(ticket: TicketWorktree, run: Runner) -> None:
             f"rebasing or force-pushing: git fetch origin && git merge origin/{branch} && "
             f"git merge origin/{default}, then ship again",
         ) from exc
-
-
-def _closes(body: str, github: str, issue: int) -> bool:
-    """Whether *body* already closes *issue* of *github* with one of GitHub's closing keywords,
-    by its short or its full reference."""
-    keyword = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
-    ref = rf"(?:{re.escape(github)})?#{issue}"
-    return re.search(rf"\b{keyword}:?\s+{ref}\b", body, re.IGNORECASE) is not None

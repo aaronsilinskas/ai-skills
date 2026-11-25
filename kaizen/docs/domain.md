@@ -69,8 +69,8 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/issue_graph.py`: the issue reads and the parent and blocked-by edge writes the `issue`, `spec` and `ticket` groups share.
   It refuses an issue reference to a repo outside the home.
 - `shared/pr.py`: the GitHub PR steps the ship and finish commands share, ending each PR body with the home's PR footer unless that setting is empty.
-  `pr_body` builds the exact body a ship sends, its `Closes` lines and footer included, and leak-checks it with the title, so the text checked is the text sent.
-  When a project's denied pattern matches the `Closes #<n>` line kaizen writes, it writes `Closes <owner>/<repo>#<n>` instead, which GitHub also accepts; when the pattern matches both forms, it refuses, naming the pattern, since no body could close the issue.
+  A ship leak-checks the exact body it sends, `Closes` lines and footer included, since a denied pattern or leak rule must see every line GitHub gets.
+  A `Closes #<n>` line kaizen writes that a denied pattern matches is written as `Closes <owner>/<repo>#<n>` instead, which GitHub also accepts, rather than refused: kaizen wrote the line, so the user can't fix it in the body file, and only a pattern denying both forms is refused.
 - `shared/worktree.py`: worktree listing, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
 - `shared/command.py`: runs a project's shell command and maps the ticket's and base's outcomes to one of `kaizen ticket compare`'s verdicts.
 - `shared/comment_only.py`: the check that a change only deletes or shrinks Python comments and docstrings, which lets `ticket ship` auto-merge a comment-only ticket when the home and the project both turn that on.

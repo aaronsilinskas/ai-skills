@@ -1,10 +1,11 @@
 """The GitHub PR steps more than one command takes: finding, opening and updating a branch's PR."""
 
 import json
+import re
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TypedDict
+from typing import NewType, TypedDict
 
 from kaizen.shared.common import RefusalError, Runner
 from kaizen.shared.home import Home
@@ -12,10 +13,10 @@ from kaizen.shared.leak import leak_check_text
 from kaizen.shared.registry import Project
 
 
-def check_pr_text(title: str, body: str, project: Project, home: Home) -> None:
+def _check_pr_text(title: str, body: str, project: Project, home: Home) -> None:
     """Refuses when a PR's *title* or *body* for *project* points outside *home*, before any
     ``gh`` call sends them."""
-    texts = {"PR title": title, "PR body": body}
+    texts = {"PR title": title, "PR body as sent": body}
     leak_check_text(texts, home, public=project.public, denied=project.leak_deny)
 
 
@@ -111,7 +112,11 @@ def read_body(body_file: Path, what: str = "PR body") -> str:
         ) from exc
 
 
-def create_pr(github: str, base: str, head: str, title: str, body: str, run: Runner) -> str:
+PrBody = NewType("PrBody", str)
+"""A PR body as ``pr_body`` built and leak-checked it, the only body a PR step sends."""
+
+
+def create_pr(github: str, base: str, head: str, title: str, body: PrBody, run: Runner) -> str:
     """Opens a ready PR from *head* into *base* with *body*, as ``pr_body`` built it, and returns
     its URL."""
     create = ["gh", "-R", github, "pr", "create", "--base", base, "--head", head]
@@ -119,7 +124,7 @@ def create_pr(github: str, base: str, head: str, title: str, body: str, run: Run
     return out.strip().splitlines()[-1]
 
 
-def update_pr(github: str, url: str, title: str, body: str, run: Runner) -> None:
+def update_pr(github: str, url: str, title: str, body: PrBody, run: Runner) -> None:
     """Replaces the title and body of the open PR at *url*; *body* is as ``pr_body`` built it."""
     edit = ["gh", "-R", github, "pr", "edit", url, "--title", title, "--body-file"]
     _run_with_body(edit, body, run)
@@ -127,7 +132,7 @@ def update_pr(github: str, url: str, title: str, body: str, run: Runner) -> None
 
 def pr_body(
     title: str, text: str, project: Project, home: Home, *, closes: Sequence[int] = ()
-) -> str:
+) -> PrBody:
     """The exact PR body a ship sends for *project*, refused before it is sent when it or the
     *title* points outside *home*.
 
@@ -135,23 +140,33 @@ def pr_body(
     file's) ending with the home's PR footer (``with_footer``). It is the one place a ship's
     body is built, so the text the leak check reads is the text GitHub gets.
     """
-    lines = "".join(f"{closing_line(project, issue)}\n" for issue in closes)
+    lines = "".join(f"{_closing_line(project, issue)}\n" for issue in closes)
     body = (f"{lines}\n" if lines else "") + with_footer(text, home.pr_footer)
-    check_pr_text(title, body, project, home)
-    return body
+    _check_pr_text(title, body, project, home)
+    return PrBody(body)
 
 
-def closing_line(project: Project, issue: int) -> str:
+def closes_issue(body: str, github: str, issue: int) -> bool:
+    """Whether *body* already closes *issue* of *github* with one of GitHub's closing keywords,
+    by either reference ``_closing_line`` writes: ``#<issue>`` or ``<owner>/<repo>#<issue>``."""
+    keyword = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
+    ref = rf"(?:{re.escape(github)})?#{issue}"
+    return re.search(rf"\b{keyword}:?\s+{ref}\b", body, re.IGNORECASE) is not None
+
+
+def _closing_line(project: Project, issue: int) -> str:
     """The line that closes *issue*: ``Closes #<issue>``, or ``Closes <owner>/<repo>#<issue>``
-    when one of the project's denied patterns matches the short form; refuses when one matches
-    both, since no body could then close the issue."""
+    when one of the project's denied patterns matches the short form; refuses when the two forms
+    are both denied, since no body could then close the issue."""
     forms = (f"Closes #{issue}", f"Closes {project.github}#{issue}")
+    denied: list[str] = []
     for line in forms:
-        denied = [p.pattern for p in project.leak_deny if p.search(line)]
-        if not denied:
+        matching = [p.pattern for p in project.leak_deny if p.search(line)]
+        if not matching:
             return line
+        denied += [p for p in matching if p not in denied]
     raise RefusalError(
-        f"the project's denied pattern(s) {', '.join(denied)} match both forms of the line"
+        f"the project's denied pattern(s) {', '.join(denied)} deny both forms of the line"
         f" that closes #{issue}: {' and '.join(forms)}",
         f"narrow leak_deny on {project.page} so it allows one of them, then rerun",
     )
