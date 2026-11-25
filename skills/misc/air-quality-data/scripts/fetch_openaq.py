@@ -5,7 +5,7 @@ Queries official government monitoring stations worldwide. Particularly useful
 for countries with sparse PurpleAir coverage (Japan, Korea, Europe) where national
 environment ministries operate regulatory-grade PM2.5 monitors aggregated by OpenAQ.
 
-Reads OPENAQ_API_KEY from the environment or ~/.config/as-air-quality-data/.env.
+Reads OPENAQ_API_KEY from the environment or ~/.config/air-quality-data/.env.
 Outputs JSON to stdout. Requires no third-party packages (uses urllib).
 
 Register for a free API key at https://openaq.org/register
@@ -22,7 +22,7 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
-ENV_FILE = Path.home() / ".config" / "as-air-quality-data" / ".env"
+ENV_FILE = Path.home() / ".config" / "air-quality-data" / ".env"
 BASE_URL = "https://api.openaq.org/v3"
 PM25_PARAMETER_ID = 2  # stable OpenAQ v3 ID for PM2.5
 

@@ -20,6 +20,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
+      # check.sh validates and tests the plugins only when the claude CLI is on the PATH.
+      # Dependabot doesn't update this pin, so bump it by hand.
+      - name: Install Claude Code
+        run: npm install --global @anthropic-ai/claude-code@2.1.332
+
       - name: Check command
         # The full leak check needs a home's facts, which no runner has, so it runs on the
         # contributor's machine.
