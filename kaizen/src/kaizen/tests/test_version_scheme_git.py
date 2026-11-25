@@ -28,9 +28,10 @@ def _commit(repo: Path, message: str) -> None:
 
 
 def _built_version(repo: Path, out: Path) -> str:
-    """The version of the wheel built from *repo*'s ``kaizen/``."""
+    """The version of the wheel built, through an sdist as the release builds it, from *repo*'s
+    ``kaizen/``."""
     subprocess.run(
-        ["uv", "build", "--wheel", "--no-sources", "--out-dir", str(out)],
+        ["uv", "build", "--no-sources", "--out-dir", str(out)],
         cwd=repo / "kaizen",
         check=True,
         capture_output=True,
