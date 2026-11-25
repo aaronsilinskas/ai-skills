@@ -1,6 +1,21 @@
 # agent-progress
 
-A Claude Code mod that shows what your subagents are doing. It needs no workflow skill: it tracks any subagent the session launches (`general-purpose`, `Explore`, plugin agents, forks).
+Hand a big job to a few subagents and the main session goes quiet: you can't see which ones are still running, which failed, or what they're costing until they report back.
+agent-progress puts that on screen while they work.
+It tracks any subagent the session launches (`general-purpose`, `Explore`, plugin agents, forks) and needs no workflow skill.
+
+## Install
+
+From the prompt of a Claude Code terminal session:
+
+```
+/plugin install agent-progress --marketplace aaronsilinskas/ai-skills
+```
+
+Answer `y` to add the marketplace, then pick a scope.
+The next time the session launches a subagent, a progress bar appears above the prompt.
+
+## What you see
 
 - **Progress bar above the prompt.** It appears when a subagent starts and shows how many have finished, how many are running, and how many failed. The `Agents ×N` button opens the panel and `✕` hides the bar. Once the work is done the bar turns green and goes away with your next prompt.
 - **Agents panel** (`/agent-progress` toggles it, `/agent-progress open` opens it without toggling, `/agent-progress clear` forgets finished agents): running, finished and planned subagents, each with its type, model and effort, its own step progress, context fill, tokens, estimated cost and elapsed time. A Compact button shrinks it to one line per agent.

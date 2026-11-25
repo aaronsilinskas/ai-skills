@@ -1,10 +1,21 @@
 # session-board
 
-See every Claude Code session on this machine at once, from any of them.
+Run a few Claude Code sessions at once and one of them is always sitting on a permission prompt or a question in a tab you aren't looking at.
+session-board shows every session on this machine from any of them: which are working, which need you, which finished.
+
+## Install
+
+From the prompt of a Claude Code terminal session:
 
 ```
 /plugin install session-board --marketplace aaronsilinskas/ai-skills
 ```
+
+Answer `y` to add the marketplace, then pick a scope.
+Install it at user scope, or in each project you work in, so every session joins the board.
+Once two sessions run with it, each shows a band above the prompt counting the others.
+
+## What you see
 
 Each session writes a small status file, `<session-id>.json`, to a `session-board` folder in your Claude Code configuration folder (`.claude` in your home), and reads everyone else's every few seconds.
 
