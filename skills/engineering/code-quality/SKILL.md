@@ -1,6 +1,6 @@
 ---
 name: code-quality
-description: "Quality bar for production source: readability, right-sized optimization, public-API discipline, type coverage. Use as an implementation review pass."
+description: "Quality bar for production source: readability, right-sized optimization, public-API discipline, type coverage. Use to review a file or function against this bar; code-review owns reviewing a branch's diff against standards and spec."
 argument-hint: "file or function to review"
 ---
 

@@ -39,6 +39,11 @@ exclude = ["src/kaizen/tests"]
 [tool.hatch.build.targets.sdist]
 only-include = ["src", "README.md", "pyproject.toml"]
 
+# The LICENSE sits at the repo root, outside kaizen/, so the sdist copies it in, where the wheel
+# built from that sdist finds it by hatchling's default license-files patterns.
+[tool.hatch.build.targets.sdist.force-include]
+"../LICENSE" = "LICENSE"
+
 # Reinstall the editable package when the commit or tags change, so its version stays current.
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]

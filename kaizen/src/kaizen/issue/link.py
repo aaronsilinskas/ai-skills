@@ -3,7 +3,7 @@ repos."""
 
 import argparse
 
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
     EdgeWrite,
@@ -84,7 +84,7 @@ def link(
             say(f"added: {edge}")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "link",
         help="add an issue's parent and blocked-by edges, in one repo or across the home's repos",

@@ -7,7 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from kaizen.shared.common import RefusalError, Runner, Say, StepFailedError, run_or_refuse
+from kaizen.shared.common import (
+    RefusalError,
+    Runner,
+    Say,
+    StepFailedError,
+    Subparsers,
+    run_or_refuse,
+)
 from kaizen.shared.home import (
     ENV_VAR,
     MARKER,
@@ -438,7 +445,7 @@ def _steps(new: NewHome, version: Version) -> list[Step]:
     ]
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "init",
         help="make the current git repo a new home",

@@ -6,13 +6,12 @@ is not read, since telling it from a string needs the language's own tokenizer. 
 language not listed here has no comments to read.
 """
 
-import io
-import tokenize
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import PurePath
 
 from kaizen.hook.common import Finding, read_text
+from kaizen.shared.python_comments import python_comments
 
 PYTHON = (".py", ".pyi")
 
@@ -60,22 +59,13 @@ def comments(name: str) -> Iterator[Comment]:
     if text is None:
         return
     if suffix in PYTHON:
-        yield from _python_comments(text)
+        for comment in python_comments(text):
+            yield Comment(comment.line, comment.text.strip(), "#")
         return
     prefix = LINE_PREFIX[suffix]
     for number, line in enumerate(text.splitlines(), start=1):
         if line.lstrip().startswith(prefix):
             yield Comment(number, line.strip(), prefix)
-
-
-def _python_comments(text: str) -> Iterator[Comment]:
-    try:
-        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
-    except (tokenize.TokenError, SyntaxError):
-        return
-    for token in tokens:
-        if token.type == tokenize.COMMENT:
-            yield Comment(token.start[0], token.string.strip(), "#")
 
 
 def comment_findings(

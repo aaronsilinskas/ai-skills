@@ -49,7 +49,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
     IssueRef,
@@ -276,7 +276,7 @@ def read_back(numbers: dict[str, int], run: Runner) -> list[str]:
     return rows
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "publish",
         help="publish a batch of tickets as sub-issues of their spec",

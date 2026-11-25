@@ -6,7 +6,7 @@ import subprocess
 
 from kaizen.hook.common import add_files_argument
 from kaizen.shared.branch import default_branch
-from kaizen.shared.common import RefusalError, Runner
+from kaizen.shared.common import RefusalError, Runner, Subparsers
 from kaizen.shared.home import Home
 
 
@@ -24,7 +24,7 @@ def refuse_protected_branch(run: Runner, branches: list[str] | None) -> None:
         )
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "no-commit-to-branch",
         help="refuse a commit on the default branch, or on the branches named",

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from kaizen.shared.branch import find_integration_branch, integration_branch, parse_ticket_branch
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import IssueRef, LinkedIssue
 from kaizen.shared.registry import Project, resolve_current
@@ -246,7 +246,7 @@ def _as_json(
     }
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "status",
         help="print a spec's tickets and its frontier",

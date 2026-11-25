@@ -3,7 +3,7 @@
 import argparse
 import subprocess
 
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.labels import Label, repo_labels
 from kaizen.shared.registry import Project, all_projects, resolve
@@ -83,7 +83,7 @@ def _create_label(repo: str, label: Label, run: Runner, say: Say) -> bool:
     return True
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "labels",
         help="create the workflow labels a project's GitHub repo lacks",

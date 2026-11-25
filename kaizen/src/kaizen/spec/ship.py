@@ -10,7 +10,7 @@ from kaizen.shared.branch import (
     integration_branch,
     remote_default_branch,
 )
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.pr import create_pr, open_pr, pr_body, read_body, update_pr
@@ -89,7 +89,7 @@ def ship(
     return Shipped(url)
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "ship",
         help="open (or update) a spec's PR, closing the spec and its integrated tickets",

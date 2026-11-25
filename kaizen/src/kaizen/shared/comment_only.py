@@ -8,10 +8,10 @@ cut-and-cite edit may keep one useful sentence in a file while the change as a w
 
 import ast
 import copy
-import io
-import tokenize
 from collections.abc import Iterator
 from typing import NamedTuple
+
+from kaizen.shared.python_comments import python_comments
 
 
 class FileChange(NamedTuple):
@@ -56,11 +56,7 @@ def _without_docstrings(tree: ast.Module) -> str:
 
 def _prose_length(source: str, tree: ast.Module) -> int:
     """The length of *source*'s comments, trimmed, plus its docstrings without whitespace."""
-    comments = sum(
-        len(token.string.lstrip("#").strip())
-        for token in tokenize.generate_tokens(io.StringIO(source).readline)
-        if token.type == tokenize.COMMENT
-    )
+    comments = sum(len(comment.text.lstrip("#").strip()) for comment in python_comments(source))
     docstrings = sum(
         len("".join(text.split()))
         for _, _, block in _blocks(tree)

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from kaizen.shared.command import VERDICT_MEANING, Verdict, run_from, verdict
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.registry import base_ref, fetch_base, resolve_ticket_worktree, uncommitted
 from kaizen.shared.worktree import link_ignored_paths, scratch_worktree
@@ -76,7 +76,7 @@ def compare(
     return outcome
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "compare",
         help="run a command on a ticket and on its base, and print a verdict",

@@ -8,22 +8,19 @@ from pathlib import Path
 
 from kaizen.shared.branch import fast_forward_main_checkout
 from kaizen.shared.common import run_subprocess
-
-
-def _git(*args: str | Path) -> str:
-    return run_subprocess(["git", *map(str, args)])
+from kaizen.tests.real_git import git
 
 
 def _commit(repo: Path, name: str, text: str) -> None:
     (repo / name).write_text(text)
-    _git("-C", repo, "add", name)
-    _git("-C", repo, "commit", "-q", "-m", f"Write {name}")
+    git("-C", repo, "add", name)
+    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
 
 
 def _clone(origin: Path, dest: Path) -> Path:
-    _git("clone", "-q", origin, dest)
-    _git("-C", dest, "config", "user.name", "Test")
-    _git("-C", dest, "config", "user.email", "test@example.com")
+    git("clone", "-q", origin, dest)
+    git("-C", dest, "config", "user.name", "Test")
+    git("-C", dest, "config", "user.email", "test@example.com")
     return dest
 
 
@@ -36,29 +33,29 @@ class Repos:
     def merge(self, name: str, text: str) -> None:
         """Moves ``origin/main`` from the other clone, as a merged PR does."""
         _commit(self.other, name, text)
-        _git("-C", self.other, "push", "-q", "origin", "main")
+        git("-C", self.other, "push", "-q", "origin", "main")
 
     def fetch(self) -> None:
         """Fetches into the main checkout, so a dry run sees the merge as last fetched."""
-        _git("-C", self.checkout, "fetch", "-q", "origin")
+        git("-C", self.checkout, "fetch", "-q", "origin")
 
     def head(self, ref: str = "HEAD") -> str:
-        return _git("-C", self.checkout, "rev-parse", ref).strip()
+        return git("-C", self.checkout, "rev-parse", ref).strip()
 
     def origin_main(self) -> str:
-        return _git("-C", self.origin, "rev-parse", "refs/heads/main").strip()
+        return git("-C", self.origin, "rev-parse", "refs/heads/main").strip()
 
     def short(self, commit: str) -> str:
-        return _git("-C", self.origin, "rev-parse", "--short", commit).strip()
+        return git("-C", self.origin, "rev-parse", "--short", commit).strip()
 
 
 def _repos(tmp_path: Path) -> Repos:
     """A main checkout on ``main`` at origin's tip, and another clone to push merges from."""
     origin = tmp_path / "origin.git"
-    _git("init", "-q", "--bare", "-b", "main", origin)
+    git("init", "-q", "--bare", "-b", "main", origin)
     checkout = _clone(origin, tmp_path / "proto")
     _commit(checkout, "README", "proto\n")
-    _git("-C", checkout, "push", "-q", "origin", "main")
+    git("-C", checkout, "push", "-q", "origin", "main")
     other = _clone(origin, tmp_path / "other")
     return Repos(origin, checkout, other)
 
@@ -137,20 +134,20 @@ def test_an_incoming_file_that_is_untracked_locally_skips_and_leaves_the_checkou
 def test_a_checkout_on_another_branch_is_skipped_and_its_default_branch_left_unmoved(tmp_path):
     repos = _repos(tmp_path)
     old = repos.head("main")
-    _git("-C", repos.checkout, "switch", "-q", "-c", "spike")
+    git("-C", repos.checkout, "switch", "-q", "-c", "spike")
     repos.merge("feature.txt", "merged\n")
 
     lines = _fast_forward(repos)
 
     assert repos.head("main") == old
-    assert _git("-C", repos.checkout, "branch", "--show-current").strip() == "spike"
+    assert git("-C", repos.checkout, "branch", "--show-current").strip() == "spike"
     _assert_skipped_naming_the_manual_command(repos, lines, "on spike, not main")
 
 
 def test_a_detached_checkout_is_skipped_and_its_default_branch_left_unmoved(tmp_path):
     repos = _repos(tmp_path)
     old = repos.head("main")
-    _git("-C", repos.checkout, "switch", "-q", "--detach")
+    git("-C", repos.checkout, "switch", "-q", "--detach")
     repos.merge("feature.txt", "merged\n")
 
     lines = _fast_forward(repos)
@@ -206,7 +203,7 @@ def test_a_dry_run_does_not_fetch(tmp_path):
 
 def test_a_dry_run_says_why_it_would_skip(tmp_path):
     repos = _repos(tmp_path)
-    _git("-C", repos.checkout, "switch", "-q", "-c", "spike")
+    git("-C", repos.checkout, "switch", "-q", "-c", "spike")
     repos.merge("feature.txt", "merged\n")
 
     lines = _fast_forward(repos, dry_run=True)
@@ -232,7 +229,7 @@ def test_a_dry_run_says_it_would_skip_when_the_merge_would_overwrite_local_chang
 
 def test_an_unreachable_origin_is_skipped_rather_than_failing(tmp_path):
     repos = _repos(tmp_path)
-    _git("-C", repos.checkout, "remote", "set-url", "origin", tmp_path / "gone.git")
+    git("-C", repos.checkout, "remote", "set-url", "origin", tmp_path / "gone.git")
 
     lines = _fast_forward(repos)
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 from kaizen.shared.branch import is_ancestor
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.registry import fetch_base, resolve_ticket_worktree, uncommitted
 
@@ -68,7 +68,7 @@ def diff(
         )
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "diff",
         help="print a ticket's commits, stat and diff against its base",
