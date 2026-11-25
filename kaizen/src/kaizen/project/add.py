@@ -40,6 +40,7 @@ from kaizen.shared.registry import (
     parse_page_text,
     starter_readme,
     with_page_listed,
+    wrap,
 )
 
 Ask = Callable[[str], str]
@@ -413,8 +414,27 @@ def terminal() -> Ask | None:
         return None
 
 
+_HELP_WIDTH = 79
+_FIELDS_BY_KEY = {field.key: field for field in FIELDS}
+
+
+def _keys_help() -> str:
+    """The help's list of the keys: each one's status, flag and answers, and its full
+    explanation, from ``KEYS`` and ``FIELDS``."""
+    entries = []
+    for key in KEYS:
+        field = _FIELDS_BY_KEY.get(key.name)
+        given = (
+            f"{field.flag}: {field.options}"
+            if field
+            else "PATH: absolute or ~/ path, default: the current directory"
+        )
+        explanation = wrap(f"{key.summary} {key.detail}", _HELP_WIDTH, "    ", "    ")
+        entries.append(f"  {key.name} ({key.status})\n    {given}\n{explanation}")
+    return "The keys a page sets, in page order:\n\n" + "\n\n".join(entries)
+
+
 def add_parser(subparsers: Subparsers) -> None:
-    keys = "".join(f"  {key.name}: {key.summary}\n" for key in KEYS)
     required = ", ".join(field.key for field in FIELDS if field.required)
     parser = subparsers.add_parser(
         "add",
@@ -433,13 +453,13 @@ def add_parser(subparsers: Subparsers) -> None:
             "no flag gives, offering the detected value or default; Enter accepts it. Without "
             "a terminal it never prompts, and refuses, listing each required key "
             f"({required}) with neither a flag nor a detected value. "
-            "The keys:\n"
-            f"{keys}\n"
+            "The keys are explained after the options.\n\n"
             "It refuses, before writing anything: a name that already has a page, a path that "
             "is not a git checkout's root or that a page already registers, a github that is "
             "not owner/repo, any value the registry would refuse, and settings it can't merge "
             "into. It creates no labels: run `kaizen project labels NAME` next."
         ),
+        epilog=_keys_help(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("name", help="the project's name: its page is NAME.md in the registry")

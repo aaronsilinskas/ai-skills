@@ -445,3 +445,39 @@ def test_a_closed_terminal_refuses_and_writes_nothing(tmp_path):
     with pytest.raises(RefusalError, match="no answer for github"):
         add_project(_shell(checkout), home_for(home / "projects"), "tool", checkout, {}, ask=closed)
     assert not (home / "projects" / "tool.md").exists()
+
+
+def _help(capsys) -> str:
+    with pytest.raises(SystemExit):
+        main(["project", "add", "--help"], cwd=Path.cwd(), env={})
+    return " ".join(capsys.readouterr().out.split())
+
+
+def test_the_help_explains_every_key_in_full(capsys):
+    out = _help(capsys)
+
+    for key in KEYS:
+        assert f"{key.name} ({key.status})" in out
+        assert f"{key.summary} {key.detail}" in out
+
+
+def test_the_help_gives_each_keys_flag_and_the_answers_it_takes(capsys):
+    out = _help(capsys)
+
+    assert "--code-paths: comma-separated paths" in out
+    assert "--public or --private: true/false" in out
+    assert "PATH: absolute or ~/ path, default: the current directory" in out
+
+
+def test_the_help_states_the_path_and_glob_syntax(capsys):
+    out = _help(capsys)
+
+    for rule in [
+        "An entry ending in `/` covers everything under that directory",
+        "`*` and `?` never cross `/`",
+        "`**` as a whole segment matches any number of directories",
+        "a glob ending in `/` covers everything under each directory it matches",
+        "Brackets are literal",
+        "as in `code_paths`",
+    ]:
+        assert rule in out
