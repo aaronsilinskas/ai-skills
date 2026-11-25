@@ -16,6 +16,7 @@ from kaizen.shared.home import (
     refuse_old_marker_copy,
     with_synced_version,
 )
+from kaizen.shared.registry import invalid_pages
 from kaizen.shared.synced import (
     OVERLAY,
     SETTINGS_SHAPE,
@@ -124,6 +125,9 @@ def _text(current: bytes | None) -> str | None:
 
 
 IN_STEP = "every synced file and setting is in step"
+PAGE_FIX = "fix each page as its line says"
+"""The fix a failed ``--check`` gives for invalid registry pages: each page's own refusal, printed
+on its ``invalid:`` line, names the key and its fix."""
 
 
 def sync_home(
@@ -194,19 +198,28 @@ def _recorded_version(home: Home, command: str, fix: str) -> Version:
 
 
 def check_home(home: Home, *, say: Say = print) -> None:
-    """Prints each of *home*'s ``changes`` as a diff and refuses, naming them all, when there is
-    any. Writes nothing, and renders for the synced version *home* records, the release its CI
-    installs; refuses when it records none."""
+    """Prints each invalid registry page of *home* with its problem, then each of its
+    ``changes`` as a diff, and refuses, naming them all, when there is any. Writes nothing, and
+    renders for the synced version *home* records, the release its CI installs; refuses when it
+    records none. The marker itself was validated when *home* was found."""
+    invalid = invalid_pages(home.registry)
+    for problem in invalid:
+        say(f"invalid: {problem.refusal}")
     version = _recorded_version(home, "home sync --check", "run `kaizen home sync`")
     found = changes(home, version)
     for change in found:
         say(f"differs: {change.relative}\n{change.diff()}")
+    problems, fixes = [], []
+    if invalid:
+        pages = ", ".join(problem.page.relative_to(home.root).as_posix() for problem in invalid)
+        problems.append(f"{len(invalid)} registry page(s) are invalid: {pages}")
+        fixes.append(PAGE_FIX)
     if found:
-        raise RefusalError(
-            f"home sync --check: {len(found)} file(s) differ from what sync writes: "
-            + ", ".join(change.relative for change in found),
-            CHECK_FIX,
-        )
+        files = ", ".join(change.relative for change in found)
+        problems.append(f"{len(found)} file(s) differ from what sync writes: {files}")
+        fixes.append(CHECK_FIX)
+    if problems:
+        raise RefusalError("home sync --check: " + "; ".join(problems), "; ".join(fixes))
     say(f"home sync --check: {IN_STEP}")
 
 
@@ -254,7 +267,16 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "which is the release a home's CI runs it with: it passes when nothing would change, "
             "and otherwise prints each difference and fails, naming every file, with the fix "
             f'"{CHECK_FIX}". It also fails when the marker records no synced version. It writes '
-            "nothing and makes no network call, so a home's CI can run it."
+            "nothing and makes no network call, so a home's CI can run it.\n\n"
+            "--check also validates the home marker and every registry page, as the commands "
+            f"that read them do: {MARKER} must parse as TOML, hold its required keys and name a "
+            "registry folder that exists, or the run is refused before anything else; each page "
+            "(every .md in the registry folder but README.md) must parse as every command that "
+            "reads it parses it: a frontmatter block of key: value lines, its required keys "
+            "present and every key well formed, as the registry folder's README lists them. "
+            "It lists each invalid page "
+            "with its problem beside the differing files, so one run shows everything, and "
+            f'fails with the fix "{PAGE_FIX}".'
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -266,7 +288,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         "--check",
         action="store_true",
         dest="check",
-        help="fail, listing every difference, unless the home is in step; write nothing",
+        help="fail, listing every difference and every invalid registry page, unless the home is "
+        "in step and its marker and pages are valid; write nothing",
     )
     parser.add_argument(
         "--allow-dev",
