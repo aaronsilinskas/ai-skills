@@ -48,9 +48,6 @@ type ProgressInput = {
 
 type StepInput = { done?: unknown; total?: unknown; note?: unknown }
 
-// ---------------------------------------------------------------------------
-// Small helpers
-
 const clip = (s: string, max: number): string => (s.length > max ? s.slice(0, Math.max(1, max - 1)) + '…' : s)
 
 const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
@@ -81,7 +78,6 @@ const textBar = (ratio: number, width: number): string => {
   return '█'.repeat(filled) + '░'.repeat(Math.max(0, width - filled))
 }
 
-// ---------------------------------------------------------------------------
 // Models: names, context windows and an estimated price.
 
 /** "claude-opus-5-5" → "Opus 5.5"; anything unrecognised shows as it came. */
@@ -148,7 +144,6 @@ const costOf = (model: string, u: Usage, isRequest: boolean): number => {
   )
 }
 
-// ---------------------------------------------------------------------------
 // Runs: what the band tracks.
 
 const newRun = (title: string, isReported: boolean, at: number): Run => ({
@@ -221,9 +216,6 @@ const plannedOf = (r: Run | null, list: AgentRun[]): Planned[] => {
   return r.tasks.map((t, i) => ({ ...t, n: i + 1 })).filter(t => !started.has(norm(t.title)))
 }
 
-// ---------------------------------------------------------------------------
-// Agent rows
-
 const elapsed = (a: AgentRun, at: number): number => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt
 
 const ctxPct = (a: AgentRun): number =>
@@ -252,7 +244,6 @@ const totals = (list: AgentRun[], at: number) => {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Desktop drawings. The desktop wraps sibling elements of a band onto new
 // lines, so the band's title, bar and label are one SVG.
 
@@ -330,9 +321,6 @@ const rowBarSvg = (W: number, ratio: number, color: string | null): string =>
 <rect${color ? '' : ' class="m"'} width="${Math.round(W * Math.min(1, Math.max(0, ratio)))}" height="6" rx="3"${color ? ` fill="${color}"` : ''}/>
 </svg>`
 
-// ---------------------------------------------------------------------------
-// Pane open/close
-
 async function togglePane($: EngineInterface): Promise<boolean> {
   if ((await $.ui.panes()).some(p => p.id === PANE)) {
     await $.ui.close({ id: PANE })
@@ -365,8 +353,6 @@ async function settleAutoRun($: EngineInterface, isMainBusy: boolean): Promise<v
       : prev,
   )
 }
-
-// ---------------------------------------------------------------------------
 
 /**
  * The `.catch` of every hook that gates a prompt, a tool call or a command: a
@@ -605,9 +591,6 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // -------------------------------------------------------------------------
-  // The band above the prompt
-
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const r = await read($, run)
     if (r === null || e.props.hasSurvey) return next(e)
@@ -665,9 +648,6 @@ export const register: Register = (on, options) => {
       </Box>
     )
   })
-
-  // -------------------------------------------------------------------------
-  // The agents pane
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
