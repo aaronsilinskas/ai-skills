@@ -35,12 +35,8 @@ class _Shell:
         status: str = "",
         grep: str = "",
         toplevel: str = TOPLEVEL,
-        added: str = "",
-        docs_added: str = "",
     ) -> None:
         self.toplevel = toplevel
-        self.added = added
-        self.docs_added = docs_added
         self.calls: list[list[str]] = []
         self.bodies: list[str] = []
         self._answers: dict[tuple[str, ...], str] = {
@@ -56,10 +52,6 @@ class _Shell:
         self.calls.append(cmd)
         if cmd[0] == "git" and "grep" in cmd:
             return self._answers[("git", "grep")]
-        if cmd[0] == "git" and "--merge-base" in cmd:
-            return self.added
-        if cmd[0] == "git" and "--no-color" in cmd:
-            return self.docs_added
         if "--show-toplevel" in cmd:
             return self.toplevel + "\n"
         if cmd[1:3] == ["issue", "create"]:
