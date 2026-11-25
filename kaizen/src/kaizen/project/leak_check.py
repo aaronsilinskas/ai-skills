@@ -47,7 +47,7 @@ def leak_check_home_clone(run: Runner, root: Path, *, home: Home, say: Say = pri
     project, checkout = resolve_home_checkout(run, root, home)
     base = _fetched_default(checkout, run) if project.leak_deny else None
     # The rules allow the home's root and its ancestors: take the registered root, not the
-    # clone's, so a CI path such as ~/work allows nothing the check at that root would refuse.
+    # clone's, so the CI runner's folders above the clone allow nothing the check would refuse.
     registered = replace(home, root=project.path)
     _check(run, registered, project, checkout, staged=False, base=base, say=say)
 
