@@ -260,3 +260,106 @@ def test_the_homes_footer_ends_the_domain_docs_pr_body(tmp_path):
 
 def test_an_empty_footer_leaves_the_domain_docs_pr_body_without_a_footer_line(tmp_path):
     assert _publish_in_home(tmp_path, 'pr_footer = ""\n') == DOCS_PR_BODY
+
+
+MAP = "# Glossary Map\n\n## Contexts\n\n- [Ctx](./ctx/GLOSSARY.md): a context\n"
+
+
+class _PathspecShell(_Shell):
+    """A ``_Shell`` whose ``git status`` reports only those of *changed* that its pathspecs
+    match, as git does."""
+
+    def __init__(self, changed: list[str], toplevel: str) -> None:
+        super().__init__(toplevel=toplevel)
+        self._changed = changed
+
+    def __call__(self, cmd: list[str]) -> str:
+        if cmd[:2] == ["git", "status"]:
+            self.calls.append(cmd)
+            specs = cmd[cmd.index("--") + 1 :]
+            matched = [
+                p for p in self._changed if any(p == s or p.startswith(s + "/") for s in specs)
+            ]
+            return "".join(f"?? {p}\n" for p in matched)
+        return super().__call__(cmd)
+
+
+def _map_checkout(tmp_path: Path, glossary_map: str = MAP) -> Path:
+    checkout = tmp_path / "proto"
+    checkout.mkdir()
+    (checkout / "GLOSSARY-MAP.md").write_text(glossary_map)
+    return checkout
+
+
+def test_a_mapped_contexts_glossary_and_adrs_ship_on_the_domain_docs_branch(tmp_path):
+    checkout = _map_checkout(tmp_path)
+    changed = ["ctx/GLOSSARY.md", "ctx/docs/adr/0002-thing.md", "GLOSSARY.md", "docs/adr/0001-x.md"]
+    shell = _PathspecShell(changed, str(checkout))
+
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
+
+    (add,) = shell.ran("git", "add")
+    assert sorted(add[3:]) == sorted(changed)
+
+
+def test_a_mapped_contexts_code_and_domain_map_stay_out_of_the_domain_docs_branch(tmp_path):
+    checkout = _map_checkout(tmp_path)
+    changed = ["ctx/GLOSSARY.md", "ctx/docs/domain.md", "ctx/src/app.py", "ctx/docs/adr-notes.md"]
+    shell = _PathspecShell(changed, str(checkout))
+
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
+
+    assert shell.ran("git", "add") == [["git", "add", "--", "ctx/GLOSSARY.md"]]
+
+
+def test_a_mapped_contexts_changed_adr_pointing_outside_the_home_is_refused_before_any_gh_call(
+    tmp_path,
+):
+    checkout = _map_checkout(tmp_path)
+    adr = checkout / "ctx" / "docs" / "adr" / "0002-thing.md"
+    adr.parent.mkdir(parents=True)
+    adr.write_text(f"# Thing\nsee {TILDE}/elsewhere\n")
+    shell = _PathspecShell(["ctx/docs/adr/0002-thing.md"], str(checkout))
+
+    with pytest.raises(RefusalError, match=r"ctx/docs/adr/0002-thing\.md line 2: outside path"):
+        publish(
+            _spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout))
+        )
+
+    assert not shell.ran("gh")
+
+
+@pytest.mark.parametrize(
+    "glossary_map",
+    [
+        "# Glossary Map\n\n## Contexts\n\n- [Ctx](./ctx/README.md): not a glossary\n",
+        "# Glossary Map\n\n## Contexts\n",
+        "# Glossary Map\n\n- [Out](../other/GLOSSARY.md): outside the checkout\n",
+    ],
+)
+def test_a_map_without_a_context_glossary_falls_back_to_the_root_domain_docs(
+    tmp_path, glossary_map
+):
+    checkout = _map_checkout(tmp_path, glossary_map)
+    changed = ["GLOSSARY.md", "docs/adr/0001-x.md", "ctx/README.md", "ctx/docs/adr/0002-y.md"]
+    shell = _PathspecShell(changed, str(checkout))
+
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
+
+    assert shell.ran("git", "add") == [["git", "add", "--", "GLOSSARY.md", "docs/adr/0001-x.md"]]
+
+
+def test_the_dry_run_lists_a_mapped_contexts_changed_docs(tmp_path, capsys):
+    checkout = _map_checkout(tmp_path)
+    shell = _PathspecShell(["ctx/GLOSSARY.md", "ctx/docs/adr/0002-thing.md"], str(checkout))
+    home = cli_home(tmp_path)
+    (home / "projects" / "relay.md").write_text(
+        f"---\npath: {checkout}\ngithub: acme/relay\npublic: false\n---\n"
+    )
+
+    argv = ["spec", "publish", str(_spec(tmp_path)), "--dry-run"]
+    assert main(argv, run=shell, cwd=home, env={}) == 0
+
+    out = capsys.readouterr().out
+    assert "domain docs for the PR: ctx/GLOSSARY.md, ctx/docs/adr/0002-thing.md\n" in out
+    assert not shell.ran("gh")
