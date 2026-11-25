@@ -48,6 +48,7 @@ import re
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 from kaizen.shared.branch import (
     find_integration_branch,
@@ -194,14 +195,21 @@ def all_projects(projects_dir: Path) -> list[Project]:
     return [_parse(page.stem, page) for page in _pages(projects_dir)]
 
 
-def invalid_pages(projects_dir: Path) -> list[tuple[Path, RefusalError]]:
+class InvalidPage(NamedTuple):
+    """A registry page ``all_projects`` refuses, and its refusal."""
+
+    page: Path
+    refusal: RefusalError
+
+
+def invalid_pages(projects_dir: Path) -> list[InvalidPage]:
     """Each page that ``all_projects`` would refuse, in name order, with its refusal."""
     found = []
     for page in _pages(projects_dir):
         try:
             _parse(page.stem, page)
         except RefusalError as refusal:
-            found.append((page, refusal))
+            found.append(InvalidPage(page, refusal))
     return found
 
 
@@ -377,7 +385,7 @@ def _path_field(page: Path, fields: dict[str, str | bool], key: str) -> Path:
     if not path.is_absolute():
         raise RefusalError(
             f"{page}: field '{key}' is {value!r}, not an absolute path or ~/…",
-            f"set '{key}' to the full path, such as ~/<dir>/{page.stem}",
+            f"set '{key}' to a full path, written from / or ~/",
         )
     return path
 

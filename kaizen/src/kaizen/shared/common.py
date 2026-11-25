@@ -14,8 +14,6 @@ class RefusalError(Exception):
 
     def __init__(self, check: str, fix: str) -> None:
         super().__init__(f"{check}\n  fix: {fix}")
-        self.check = check
-        self.fix = fix
 
 
 class StepFailedError(Exception):

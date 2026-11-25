@@ -126,6 +126,8 @@ def _text(current: bytes | None) -> str | None:
 
 IN_STEP = "every synced file and setting is in step"
 PAGE_FIX = "fix each page as its line says"
+"""The fix a failed ``--check`` gives for invalid registry pages: each page's own refusal, printed
+on its ``invalid:`` line, names the key and its fix."""
 
 
 def sync_home(
@@ -200,16 +202,16 @@ def check_home(home: Home, *, say: Say = print) -> None:
     ``changes`` as a diff, and refuses, naming them all, when there is any. Writes nothing, and
     renders for the synced version *home* records, the release its CI installs; refuses when it
     records none. The marker itself was validated when *home* was found."""
-    version = _recorded_version(home, "home sync --check", "run `kaizen home sync`")
     invalid = invalid_pages(home.registry)
-    for _, refusal in invalid:
-        say(f"invalid: {refusal.check}\n  fix: {refusal.fix}")
+    for problem in invalid:
+        say(f"invalid: {problem.refusal}")
+    version = _recorded_version(home, "home sync --check", "run `kaizen home sync`")
     found = changes(home, version)
     for change in found:
         say(f"differs: {change.relative}\n{change.diff()}")
     problems, fixes = [], []
     if invalid:
-        pages = ", ".join(page.relative_to(home.root).as_posix() for page, _ in invalid)
+        pages = ", ".join(problem.page.relative_to(home.root).as_posix() for problem in invalid)
         problems.append(f"{len(invalid)} registry page(s) are invalid: {pages}")
         fixes.append(PAGE_FIX)
     if found:
@@ -269,9 +271,10 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "--check also validates the home marker and every registry page, as the commands "
             f"that read them do: {MARKER} must parse as TOML, hold its required keys and name a "
             "registry folder that exists, or the run is refused before anything else; each page "
-            "(every .md in the registry folder but README.md) must start with a frontmatter "
-            "block of key: value lines holding path, github and public, its optional keys well "
-            "formed, and its path and worktree_root absolute or ~/…. It lists each invalid page "
+            "(every .md in the registry folder but README.md) must parse as every command that "
+            "reads it parses it: a frontmatter block of key: value lines, its required keys "
+            "present and every key well formed, as the registry folder's README lists them. "
+            "It lists each invalid page "
             "with its problem beside the differing files, so one run shows everything, and "
             f'fails with the fix "{PAGE_FIX}".'
         ),

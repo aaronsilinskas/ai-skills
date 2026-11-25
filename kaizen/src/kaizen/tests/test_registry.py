@@ -258,9 +258,9 @@ def test_invalid_pages_lists_each_bad_page_and_skips_good_ones_and_the_readme(tm
     (projects / "a.md").write_text("# none\n")
     (projects / "b.md").write_text("---\npath: /b\n---\n")
 
-    found = registry.invalid_pages(projects)
+    invalid = registry.invalid_pages(projects)
 
-    assert [(page.name, refusal.check) for page, refusal in found] == [
+    assert [(found.page.name, str(found.refusal).splitlines()[0]) for found in invalid] == [
         ("a.md", f"{projects / 'a.md'}: no registry frontmatter"),
         ("b.md", f"{projects / 'b.md'}: missing field 'github'"),
     ]
