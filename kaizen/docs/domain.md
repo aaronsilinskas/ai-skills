@@ -14,12 +14,15 @@ Each command's `--help` says what it checks and does; this map holds only what `
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
   git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo and never touch GitHub.
   Fixtures use generic homes, owners and paths, and assume no notes folder.
-- `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter and pytest, all through `uv`.
+- `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pytest and `line_length_check.py`, all through `uv`.
+- `kaizen/src/kaizen/tests/scripts.py`: loads each Python script in `kaizen/scripts/` by path for its tests, since the scripts sit outside the package.
 - `kaizen/scripts/release_check.py`: the release workflow's version and wheel checks, also runnable by hand.
   Its tests sit with the package's, in `kaizen/src/kaizen/tests/test_release_check.py`.
   `test_version_scheme_git.py` builds real wheels in a temporary repo to check the version the tags give, so it also needs `uv`, which fetches the build requirements unless its cache holds them.
-  `tests/release_script.py` loads the script for both.
   The workflow itself is `.github/workflows/release.yml` at the repo root, run only by `kaizen-v*` tags.
+- `kaizen/scripts/line_length_check.py`: refuses a prose line over 200 characters in any synced file as a generic home renders it, header line included.
+  A home that holds its docs to that width can't edit a synced file, so kaizen's templates keep to it.
+  Fenced code blocks and table rows are exempt; its tests are in `kaizen/src/kaizen/tests/test_line_length_check.py`.
 
 Paths below are relative to `kaizen/src/kaizen/`.
 

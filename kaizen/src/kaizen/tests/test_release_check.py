@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from kaizen.tests.release_script import release_check
+from kaizen.tests.scripts import release_check
 
 
 def _fake_wheel(tmp_path: Path, version: str) -> str:

@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.version import Version
-from kaizen.tests.release_script import KAIZEN_DIR, release_check
+from kaizen.tests.scripts import KAIZEN_DIR, release_check
 
 
 def _git(repo: Path, *args: str) -> None:
