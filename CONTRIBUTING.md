@@ -1,13 +1,6 @@
 # Contributing
 
-How to change this repo's skills, plugins and kaizen, check the change, and release kaizen.
-
-## Repo layout
-
-- `skills/<bucket>/<skill>/`: the overlay's skills, which `npx skills add aaronsilinskas/ai-skills` installs.
-- `plugins/<plugin>/`: the Claude Code plugins, listed in `.claude-plugin/marketplace.json`.
-- `kaizen/`: the kaizen CLI, its own Python package.
-- `.claude/skills/`: copies of Matt Pocock's skills, used while working on this repo. A sync refreshes them (see [Upstream](#upstream)); don't edit them.
+How to change this repo's skills (`skills/`), plugins (`plugins/`) and kaizen (`kaizen/`), check the change, and release kaizen.
 
 ## Conventions
 
@@ -25,7 +18,6 @@ One exception to Matt's conventions: skill frontmatter keeps `argument-hint` whe
 
 Use Matt's `writing-for-agents` skill (installed under `.claude/skills/`) when creating or updating a skill.
 
-A new skill or plugin also gets a row in the README's table for its bucket or the plugin table, which the consistency check reads.
 
 ## Consistency check
 

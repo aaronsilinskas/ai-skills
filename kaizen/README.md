@@ -1,8 +1,8 @@
 # kaizen
 
-Agents that run the same workflow across several repos do the mechanical parts a little differently each time: a worktree branched from the wrong place, a PR pushed without the leak check, one repo's copy of the shared agent docs drifting from the rest.
+Agents that run the same workflow across several repos do the mechanical parts a little differently each time: a worktree branched from the wrong place, a PR pushed without the leak check, a home's shared agent docs drifting from the release that wrote them.
 kaizen is a command-line tool that does those parts the same way every time, so the agents and skills only make the judgement calls.
-It starts ticket worktrees, ships PRs through a leak check, publishes specs and issues, and keeps every repo's shared agent docs in step.
+It starts ticket worktrees, ships PRs through a leak check, publishes specs and issues, and keeps a home's shared agent docs in step with its templates.
 
 It works from a **home**: a git repo where agent sessions start, holding a registry of the projects it works on, the agent docs those sessions follow, and the facts its leak check needs.
 It needs only the Python standard library at runtime.
@@ -18,13 +18,13 @@ uv tool install kaizen-kit
 That puts two commands on your path, `kaizen` and its short alias `kz`.
 They are the same program; docs and hooks spell out `kaizen`.
 
-Then, in the git repo you want as your home, preview what setting it up would do:
+Then, in the git repo you want as your home (one with a GitHub `origin`), preview what setting it up would do:
 
 ```sh
 kaizen home init --dry-run
 ```
 
-It prints its checks and every file it would write in full (the project registry, the synced agent docs, the pre-commit config and `kaizen.toml`), and writes nothing.
+It prints its checks and every file it would write in full, such as the project registry, the synced agent docs and `kaizen.toml`, and writes nothing.
 Run it again without `--dry-run` to make the home; it ends with a checklist of the steps only you can do, such as registering your projects.
 
 ## Upgrade

@@ -13,7 +13,7 @@ From the prompt of a Claude Code terminal session:
 
 Answer `y` to add the marketplace, then pick a scope.
 Install it at user scope, or in each project you work in, so every session joins the board.
-Once two sessions run with it, each shows a band above the prompt counting the others.
+Once another session with it starts working, a band above the prompt counts it.
 
 ## What you see
 

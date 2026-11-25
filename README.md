@@ -4,7 +4,7 @@
 
 This repo is an overlay of [Agent Skills](https://agentskills.io/) that fills those gaps. It sits on top of Matt's skills and depends on them: install his first. Huge thanks to Matt for the foundation.
 
-The repo also hosts two Claude Code plugins and kaizen, a workflow CLI. Neither needs the skills.
+The repo also hosts two Claude Code plugins and kaizen, a workflow CLI. None of them needs the skills.
 
 ## Quick start
 
@@ -17,7 +17,7 @@ npx skills add aaronsilinskas/ai-skills
 
 Then, in your agent, run `/setup-matt-pocock-skills` once. It writes the project config the skills read (an `## Agent skills` block and `docs/agents/`).
 
-To try it, ask the agent to review a file you just changed against `code-quality`. You get findings on readability, public API and types, judged against your project's own glossary, ADRs and standards files. Or type `/to-idea` followed by a sentence about something you noticed: it files that as an `idea`-labeled issue in your tracker.
+To try it, ask the agent to review a file you just changed against `code-quality`, and it reports findings against your project's own glossary, ADRs and standards files. Or type `/to-idea` followed by a sentence about something you noticed. It files that as an `idea`-labeled issue in your tracker.
 
 ## Skills
 
@@ -73,7 +73,7 @@ From a shell it's `claude plugin install agent-progress --marketplace aaronsilin
 
 ## kaizen
 
-Agents running the same workflow across several repos tend to do the mechanical parts slightly differently each time. [kaizen](kaizen/README.md) is a command-line tool that does those parts the same way every time: starting a ticket worktree, shipping a PR through a leak check, keeping each repo's shared agent docs in step. Install it with `uv tool install kaizen-kit`. It's a separate product from the skills, and `npx skills` doesn't install it.
+Agents running the same workflow across several repos tend to do the mechanical parts slightly differently each time. [kaizen](kaizen/README.md) is a command-line tool that does those parts the same way every time: starting a ticket worktree, shipping a PR through a leak check, keeping each home's shared agent docs in step with kaizen's templates. Install it with `uv tool install kaizen-kit`. It's a separate product from the skills, and `npx skills` doesn't install it.
 
 ## Contributing
 
