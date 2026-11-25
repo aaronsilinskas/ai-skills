@@ -341,7 +341,7 @@ def test_the_cli_runs_finish_and_exits_nonzero_on_a_refusal(kaizen, tmp_path, ca
     assert "ticket worktree" in capsys.readouterr().err
 
 
-def test_finish_removes_a_merged_docs_changes_worktree_and_branch(tmp_path):
+def test_finish_removes_the_worktree_and_branch_of_a_merged_docs_change(tmp_path):
     projects, _ = _setup(tmp_path)
     worktree = tmp_path / "proto" / ".claude" / "worktrees" / "docs-fix-typos"
     shell = _shell(branch="docs-fix-typos\n")

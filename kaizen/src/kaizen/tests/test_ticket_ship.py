@@ -472,7 +472,7 @@ def test_shipping_a_docs_change_pushes_its_branch(tmp_path):
     assert shell.ran("push") == [["git", "-C", str(worktree), "push", "-u", "origin", DOCS_BRANCH]]
 
 
-def test_a_docs_changes_pr_body_has_no_closes_line_and_ends_with_the_attribution(tmp_path):
+def test_the_pr_body_of_a_docs_change_has_no_closes_line_and_ends_with_the_attribution(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
@@ -572,7 +572,7 @@ DOCS_ONLY = "docs/index.md\ndocs/auto-merge-docs.md\n"
 DOCS_AND_README = "docs/index.md\nREADME.md\n"
 
 
-def test_a_docs_change_changing_only_auto_merge_paths_gets_auto_merge_on_its_pr(tmp_path):
+def test_a_docs_change_to_only_auto_merge_paths_gets_auto_merge_on_its_pr(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_ONLY)
 
@@ -581,7 +581,7 @@ def test_a_docs_change_changing_only_auto_merge_paths_gets_auto_merge_on_its_pr(
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", NEW_PR]]
 
 
-def test_a_docs_change_changing_only_paths_an_auto_merge_glob_matches_gets_auto_merge(tmp_path):
+def test_a_docs_change_to_only_paths_an_auto_merge_glob_matches_gets_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="**/*.md")
     shell = _docs_shell(changed=DOCS_AND_README)
 
@@ -590,7 +590,7 @@ def test_a_docs_change_changing_only_paths_an_auto_merge_glob_matches_gets_auto_
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", NEW_PR]]
 
 
-def test_a_docs_change_changing_a_path_outside_auto_merge_paths_gets_no_auto_merge(tmp_path):
+def test_a_docs_change_to_a_path_outside_auto_merge_paths_gets_no_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README)
 
@@ -668,7 +668,7 @@ def test_ship_says_a_ticket_closing_an_issue_waits_for_review(tmp_path):
     assert "no auto-merge: a ticket closing an issue waits for review" in lines
 
 
-def test_reshipping_a_docs_change_changing_only_auto_merge_paths_auto_merges_its_open_pr(
+def test_reshipping_a_docs_change_to_only_auto_merge_paths_auto_merges_its_open_pr(
     tmp_path,
 ):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
@@ -680,7 +680,7 @@ def test_reshipping_a_docs_change_changing_only_auto_merge_paths_auto_merges_its
 
 
 def _docs_only_lines(tmp_path: Path) -> list[str]:
-    """What ``ship`` prints for a docs change changing only its project's auto-merge paths."""
+    """What ``ship`` prints for a docs change to only its project's auto-merge paths."""
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     lines: list[str] = []
     ship(
@@ -717,7 +717,7 @@ def test_a_dry_run_says_it_would_enable_auto_merge_and_enables_nothing(tmp_path)
     assert lines[-1] == "would enable auto-merge on the PR"
 
 
-def test_a_docs_change_with_no_net_change_gets_no_auto_merge(tmp_path):
+def test_a_docs_change_with_an_empty_diff_gets_no_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed="")
 

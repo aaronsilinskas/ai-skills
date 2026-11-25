@@ -177,7 +177,7 @@ def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
 
 
 def _auto_merge(project: Project, changed: list[str]) -> _AutoMerge:
-    """Whether a docs change to *changed* gets auto-merge, and the line saying why."""
+    """Whether a docs change to the paths *changed* gets auto-merge, and why."""
     if project.auto_merge_paths is None:
         return _AutoMerge(
             False, f"no auto-merge: project {project.name} declares no auto_merge_paths"

@@ -452,7 +452,7 @@ class TicketWorktree:
     path: Path
     branch: str
     issue: int | None
-    """The issue the ticket closes; ``None`` for a docs change (a ``docs-<slug>`` branch)."""
+    """The issue the ticket closes; ``None`` when a ``docs-<slug>`` branch holds a docs change."""
     default_branch: str
     spec: int | None
     """The spec the ticket belongs to (a ``spec-<N>-fix-…`` branch); ``None`` for a lone ticket."""
@@ -637,7 +637,7 @@ def refuse_code_changes(ticket: TicketWorktree, changed: list[str]) -> None:
     if code:
         listed = "\n".join(f"  {path}" for path in code)
         raise RefusalError(
-            f"{ticket.branch} is a docs change, but its diff against {base} touches"
+            f"{ticket.branch} holds a docs change, but its diff against {base} touches"
             f" code:\n{listed}",
             f"open an issue for the change and start it with"
             f" `kaizen ticket start {ticket.project.name} <issue>`, or drop the code changes",

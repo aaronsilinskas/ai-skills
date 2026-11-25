@@ -1,5 +1,5 @@
 """``kaizen ticket start``: create a project's ticket worktree for one issue, or for a docs
-ticket."""
+change."""
 
 import argparse
 import re
@@ -183,7 +183,7 @@ def _refuse_bad_slug(slug: str) -> str:
 def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     parser = subparsers.add_parser(
         "start",
-        help="create the ticket worktree for an issue",
+        help="create the ticket worktree for an issue or a docs change",
         description=(
             "Read the issue, fetch the project, and add the ticket worktree on a "
             "fix-<issue>-<slug> branch from origin's default branch (with --spec, on a "
@@ -191,8 +191,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "lacks it, the local one `kaizen spec start --local` made, refusing a ticket with an "
             "open blocker not yet integrated into it unless --ignore-blockers; that check "
             "fetches the integration branch alone, also on --dry-run). Prints the worktree "
-            "path and the issue's title, body and comments. With no issue, add a docs "
-            "ticket worktree on a docs-<slug> branch for a change that touches no code "
+            "path and the issue's title, body and comments. With no issue, add the "
+            "ticket worktree for a docs change, which touches no code, on a docs-<slug> branch "
             "(--slug required, --spec refused); `kaizen ticket ship` refuses it if it touches "
             "the project's code_paths. "
             "Each path in the project's worktree_links (git-ignored, such as a downloaded "

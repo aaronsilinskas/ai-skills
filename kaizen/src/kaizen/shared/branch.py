@@ -26,7 +26,7 @@ MAIN_CHECKOUT_NOTE = (
 @dataclass(frozen=True)
 class TicketBranch:
     issue: int | None
-    """The issue the ticket closes; ``None`` for a docs change."""
+    """The issue the ticket closes; ``None`` when the branch holds a docs change."""
     spec: int | None
     """The spec whose integration branch the ticket integrates into; ``None`` for a lone ticket."""
 
