@@ -22,7 +22,7 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [air-quality-data](skills/misc/air-quality-data/SKILL.md) | You or model | Fetch and compare air quality data (AQI, PM2.5/PM10) via EPA AirNow, PurpleAir, IQAir, and OpenAQ. Installs as `as-air-quality-data`. |
+| [as-air-quality-data](skills/misc/as-air-quality-data/SKILL.md) | You or model | Fetch and compare air quality data (AQI, PM2.5/PM10) via EPA AirNow, PurpleAir, IQAir, and OpenAQ. |
 
 ## What this overlay adds
 
@@ -33,7 +33,7 @@ Each skill here fills a gap in Matt's skills. None of them shares a name with on
 - **`embedded-python`:** Python rules for CircuitPython, MicroPython and other constrained hardware, where allocations and GC pauses matter: no allocation on hot paths, mutate in place, plain loops, runtime-safe typing. The model reaches it while writing the code, not only at review.
 - **`test-quality`:** a quality bar for the tests themselves (naming, one behavior per test, coverage traced to guarantees) plus per-language mocking guides, run as its own review pass. Matt's `tdd` owns the red-green loop.
 - **`to-idea`:** captures a discovery as a lightweight `idea`-labeled issue, a stub to revisit rather than a spec. It reads the label from the project's triage-labels doc.
-- **`air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
+- **`as-air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
 
 ## Installation
 
@@ -110,10 +110,11 @@ bash scripts/check.sh
 
 It runs every check even after a failure, prints a PASS, FAIL or SKIP line for each, and exits non-zero if anything failed. It works from any directory.
 
-1. **Conventions:** no em-dash in any git-tracked file outside `.claude/skills/` (Matt's copies, which this repo doesn't own); every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; and no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too).
-2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table, and the README lists no skill that isn't on disk.
-3. **Script lint:** `skills/engineering/wizard/template.sh` passes `bash -n` (and `shellcheck`, when installed). With no `wizard` skill in this repo, it reports SKIP.
-4. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's own check, whose script lists its steps.
+1. **Conventions:** no em-dash in any git-tracked file outside `.claude/skills/` (Matt's copies, which this repo doesn't own); every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too); and every skill's `name:` is its directory's name.
+2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table; every `plugins/<plugin>` has one entry in `.claude-plugin/marketplace.json`, at its `plugin.json` version, and one row in the README's plugin table; `skills-lock.json` names exactly the skills in `.claude/skills/`. None of them lists anything that isn't on disk.
+3. **Links:** every relative link in a git-tracked Markdown file names a tracked file or directory. Matt's copies and kaizen's templates, whose links resolve where they are rendered, are skipped.
+4. **Plugins:** `claude plugin validate .` passes, and `claude plugin test` passes for each plugin. Without the `claude` CLI on the PATH, it reports SKIP; CI installs it.
+5. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's own check, whose script lists its steps.
 
 CI (`.github/workflows/check.yml`) runs the same command on every pull request and on pushes to `main`.
 

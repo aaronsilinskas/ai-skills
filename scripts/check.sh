@@ -3,7 +3,7 @@
 # check.sh: this repo's one check command, for the skills collection and the
 # kaizen package alike.
 #
-# Runs four checks and exits non-zero if ANY of them fails. All of them run
+# Runs five checks and exits non-zero if ANY of them fails. All of them run
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
 #   1. Conventions, adopted from Matt Pocock's skills (decided in #44):
@@ -17,13 +17,21 @@
 #      d. No user-invoked skill calls another user-invoked skill through the
 #         Skill tool. User-invoked names come from skills/ and from the
 #         upstream skills installed under .claude/skills/.
-#   2. Wiring parity: every skills/<bucket>/<skill> directory appears exactly
-#      once in a README bucket table, and the README lists no skill that
-#      isn't on disk.
-#   3. Script lint: skills/engineering/wizard/template.sh passes `bash -n`
-#      (and shellcheck too, when it is installed on the runner). Prints SKIP,
-#      not FAIL, when the template is absent.
-#   4. kaizen: kaizen/scripts/check.sh, the kaizen package's own check,
+#      e. Every skill's frontmatter `name:` equals its directory name.
+#   2. Wiring parity:
+#      a. Every skills/<bucket>/<skill> directory appears exactly once in a
+#         README bucket table, and the README lists no skill that isn't on disk.
+#      b. Every plugins/<plugin> has one .claude-plugin/marketplace.json entry,
+#         at the version its .claude-plugin/plugin.json gives, and one row in
+#         the README's plugin table; neither lists a plugin that isn't on disk.
+#      c. The skills in skills-lock.json are the .claude/skills/ directories.
+#   3. Links: every relative link in a git-tracked Markdown file, outside
+#      .claude/skills/ and kaizen's templates (rendered into other repos),
+#      names a git-tracked file or directory.
+#   4. Plugins: `claude plugin validate .` passes and `claude plugin test`
+#      passes for each plugin. Prints SKIP when the claude CLI isn't on the
+#      PATH; CI installs it.
+#   5. kaizen: kaizen/scripts/check.sh, the kaizen package's own check,
 #      exits 0.
 #
 # Run it before a PR, and after editing skills:
@@ -177,6 +185,13 @@ elif check == "user-calls":
                                     f"tell the user to run /{name} instead")
     summary = f"{len(callers)} user-invoked skills call no user-invoked skill through the Skill tool"
 
+elif check == "skill-names":
+    for d in skills:
+        name = frontmatter(f"{d}/SKILL.md").get("name")
+        if name != os.path.basename(d):
+            problems.append(f"{d}/SKILL.md: name: is {name!r}, but the directory is {os.path.basename(d)!r}")
+    summary = f"{len(skills)} skills are named after their directory"
+
 else:
     sys.exit(f"unknown convention check: {check}")
 
@@ -198,79 +213,160 @@ PY
 run_convention_check descriptions "description: frontmatter that doesn't parse as YAML"
 run_convention_check openai-yaml "agents/openai.yaml missing or contradicting the frontmatter"
 run_convention_check user-calls "user-invoked skill calls another user-invoked skill"
+run_convention_check skill-names "skill name: that differs from its directory"
 
 # ── Check 2: Wiring parity ─────────────────────────────────────────────────
 echo
-echo "== Check 2: wiring parity (disk ↔ README) =="
-if parity_report="$(python3 - <<'PY'
-import glob, re, sys
+echo "== Check 2: wiring parity =="
 
-# On-disk skills: two-level skills/<bucket>/<skill> directories.
-on_disk = {
-    p.rstrip("/").split("skills/", 1)[1]
-    for p in glob.glob("skills/*/*/")
-}
+# Runs one wiring-parity check, named by its first argument, labelling a
+# failure with its second. Like run_convention_check, it writes the report to
+# a file, not $(...).
+run_parity_check() {
+  local report_file status
+  report_file="$(mktemp)"
+  python3 - "$1" >"$report_file" 2>&1 <<'PY'
+import glob, json, os, re, sys
+from collections import Counter
 
-# README table links look like "skills/<bucket>/<skill>/SKILL.md".
+def compare(kind: str, on_disk: set[str], listed: list[str], where: str) -> list[str]:
+    """Problems with *listed* (as *where* lists it) not naming each of *on_disk* once."""
+    problems = []
+    dupes = sorted(n for n, c in Counter(listed).items() if c > 1)
+    if dupes:
+        problems.append(f"{where} lists these {kind}s more than once: {dupes}")
+    missing = sorted(on_disk - set(listed))
+    if missing:
+        problems.append(f"on disk but missing from {where}: {missing}")
+    orphan = sorted(set(listed) - on_disk)
+    if orphan:
+        problems.append(f"in {where} but not on disk: {orphan}")
+    return problems
+
 with open("README.md") as f:
     readme = f.read()
-in_readme = re.findall(r"skills/([^/]+/[^/]+)/SKILL\.md", readme)
+check = sys.argv[1]
 
-problems = []
-readme_set, dupes = set(), set()
-for name in in_readme:
-    (dupes if name in readme_set else readme_set).add(name)
-if dupes:
-    problems.append(f"README lists these skills more than once: {sorted(dupes)}")
+if check == "skills":
+    # On-disk skills are skills/<bucket>/<skill> directories; README table
+    # links look like "skills/<bucket>/<skill>/SKILL.md".
+    on_disk = {p.rstrip("/").split("skills/", 1)[1] for p in glob.glob("skills/*/*/")}
+    listed = re.findall(r"\(skills/([^/]+/[^/]+)/SKILL\.md\)", readme)
+    problems = compare("skill", on_disk, listed, "README")
+    summary = f"{len(on_disk)} skills wired consistently across disk and README"
 
-missing = sorted(on_disk - readme_set)
-if missing:
-    problems.append(f"on disk but missing from README: {missing}")
-orphan = sorted(readme_set - on_disk)
-if orphan:
-    problems.append(f"in README but no matching directory: {orphan}")
+elif check == "plugins":
+    on_disk = {os.path.basename(p.rstrip("/")) for p in glob.glob("plugins/*/")}
+    with open(".claude-plugin/marketplace.json") as f:
+        entries = json.load(f).get("plugins", [])
+    listed = [os.path.basename(os.path.normpath(e.get("source", ""))) for e in entries]
+    problems = compare("plugin", on_disk, listed, ".claude-plugin/marketplace.json")
+    problems += compare("plugin", on_disk, re.findall(r"\(plugins/([^/]+)/README\.md\)", readme), "README")
+    for name, entry in zip(listed, entries):
+        manifest = f"plugins/{name}/.claude-plugin/plugin.json"
+        if not os.path.isfile(manifest):
+            continue
+        with open(manifest) as f:
+            version = json.load(f).get("version")
+        if entry.get("version") != version:
+            problems.append(f"{name}: marketplace.json has version {entry.get('version')!r}, "
+                            f"but {manifest} has {version!r}")
+    summary = f"{len(on_disk)} plugins in marketplace.json at their plugin.json version, and in README"
+
+elif check == "lock":
+    on_disk = {os.path.basename(p.rstrip("/")) for p in glob.glob(".claude/skills/*/")}
+    with open("skills-lock.json") as f:
+        locked = list(json.load(f).get("skills", {}))
+    problems = compare("skill", on_disk, locked, "skills-lock.json")
+    summary = f"{len(on_disk)} upstream skills in .claude/skills/ match skills-lock.json"
+
+else:
+    sys.exit(f"unknown parity check: {check}")
 
 if problems:
     print("\n".join(problems))
     sys.exit(1)
-print(f"{len(on_disk)} skills wired consistently across disk and README")
+print(summary)
 PY
-)"; then
-  pass "$parity_report"
-else
-  fail "wiring parity mismatch:"
-  printf '%s\n' "$parity_report" | indent
-fi
+  status=$?
+  if [[ $status -eq 0 ]]; then
+    pass "$(cat "$report_file")"
+  else
+    fail "$2:"
+    indent <"$report_file"
+  fi
+  rm -f "$report_file"
+}
 
-# ── Check 3: Script lint ───────────────────────────────────────────────────
+run_parity_check skills "skills on disk and in the README differ"
+run_parity_check plugins "plugins on disk, in marketplace.json and in the README differ"
+run_parity_check lock "skills-lock.json and .claude/skills/ differ"
+
+# ── Check 3: Links ─────────────────────────────────────────────────────────
 echo
-echo "== Check 3: script lint (wizard/template.sh) =="
-TEMPLATE="skills/engineering/wizard/template.sh"
-if [[ ! -f "$TEMPLATE" ]]; then
-  skip "$TEMPLATE not present (wizard is not in this repo), nothing to lint"
-else
-  lint_err="$(mktemp)"
-  if bash -n "$TEMPLATE" 2>"$lint_err"; then
-    pass "bash -n $TEMPLATE"
-  else
-    fail "bash -n reported syntax errors in $TEMPLATE:"
-    indent <"$lint_err"
-  fi
+echo "== Check 3: relative Markdown links =="
+links_file="$(mktemp)"
+python3 - >"$links_file" 2>&1 <<'PY'
+import os, re, subprocess, sys
+from urllib.parse import unquote
 
-  if command -v shellcheck >/dev/null 2>&1; then
-    # Gate on errors (real breakage), not warnings/style, so this guard doesn't
-    # fail the tree over lint nits in a script owned by another skill.
-    if shellcheck -S error "$TEMPLATE" >"$lint_err" 2>&1; then
-      pass "shellcheck $TEMPLATE"
-    else
-      fail "shellcheck reported problems in $TEMPLATE:"
-      indent <"$lint_err"
-    fi
-  else
-    skip "shellcheck not installed on this runner, skipping (not a failure)"
-  fi
-  rm -f "$lint_err"
+# Not checked: Matt's copies, which this repo doesn't own, and kaizen's
+# templates, whose links resolve in the repo they are rendered into.
+SKIP = (".claude/skills/", "kaizen/src/kaizen/shared/templates/")
+
+INLINE = re.compile(r"!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?[^)]*\)")
+REFERENCE = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?([^\s>]+)")
+FENCE = re.compile(r"\s*(`{3,}|~{3,})")
+SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
+
+tracked = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True, check=True).stdout.split("\0")
+targets = set()
+for path in filter(None, tracked):
+    while path:
+        targets.add(path)
+        path = os.path.dirname(path)
+
+docs = sorted(p for p in tracked if p.endswith(".md") and not p.startswith(SKIP))
+problems = []
+for doc in docs:
+    fence = None
+    with open(doc, encoding="utf-8") as f:
+        for lineno, line in enumerate(f, 1):
+            m = FENCE.match(line)
+            if m:
+                if fence is None:
+                    fence = m.group(1)
+                elif m.group(1).startswith(fence):
+                    fence = None
+                continue
+            if fence:
+                continue
+            line = re.sub(r"(`+).*?\1", "", line)
+            for link in INLINE.findall(line) + REFERENCE.findall(line):
+                if SCHEME.match(link) or link.startswith("#"):
+                    continue
+                path = unquote(link.split("#", 1)[0].split("?", 1)[0])
+                if not path:
+                    continue
+                if path.startswith("/"):
+                    resolved = os.path.normpath(path.lstrip("/"))
+                else:
+                    resolved = os.path.normpath(os.path.join(os.path.dirname(doc), path))
+                if resolved not in targets:
+                    problems.append(f"{doc}:{lineno}: {link} names no git-tracked file or directory")
+
+if problems:
+    print("\n".join(problems))
+    sys.exit(1)
+print(f"every relative link in {len(docs)} Markdown files resolves")
+PY
+if [[ $? -eq 0 ]]; then
+  pass "$(cat "$links_file")"
+else
+  fail "broken relative links:"
+  indent <"$links_file"
 fi
+rm -f "$links_file"
 
 # Runs a command, printing PASS with *label* when it exits 0, or FAIL with its
 # output when it doesn't.
@@ -287,9 +383,21 @@ run_quiet() {
   rm -f "$report_file"
 }
 
-# ── Check 4: kaizen ────────────────────────────────────────────────────────
+# ── Check 4: Plugins ───────────────────────────────────────────────────────
 echo
-echo "== Check 4: kaizen (kaizen/scripts/check.sh) =="
+echo "== Check 4: plugins (claude plugin validate and test) =="
+if command -v claude >/dev/null 2>&1; then
+  run_quiet "claude plugin validate ." claude plugin validate .
+  for plugin in plugins/*/; do
+    run_quiet "claude plugin test ${plugin%/}" claude plugin test "${plugin%/}"
+  done
+else
+  skip "claude CLI not on the PATH, so the plugins are neither validated nor tested"
+fi
+
+# ── Check 5: kaizen ────────────────────────────────────────────────────────
+echo
+echo "== Check 5: kaizen (kaizen/scripts/check.sh) =="
 run_quiet "kaizen/scripts/check.sh" bash kaizen/scripts/check.sh
 
 # ── Summary ────────────────────────────────────────────────────────────────
