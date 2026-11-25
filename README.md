@@ -73,7 +73,7 @@ From a shell it's `claude plugin install agent-progress --marketplace aaronsilin
 
 ## kaizen
 
-When coding agents work across public and private repositories, they do the mechanical steps a little differently each time, and sooner or later a private repository's name or a local path lands in a public commit. [kaizen](kaizen/README.md) is a command-line tool that does those steps the same way every time: it gives each ticket its own worktree, opens the pull request, and checks every commit, pull request and issue before it goes out so nothing from a private repository reaches a public one. It also keeps the workflow instructions your agents follow the same for every repository they work on. Install it with `uv tool install kaizen-kit`. It's a separate product from the skills, and `npx skills` doesn't install it.
+When coding agents work across public and private repositories, they do the mechanical steps a little differently each time, and sooner or later a private repository's name or a local path lands in a public commit. [kaizen](kaizen/README.md) is a command-line tool that does those steps the same way every time: it gives each ticket its own worktree, opens the pull request, and checks every commit, pull request and issue before it goes out so nothing from a private repository reaches a public one. It works from a home repository, one repository where your agent sessions start and that keeps the workflow instructions they follow the same for every project. Install it with `uv tool install kaizen-kit`. It's a separate product from the skills, and `npx skills` doesn't install it.
 
 ## Contributing
 

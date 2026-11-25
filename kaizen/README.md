@@ -8,10 +8,20 @@ kaizen is a command-line tool that does those steps the same way every time, so 
 Before a commit, pull request or issue goes out, kaizen checks its text and refuses to send it if it would expose a private repository; this is the leak check.
 kaizen also gives each ticket its own git worktree, opens the pull request, and publishes specs and issues.
 
-kaizen keeps its setup in one git repository you choose, the **home**.
-Your agent sessions start there, and it lists the repositories they work on and holds the workflow instructions the agents follow.
-Those instructions come from kaizen's templates, so after an upgrade one command brings them up to date and every session follows the same rules.
 kaizen needs only the Python standard library at runtime.
+
+## The home repository
+
+Most people start by running skills inside a single repository.
+Once you work across many, keeping the skills and configuration in sync gets hard, and each repository gives the agent a slightly different setup.
+A home repository is the next step: one repository that holds your skills, agent instructions and configuration, where your agent sessions start, and from which they work across the project repositories it lists, so agents behave the same in all your projects.
+kaizen builds on [The Home Repo Pattern](https://www.aihero.dev/the-home-repo-pattern), which defines a Home Repo as "one repository that holds your skills, your AGENTS.md and your shared docs" that you run your agent in (some call it a meta-repo).
+On top of that, kaizen gives a home:
+
+- a list of the project repositories it works on, which kaizen's commands read;
+- shared workflow instructions, rendered from kaizen's templates and refreshed with each release, so every home and session stays in step;
+- the leak check above, keeping private repositories' details out of public ones;
+- the same commands for the mechanical steps, every time.
 
 ## Quick start
 

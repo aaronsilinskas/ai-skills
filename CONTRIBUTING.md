@@ -2,6 +2,11 @@
 
 How to change this repo's skills (`skills/`), plugins (`plugins/`) and kaizen (`kaizen/`), check the change, and release kaizen.
 
+## Setup
+
+Once per clone, install the commit hooks with `uvx pre-commit install`.
+They run kaizen's checks on each commit, so they need `kaizen` on your PATH (`uv tool install kaizen-kit`).
+
 ## Conventions
 
 Skills follow [Matt's authoring conventions](https://github.com/mattpocock/skills/blob/main/CLAUDE.md), the [agentskills.io specification](https://agentskills.io/specification) and its [best practices](https://agentskills.io/skill-creation/best-practices):
