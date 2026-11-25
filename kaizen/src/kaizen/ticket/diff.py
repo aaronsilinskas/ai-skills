@@ -1,6 +1,7 @@
 """``kaizen ticket diff``: a ticket's commits, stat and diff against its resolved base."""
 
 import argparse
+import subprocess
 from pathlib import Path
 from typing import Literal, get_args
 
@@ -10,7 +11,8 @@ from kaizen.shared.home import Home
 from kaizen.shared.registry import fetch_base, resolve_ticket_worktree, uncommitted
 
 Section = Literal["base", "log", "stat"]
-"""A section ``kaizen ticket diff`` can print on its own: the base ref, the commits or the stat."""
+"""A section ``kaizen ticket diff`` can print on its own: the base commit, the commits or the
+stat."""
 
 
 def diff(
@@ -26,7 +28,8 @@ def diff(
     Args:
         worktree: The ticket worktree path.
         run: Runs git.
-        only: Print just this section, unlabelled. ``None`` prints them all: the base, whether
+        only: Print just this section, unlabelled; the base section is the merge base's SHA.
+            ``None`` prints them all: the base ref and its merge base, whether
             it is an ancestor of ``HEAD``, the commits ahead, the stat, the diff and a note
             listing any uncommitted changes.
         home: The home whose registry names the project.
@@ -34,10 +37,10 @@ def diff(
     """
     ticket = resolve_ticket_worktree(worktree, run, home.registry)
     base = fetch_base(ticket, run)
-    if only == "base":
-        say(base)
-        return
     git = ["git", "-C", str(ticket.path)]
+    if only == "base":
+        say(_merge_base(git, base, run))
+        return
     queries: dict[Section, list[str]] = {
         "log": [*git, "log", "--oneline", f"{base}..HEAD"],
         "stat": [*git, "diff", "--stat", f"{base}...HEAD"],
@@ -47,7 +50,13 @@ def diff(
         return
 
     changes = [*git, "diff", f"{base}...HEAD"]
-    say(f"base: {base}")
+    try:
+        merge_base = f"merge base {_merge_base(git, base, run)}"
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode != 1:  # 1 means no common history; anything else is a real failure
+            raise
+        merge_base = "no merge base: HEAD shares no history with it"
+    say(f"base: {base} ({merge_base})")
     say(_ancestry(str(ticket.path), base, run))
     say(f"commits ahead ({base}..HEAD):\n{_body(run(queries['log']))}")
     say(f"stat ({base}...HEAD):\n{_body(run(queries['stat']))}")
@@ -67,10 +76,12 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "Fetch only the ticket's base from origin: origin/spec-<N> for a spec's ticket"
             " (or the local spec-<N>, fetching nothing, while a spec started with"
             " `kaizen spec start --local` has it only locally), else origin/<default branch>."
-            " Then print the base, whether it is an ancestor of HEAD (and the merge that fixes"
-            " it when not), the commits ahead (base..HEAD), the stat and the diff"
-            " (base...HEAD), and a note listing any uncommitted changes. Works for spec, lone"
-            " and docs tickets. Only queries: never resets or changes the worktree."
+            " Then print the base ref with its merge base with HEAD (a SHA that stays put"
+            " while the base branch moves on, which --base prints alone), whether it is an"
+            " ancestor of HEAD (and the merge that fixes it when not), the commits ahead"
+            " (base..HEAD), the stat and the diff (base...HEAD), and a note listing any"
+            " uncommitted changes. Works for spec, lone and docs tickets. Only queries: never"
+            " resets or changes the worktree."
         ),
     )
     parser.add_argument(
@@ -89,7 +100,10 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 
 _SECTION_HELP: dict[Section, str] = {
-    "base": "the base ref",
+    "base": (
+        "the merge base of the base and HEAD, a commit SHA that stays put while the base"
+        " branch moves on, to run code-review from"
+    ),
     "log": "the commits ahead",
     "stat": "the stat",
 }
@@ -97,6 +111,10 @@ _SECTION_HELP: dict[Section, str] = {
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
     diff(args.worktree, run, home=home, only=args.only)
+
+
+def _merge_base(git: list[str], base: str, run: Runner) -> str:
+    return run([*git, "merge-base", base, "HEAD"]).strip()
 
 
 def _body(text: str) -> str:

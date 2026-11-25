@@ -129,7 +129,7 @@ def test_a_ticket_of_a_local_spec_diffs_and_compares_against_the_local_branch(re
         worktree, ["test", "!", "-e", "greeting.txt"], run, runs=1, home=home, say=_quiet
     )
 
-    assert capsys.readouterr().out == f"spec-{SPEC}\n"
+    assert capsys.readouterr().out == repos.local(f"refs/heads/spec-{SPEC}") + "\n"
     assert verdict == "caused"
     assert not run.ran("fetch", "-q", "origin")
 

@@ -14,6 +14,7 @@ SPEC_BRANCH = "spec-117-fix-122-kaizen-ticket-diff"
 DOCS_BRANCH = "docs-tidy-guides"
 LOG = "abc1234 Add kaizen ticket diff\n"
 STAT = " kaizen/ticket/diff.py | 40 ++++++++\n 1 file changed, 40 insertions(+)\n"
+MERGE_BASE = "4f1c2d9e8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e"
 DIFF = "diff --git a/kaizen/ticket/diff.py b/kaizen/ticket/diff.py\n+new line\n"
 
 
@@ -34,6 +35,7 @@ def _shell(branch: str = SPEC_BRANCH, **overrides: Reply) -> Shell:
             ("for-each-ref",): overrides.get("local", ""),
             ("fetch",): overrides.get("fetch", ""),
             ("merge-base", "--is-ancestor"): overrides.get("ancestor", ""),
+            ("merge-base",): overrides.get("merge_base", f"{MERGE_BASE}\n"),
             ("log",): LOG,
             ("diff", "--stat"): STAT,
             ("diff",): DIFF,
@@ -63,7 +65,7 @@ def test_a_spec_tickets_diff_is_against_its_integration_branch(kaizen, capsys):
     assert kaizen(["ticket", "diff", _worktree(SPEC_BRANCH)], run=shell) == 0
 
     out = capsys.readouterr().out
-    assert out.startswith("base: origin/spec-117\n")
+    assert out.startswith(f"base: origin/spec-117 (merge base {MERGE_BASE})\n")
     assert "origin/spec-117 is an ancestor of HEAD\n" in out
     assert f"commits ahead (origin/spec-117..HEAD):\n{LOG}" in out
     assert f"stat (origin/spec-117...HEAD):\n{STAT}" in out
@@ -90,7 +92,7 @@ def test_a_docs_tickets_diff_is_against_the_default_branch(kaizen, capsys):
     assert kaizen(["ticket", "diff", _worktree(DOCS_BRANCH)], run=shell) == 0
 
     out = capsys.readouterr().out
-    assert out.startswith("base: origin/main\n")
+    assert out.startswith(f"base: origin/main (merge base {MERGE_BASE})\n")
     assert shell.ran("diff", "origin/main...HEAD")
 
 
@@ -127,7 +129,7 @@ def test_a_clean_worktree_gets_no_uncommitted_note(kaizen, capsys):
 
 @pytest.mark.parametrize(
     ("flag", "expected"),
-    [("--base", "origin/spec-117\n"), ("--stat", STAT), ("--log", LOG)],
+    [("--base", f"{MERGE_BASE}\n"), ("--stat", STAT), ("--log", LOG)],
     ids=["base", "stat", "log"],
 )
 def test_a_section_flag_prints_only_that_section(kaizen, capsys, flag, expected):
@@ -167,5 +169,26 @@ def test_a_spec_ticket_whose_integration_branch_is_only_local_diffs_against_it(k
 
     assert kaizen(["ticket", "diff", _worktree(SPEC_BRANCH), "--base"], run=shell) == 0
 
-    assert capsys.readouterr().out == "spec-117\n"
+    assert capsys.readouterr().out == f"{MERGE_BASE}\n"
+    assert shell.ran("merge-base", "spec-117", "HEAD")
     assert not shell.ran("fetch")
+
+
+def test_base_is_the_merge_base_of_the_fetched_base_and_head(kaizen, capsys):
+    shell = _shell()
+
+    kaizen(["ticket", "diff", _worktree(SPEC_BRANCH), "--base"], run=shell)
+
+    assert shell.ran("merge-base") == [
+        ["git", "-C", _worktree(SPEC_BRANCH), "merge-base", "origin/spec-117", "HEAD"]
+    ]
+
+
+def test_a_base_with_no_common_history_still_prints_the_rest(kaizen, capsys):
+    shell = _shell(merge_base=_not_ancestor, ancestor=_not_ancestor)
+
+    assert kaizen(["ticket", "diff", _worktree(SPEC_BRANCH)], run=shell) == 0
+
+    out = capsys.readouterr().out
+    assert out.startswith("base: origin/spec-117 (no merge base: HEAD shares no history with it)\n")
+    assert f"diff (origin/spec-117...HEAD):\n{DIFF}" in out
