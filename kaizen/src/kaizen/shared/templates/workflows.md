@@ -48,19 +48,19 @@ Run `kaizen home sync` from the home's root after `kaizen` is upgraded, or when 
 It rewrites each synced file that differs and adds the git stash deny rule to `.claude/settings.json`; commit what it changed.
 When the check fails on a hand edit to a synced file, move that rule to the home overlay before syncing, or the sync drops it.
 It also records the release it ran as `synced_version` in `kaizen.toml`: these files were rendered by {{synced_version}}.
-The home's CI step is `uvx --refresh-package kaizen-kit --from kaizen-kit=={{synced_version}} kaizen home sync --check`.
+The home's CI step runs `uvx --refresh-package kaizen-kit --from kaizen-kit=={{synced_version}} kaizen home sync --check`, in the bash loop below.
 CI judges the synced files by the release that wrote them, whatever a machine has installed.
 `--refresh-package` makes uv ask PyPI again rather than trust a cached package list, which may predate a release made minutes earlier.
-PyPI's CDN can still serve a stale index for a few minutes after a release, so CI retries only that resolution failure, 3 attempts 30 seconds apart, and fails at once on any other error:
+PyPI's CDN can still serve a stale index for a few minutes after a release, so the loop retries only that resolution failure, 3 attempts 30 seconds apart, and fails at once on any other error:
 
-```sh
+```bash
 for attempt in 1 2 3; do
   out=$(uvx --refresh-package kaizen-kit --from kaizen-kit=={{synced_version}} kaizen home sync --check 2>&1) && { printf '%s\n' "$out"; break; }
-  printf '%s\n' "$out" >&2
-  [[ $out == *"no version of kaizen-kit"* && $attempt -lt 3 ]] || exit 1
+  status=$?; printf '%s\n' "$out" >&2
+  [[ $out == *"no version of kaizen-kit"* && $attempt -lt 3 ]] || exit "$status"
   echo "PyPI index not ready yet, retrying in 30s" >&2; sleep 30
 done
 ```
 
-When a sync changes the synced version, put the new one in that step, in the same commit.
+When a sync changes the synced version, put the new one in that loop, in the same commit.
 Every `kaizen` command compares the installed release with the synced version: a newer install warns to sync, and an older one refuses until `{{upgrade}}` runs.
