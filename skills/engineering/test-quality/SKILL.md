@@ -57,9 +57,7 @@ def test_zero_acceleration_yields_zero_progress():
 
 If the name says "X causes Y", the test must change X and observe Y.
 
-### A named test beats an explanatory comment
-
-Treat each "this handles ..." comment in source as a missing test: name it for the case and assert it (e.g. `test_<thing>_when_<condition>_...`).
+A source comment that states behavior becomes a test through the **test** bucket of `comments-backpressure`, which owns that rule; name the test by this section.
 
 ## Test structure
 

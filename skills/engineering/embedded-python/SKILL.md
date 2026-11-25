@@ -90,7 +90,7 @@ Prefer multiply over divide when the denominator is fixed. In hot paths, always 
 
 ## CircuitPython and MicroPython Compatibility
 
-This skill targets the **latest stable releases** of CircuitPython and MicroPython. Do not flag features as unavailable unless they are absent from current releases.
+This skill targets the **latest stable releases** of CircuitPython and MicroPython. Flag a feature as unavailable only when those releases lack it.
 
 Minimize and isolate CircuitPython-specific dependencies so the same code can run on MicroPython and other environments. Avoid scattering platform-specific imports or calls throughout modules; contain them at the boundary.
 
@@ -153,7 +153,7 @@ class MyConfig:
     DEFAULT_BRIGHTNESS: Final = 0x33
 ```
 
-`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard described above. The annotation itself must **never** be quoted. String-quoting `Final` is unnecessary for CircuitPython.
+`Final` is part of the standard `typing` module and is respected by Pylance, mypy, and Pyrefly. The import goes under the `TYPE_CHECKING` guard described above. Write the annotation unquoted, as above.
 
 ## State Object Lifecycle
 
