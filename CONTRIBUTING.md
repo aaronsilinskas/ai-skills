@@ -4,8 +4,8 @@ How to change this repo's skills (`skills/`), plugins (`plugins/`) and kaizen (`
 
 ## Setup
 
-Once per clone, install the commit hooks with `uvx pre-commit install`.
-They run kaizen's checks on each commit, so they need `kaizen` on your PATH (`uv tool install kaizen-kit`).
+The commit hooks are for maintainers working from a kaizen home: install them once per clone with `uvx pre-commit install`, with `kaizen` on your PATH.
+kaizen's hooks refuse to run outside a home, so other contributors skip the install; CI runs `scripts/check.sh` on every pull request.
 
 ## Conventions
 
