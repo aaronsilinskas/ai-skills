@@ -40,6 +40,7 @@ from kaizen.shared.registry import (
     parse_page_text,
     starter_readme,
     with_page_listed,
+    wrap,
 )
 
 Ask = Callable[[str], str]
@@ -191,7 +192,7 @@ FIELDS = (
     ),
     Field(
         "auto_merge_comment_only",
-        "--auto-merge-comment-only",
+        "--auto-merge-comment-only or --no-auto-merge-comment-only",
         "true/false",
         _bool_problem,
         default=lambda path: "false",
@@ -413,8 +414,35 @@ def terminal() -> Ask | None:
         return None
 
 
+_HELP_WIDTH = 79
+_HERE = "the current directory"
+_FIELDS_BY_KEY = {field.key: field for field in FIELDS}
+
+
+def _keys_help() -> str:
+    """The help's list of the keys: each one's status, how the command takes it, and its full
+    explanation."""
+    entries = []
+    for key in KEYS:
+        given = (
+            f"PATH (default: {_HERE})"
+            if key.name == "path"
+            else _flag_help(_FIELDS_BY_KEY[key.name])
+        )
+        explanation = wrap(f"{key.summary} {key.detail}", _HELP_WIDTH, "    ", "    ")
+        entries.append(f"  {key.name} ({key.status})\n    {given}\n{explanation}")
+    return "The keys a page sets, in page order:\n\n" + "\n\n".join(entries)
+
+
+def _flag_help(field: Field) -> str:
+    """How *field* is given on the command line, and what the page means when it is left out."""
+    given = field.flag if field.boolean else f"{field.flag} {field.options}"
+    if field.default is not None:
+        given += f"; left out: {field.default(Path('<path>')) or 'none'}"
+    return given
+
+
 def add_parser(subparsers: Subparsers) -> None:
-    keys = "".join(f"  {key.name}: {key.summary}\n" for key in KEYS)
     required = ", ".join(field.key for field in FIELDS if field.required)
     parser = subparsers.add_parser(
         "add",
@@ -433,18 +461,18 @@ def add_parser(subparsers: Subparsers) -> None:
             "no flag gives, offering the detected value or default; Enter accepts it. Without "
             "a terminal it never prompts, and refuses, listing each required key "
             f"({required}) with neither a flag nor a detected value. "
-            "The keys:\n"
-            f"{keys}\n"
+            "The keys are explained after the options.\n\n"
             "It refuses, before writing anything: a name that already has a page, a path that "
             "is not a git checkout's root or that a page already registers, a github that is "
             "not owner/repo, any value the registry would refuse, and settings it can't merge "
             "into. It creates no labels: run `kaizen project labels NAME` next."
         ),
+        epilog=_keys_help(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("name", help="the project's name: its page is NAME.md in the registry")
     parser.add_argument(
-        "path", nargs="?", type=Path, help="the project's main checkout (default: here)"
+        "path", nargs="?", type=Path, help=f"the project's main checkout (default: {_HERE})"
     )
     for field in FIELDS:
         if not field.boolean:

@@ -445,3 +445,49 @@ def test_a_closed_terminal_refuses_and_writes_nothing(tmp_path):
     with pytest.raises(RefusalError, match="no answer for github"):
         add_project(_shell(checkout), home_for(home / "projects"), "tool", checkout, {}, ask=closed)
     assert not (home / "projects" / "tool.md").exists()
+
+
+def _help(capsys) -> str:
+    with pytest.raises(SystemExit):
+        main(["project", "add", "--help"], cwd=Path.cwd(), env={})
+    return " ".join(capsys.readouterr().out.split())
+
+
+def test_the_help_explains_every_key_in_full(capsys):
+    out = _help(capsys)
+
+    for key in KEYS:
+        assert f"{key.name} ({key.status})" in out
+        assert f"{key.summary} {key.detail}" in out
+
+
+def test_the_help_gives_how_each_key_is_given_and_its_default(capsys):
+    with pytest.raises(SystemExit):
+        main(["project", "add", "--help"], cwd=Path.cwd(), env={})
+    lines = {line.strip() for line in capsys.readouterr().out.splitlines()}
+
+    assert {
+        "PATH (default: the current directory)",
+        "--github owner/repo",
+        "--public or --private",
+        "--check a shell command, or none",
+        "--code-paths comma-separated paths",
+        "--worktree-root absolute or ~/ path; left out: <path>/.claude/worktrees",
+        "--auto-merge-paths comma-separated paths; left out: none",
+        "--auto-merge-comment-only or --no-auto-merge-comment-only; left out: false",
+        "--worktree-links comma-separated paths; left out: none",
+    } <= lines
+
+
+def test_the_help_states_the_path_and_glob_syntax(capsys):
+    out = _help(capsys)
+
+    for rule in [
+        "An entry ending in `/` covers everything under that directory",
+        "`*` and `?` never cross `/`",
+        "`**` as a whole segment matches any number of directories",
+        "a glob ending in `/` covers everything under each directory it matches",
+        "Brackets are literal",
+        "as in `code_paths`",
+    ]:
+        assert rule in out

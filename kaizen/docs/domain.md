@@ -59,7 +59,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and the resolvers that say which registered project a path or remote belongs to.
   The registry folder always comes from the `Home`, never from a default path.
   It also holds the starter README and page a new home gets, and the page and README link `project add` writes, beside the parser so they change together.
-  `KEYS` is the one table of the keys a page may set: the README's **Keys** section and `project add`'s prompts both read it, so their explanations can't drift.
+  `KEYS` is the one table of the keys a page may set: the README's **Keys** section, `project add`'s prompts and its `--help` all read it, so their explanations can't drift.
 - `shared/ticket_worktree.py`: the **ticket worktree**: `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state, and the git operations a command runs on it.
   It imports the registry, never the reverse, and an import-linter contract keeps it that way.
 - `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>`, a **docs change**'s `docs-<slug>`, and the `spec-<N>-domain-docs` branch `spec publish` ships a spec's domain-doc edits on and `ticket publish` waits for) and the merge subject that **integrates** a ticket.

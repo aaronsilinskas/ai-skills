@@ -381,7 +381,7 @@ def _path_field(page: Path, fields: dict[str, str | bool], key: str) -> Path:
 @dataclass(frozen=True)
 class Key:
     """One frontmatter key a page may set, as the registry README's **Keys** section and
-    ``kaizen project add``'s prompts explain it."""
+    ``kaizen project add``'s prompts and help explain it."""
 
     name: str
     status: str
@@ -497,18 +497,20 @@ def starter_readme(pages: list[str]) -> str:
     """The text of a new registry's README: what each frontmatter key means and which commands
     read it, then a link to each page in *pages* (page names, in order)."""
     keys = "\n".join(
-        _wrap(f"- `{key.name}` ({key.status}): {key.summary} {key.detail}") for key in KEYS
+        wrap(f"- `{key.name}` ({key.status}): {key.summary} {key.detail}") for key in KEYS
     )
     return _STARTER_README.format(keys=keys, pages=_pages_section(pages))
 
 
-def _wrap(item: str) -> str:
-    """The list *item* wrapped to the README's width, never inside a code span."""
-    unbroken = re.sub(r"`[^`]*`", lambda span: span[0].replace(" ", _NBSP), item)
+def wrap(text: str, width: int = _README_WIDTH, indent: str = "", hang: str = "  ") -> str:
+    """*text* wrapped to *width*, its first line indented by *indent* and the rest by *hang*,
+    never inside a code span."""
+    unbroken = re.sub(r"`[^`]*`", lambda span: span[0].replace(" ", _NBSP), text)
     wrapped = textwrap.fill(
         unbroken,
-        _README_WIDTH,
-        subsequent_indent="  ",
+        width,
+        initial_indent=indent,
+        subsequent_indent=hang,
         break_long_words=False,
         break_on_hyphens=False,
     )
