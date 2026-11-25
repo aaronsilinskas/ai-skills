@@ -53,15 +53,18 @@ Paths below are relative to `kaizen/src/kaizen/`.
   A linked worktree of the home counts as that home, so commands work the same from a ticket worktree.
   It also renders a new home's marker, reads and writes the home's Claude Code settings, sets the home's root in their env, and adds entries to a `permissions` list, keeping every other key and entry: the one merge `home sync`'s managed settings and `project add`'s directory entry share.
   The marker's one line kaizen writes after `home init`, the synced version, is written by text, keeping every other byte, since the standard library writes no TOML.
-- `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
+- `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and the resolvers that say which registered project a path or remote belongs to.
   The registry folder always comes from the `Home`, never from a default path.
   It also holds the starter README and page a new home gets, and the page and README link `project add` writes, beside the parser so they change together.
   `KEYS` is the one table of the keys a page may set: the README's **Keys** section and `project add`'s prompts both read it, so their explanations can't drift.
+- `shared/ticket_worktree.py`: the **ticket worktree**: `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state, and the git operations a command runs on it.
+  It imports the registry, never the reverse, and an import-linter contract keeps it that way.
 - `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>`, a **docs change**'s `docs-<slug>`, and the `spec-<N>-domain-docs` branch `spec publish` ships a spec's domain-doc edits on and `ticket publish` waits for) and the merge subject that **integrates** a ticket.
   Names are worked out from numbers, so the integration branch's history alone records which tickets are integrated.
   `find_integration_branch` says where a started spec's integration branch is: on `origin`, or only local, as `spec start --local` leaves it until the spec's first integration pushes it.
   Every command that reads an integration branch prefers `origin`'s, so a local copy matters only while `origin` lacks the branch, and the push that publishes it deletes the local copy, which `spec finish` would otherwise refuse as unmerged.
   It also fast-forwards the **main checkout** after a finish, only when that is safe, and prints a skip otherwise.
+  `fetch_branch` fetches one branch from `origin` into a checkout, for a ticket's base or a spec's integration branch.
 - `shared/leak.py`: the **leak check**, for every command that pushes, opens a PR or publishes an issue (ADR 0002).
   `leak_check` searches a checkout's tracked files, a commit's tree or the index; `leak_check_text` searches text about to be sent to GitHub.
   Each rule is an allowlist built from the home's facts, so it holds no data of its own.
@@ -124,6 +127,6 @@ One module per command; each group's `--help` lists them.
   Commands that only query (`project leak-check`, the `hook` commands, `pr wait`, `issue show`, `spec status`, `ticket diff`) have no `--dry-run`.
 - Every command prints one line per completed step, so a failure partway through shows what is already done.
 - No command uses stored state: branches, worktrees and GitHub are read each time.
-- The import contracts in `pyproject.toml`: `shared/` imports no command group (the CLI excepted), and `spec/` imports nothing of `ticket/`.
+- The import contracts in `pyproject.toml`: `shared/` imports no command group (the CLI excepted), `spec/` imports nothing of `ticket/`, and `shared/registry.py` imports nothing of `shared/ticket_worktree.py`.
 - Registry frontmatter is flat `key: value` lines (strings, `true`/`false`), parsed without a YAML dependency.
 - Homes never reference each other (ADR 0002).

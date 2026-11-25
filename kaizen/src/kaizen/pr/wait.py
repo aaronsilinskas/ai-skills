@@ -12,7 +12,7 @@ from typing import TypedDict
 
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
-from kaizen.shared.registry import resolve_ticket_worktree
+from kaizen.shared.ticket_worktree import resolve_ticket_worktree
 
 DEFAULT_TIMEOUT = 540
 """Seconds to wait in all: inside the 10-minute cap of a foreground agent shell call."""

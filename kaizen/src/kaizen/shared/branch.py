@@ -12,7 +12,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
 
 _TICKET_BRANCH = re.compile(r"(?:spec-(\d+)-)?fix-(\d+)-[\w.-]+|docs-[\w.-]+")
 _MERGE_SUBJECT = re.compile(r"Integrate (\S+) into spec-(\d+)")
@@ -114,6 +114,19 @@ def remote_default_branch(checkout: str, run: Runner) -> str:
         f"could not read origin's default branch in {checkout}",
         f"check that `git -C {checkout} ls-remote --symref origin HEAD` names a branch",
     )
+
+
+def fetch_branch(checkout: str, branch: str, run: Runner, fix: str) -> str:
+    """Fetches only *branch* from ``origin`` into *checkout* and returns its remote-tracking ref,
+    ``origin/<branch>``; refuses with *fix* when the fetch fails."""
+    refspec = f"+refs/heads/{branch}:refs/remotes/origin/{branch}"
+    run_or_refuse(
+        ["git", "-C", checkout, "fetch", "-q", "origin", refspec],
+        run,
+        f"could not fetch {branch} from origin",
+        fix,
+    )
+    return f"origin/{branch}"
 
 
 def default_branch(run: Runner) -> str:

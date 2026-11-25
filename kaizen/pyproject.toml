@@ -127,3 +127,9 @@ name = "spec does not import ticket"
 type = "forbidden"
 source_modules = ["kaizen.spec"]
 forbidden_modules = ["kaizen.ticket"]
+
+[[tool.importlinter.contracts]]
+name = "the registry does not import the ticket worktree"
+type = "forbidden"
+source_modules = ["kaizen.shared.registry"]
+forbidden_modules = ["kaizen.shared.ticket_worktree"]

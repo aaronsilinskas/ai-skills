@@ -12,7 +12,7 @@ from typing import Literal
 from kaizen.shared.command import VERDICT_MEANING, Verdict, run_from, verdict
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
-from kaizen.shared.registry import base_ref, fetch_base, resolve_ticket_worktree, uncommitted
+from kaizen.shared.ticket_worktree import base_ref, fetch_base, resolve_ticket_worktree, uncommitted
 from kaizen.shared.worktree import link_ignored_paths, scratch_worktree
 
 Side = Literal["ticket", "base"]

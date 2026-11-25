@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.common import RefusalError
-from kaizen.shared.registry import resolve_ticket_worktree
+from kaizen.shared.ticket_worktree import resolve_ticket_worktree
 from kaizen.tests.ticket_shell import Shell
 
 

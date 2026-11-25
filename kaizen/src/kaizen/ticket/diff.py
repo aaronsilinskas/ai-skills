@@ -8,7 +8,7 @@ from typing import Literal, get_args
 from kaizen.shared.branch import is_ancestor
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
-from kaizen.shared.registry import fetch_base, resolve_ticket_worktree, uncommitted
+from kaizen.shared.ticket_worktree import fetch_base, resolve_ticket_worktree, uncommitted
 
 Section = Literal["base", "log", "stat"]
 """A section ``kaizen ticket diff`` can print on its own: the base commit, the commits or the

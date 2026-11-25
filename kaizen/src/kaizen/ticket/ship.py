@@ -22,8 +22,8 @@ from kaizen.shared.pr import (
     read_body,
     update_pr,
 )
-from kaizen.shared.registry import (
-    Project,
+from kaizen.shared.registry import Project
+from kaizen.shared.ticket_worktree import (
     TicketWorktree,
     changed_paths,
     file_changes,
