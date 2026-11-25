@@ -89,6 +89,7 @@ One module per command; each group's `--help` lists them.
   `spec integrate` merges in a scratch worktree and pushes only after the check command passes; the ticket branch is never pushed (ADR 0001).
   `spec/common.py` reads a spec's sub-issues and each ticket's blockers, for `spec status` and `ticket start --spec`.
 - `project/`: `project leak-check`, the leak check on its own for a push no other command makes, and `project labels`, which creates the workflow labels a project's repo lacks and never edits or deletes one.
+  `project leak-check --root`, the CI form, takes only the home's own root, finding its page by origin's repo through `registry.resolve_home_checkout`, and runs the same rules from the same `Home`, so it widens no allowlist (ADR 0002).
 - `issue/`: `issue show`, `issue link` and `issue publish`, built on the issue graph.
 - `pr/`: `pr wait`, which waits for a PR's checks and exits by their outcome.
 - `home/`: `home init`, which makes the git repo it runs in a new home, and needs no home itself.

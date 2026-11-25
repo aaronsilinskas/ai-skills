@@ -64,6 +64,10 @@ WORKTREES = ".claude/worktrees"
 """A project's worktree root when its page sets no ``worktree_root``, relative to its path."""
 
 _GITHUB_REPO = re.compile(r"[\w.-]+/[\w.-]+")
+_GITHUB_REMOTE = re.compile(
+    r"(?:git@github\.com:|ssh://git@github\.com(?::\d+)?/|https://(?:[^@/]+@)?github\.com/)"
+    r"(?P<owner>[\w.-]+)/(?P<repo>[\w.-]+?)(?:\.git)?/?"
+)
 
 _WILDCARDS = {"*": "[^/]*", "?": "[^/]"}
 """The regex each glob wildcard stands for within one path segment."""
@@ -162,6 +166,48 @@ def resolve_checkout(run: Runner, path: Path | None, projects_dir: Path) -> tupl
         f"{root} is not a registered project's main checkout or a worktree under its worktree root",
         f"{action} the root of one of: {places}",
     )
+
+
+def github_remote(url: str) -> tuple[str, str] | None:
+    """The GitHub owner and repo a remote *url* names, in SSH or HTTPS form; ``None`` for any
+    other URL."""
+    if match := _GITHUB_REMOTE.fullmatch(url):
+        return match["owner"], match["repo"]
+    return None
+
+
+def resolve_home_checkout(
+    run: Runner, path: Path, home_root: Path, projects_dir: Path
+) -> tuple[Project, Path]:
+    """The home's own project, and the checkout's root, for the git checkout at *path*, which
+    must be the root of the home kaizen serves, *home_root*, wherever that is, such as a CI
+    clone. The project is the page whose ``github`` is the checkout's ``origin`` repo, so its
+    registered path is not needed. Refuses any other checkout, and an origin no page registers."""
+    root = _toplevel(run, path.expanduser())
+    if root.resolve() != home_root.resolve():
+        raise RefusalError(
+            f"project leak-check --root: {root.resolve()} is not the root of the home kaizen"
+            f" serves, {home_root}",
+            "pass the home's root, from inside it, with KAIZEN_HOME unset or set to it",
+        )
+    url = run_or_refuse(
+        ["git", "-C", str(root), "remote", "get-url", "origin"],
+        run,
+        f"project leak-check --root: {root} has no origin remote",
+        "check out the home from its GitHub repo",
+    ).strip()
+    # The URL itself is not printed: an HTTPS remote can carry a token.
+    remote = github_remote(url)
+    repo = "/".join(remote).lower() if remote else None
+    project = next((p for p in all_projects(projects_dir) if p.github.lower() == repo), None)
+    if project is None:
+        named = f"repo {'/'.join(remote)}" if remote else "URL, which names no GitHub repo"
+        raise RefusalError(
+            f"project leak-check --root: no registry page's github is origin's {named}",
+            "register the home's own page with its GitHub repo as github, or run in a clone"
+            " of that repo",
+        )
+    return project, root
 
 
 def _main_checkout_owner(root: Path, projects: list[Project]) -> Project | None:

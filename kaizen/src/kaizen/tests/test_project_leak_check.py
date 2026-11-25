@@ -283,3 +283,44 @@ def test_a_denied_word_on_no_added_line_passes(tmp_path, staged):
     )
 
     assert shell.ran("diff")
+
+
+def _root_shell(tmp_path: Path, merge_base: Reply = "abc\n") -> Shell:
+    """A shell for ``--root`` on the home at ``tmp_path``, on a ticket branch, whose origin is
+    ``owner/site``; the diff adds ``ADDED_DENIED``."""
+    return Shell(
+        {
+            ("rev-parse", "--show-toplevel"): f"{tmp_path}\n",
+            ("remote", "get-url"): "https://github.com/owner/site\n",
+            ("ls-remote", "--symref"): "ref: refs/heads/main\tHEAD\n",
+            ("merge-base",): merge_base,
+            ("grep",): failed("git grep"),
+            ("diff",): ADDED_DENIED,
+        }
+    )
+
+
+def test_root_searches_denied_patterns_against_the_default_branch_on_any_branch(tmp_path):
+    shell = _root_shell(tmp_path)
+
+    with pytest.raises(RefusalError, match=r"docs/a\.md:4: denied pattern zephyr"):
+        leak_check_project(
+            shell, home=home_for(_denying_projects(tmp_path)), root=tmp_path, say=lambda _: None
+        )
+
+    (diff,) = shell.ran("diff")
+    assert diff[diff.index("--merge-base") + 1] == "origin/main"
+    assert not shell.ran("rev-parse", "--abbrev-ref")
+
+
+def test_root_in_a_clone_lacking_the_default_branchs_history_is_refused_before_any_search(
+    tmp_path,
+):
+    shell = _root_shell(tmp_path, merge_base=failed("git merge-base"))
+
+    with pytest.raises(RefusalError, match=r"fetch-depth: 0"):
+        leak_check_project(
+            shell, home=home_for(_denying_projects(tmp_path)), root=tmp_path, say=lambda _: None
+        )
+
+    assert not shell.ran("grep")

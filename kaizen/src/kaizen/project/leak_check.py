@@ -5,13 +5,14 @@ import argparse
 from pathlib import Path
 
 from kaizen.shared.branch import parse_ticket_branch, remote_default_branch
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.registry import (
     Project,
     base_ref,
     resolve_checkout,
+    resolve_home_checkout,
     resolve_ticket_worktree,
 )
 
@@ -22,6 +23,7 @@ def leak_check_project(
     *,
     home: Home,
     staged: bool = False,
+    root: Path | None = None,
     say: Say = print,
 ) -> None:
     """Refuses, listing each offending line, when the tracked files of the checkout at *path*
@@ -30,9 +32,20 @@ def leak_check_project(
 
     The project's denied patterns are searched on the lines the index adds when *staged*, else
     on those the checkout adds against its base: a spec ticket's integration branch, otherwise
-    the default branch, as last fetched."""
-    project, checkout = resolve_checkout(run, path, home.registry)
-    base = None if staged or not project.leak_deny else _base(project, checkout, run, home.registry)
+    the default branch, as last fetched.
+
+    Given *root*, the CI form, the checkout is the home's own, at *root* wherever it is, and its
+    base is always the default branch, whose history the clone must hold."""
+    if root is not None:
+        project, checkout = resolve_home_checkout(run, root, home.root, home.registry)
+        base = _fetched_default(checkout, run) if project.leak_deny else None
+    else:
+        project, checkout = resolve_checkout(run, path, home.registry)
+        base = (
+            None
+            if staged or not project.leak_deny
+            else _base(project, checkout, run, home.registry)
+        )
     leak_check(
         checkout,
         home,
@@ -53,6 +66,21 @@ def _base(project: Project, checkout: Path, run: Runner, projects_dir: Path) -> 
     return base_ref(resolve_ticket_worktree(checkout, run, projects_dir), run)
 
 
+def _fetched_default(checkout: Path, run: Runner) -> str:
+    """``origin/<default branch>``, refusing a clone that lacks it or its merge base with
+    ``HEAD``, such as a shallow CI clone, so no denied pattern goes unsearched."""
+    base = f"origin/{remote_default_branch(str(checkout), run)}"
+    run_or_refuse(
+        ["git", "-C", str(checkout), "merge-base", base, "HEAD"],
+        run,
+        f"project leak-check --root: {checkout} lacks {base} or its history with HEAD, which"
+        " leak_deny's search needs",
+        f"fetch the default branch with its history before the check, such as actions/checkout's"
+        f" fetch-depth: 0, or `git fetch origin {base.removeprefix('origin/')}` in a full clone",
+    )
+    return base
+
+
 def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     parser = subparsers.add_parser(
         "leak-check",
@@ -66,7 +94,19 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "line with its rule and fix. The project's leak_deny patterns are searched only on "
             "the lines the checkout adds against its base (a spec ticket's integration branch, "
             "else the default branch, as last fetched). It only queries, so it has no --dry-run."
+            "\n\n"
+            "In a home's CI, where the clone is at no registered path, run it as "
+            f"`{CI_STEP}` from the clone's root. --root takes the home kaizen serves (KAIZEN_HOME "
+            "unset or set to that root, so the marker found there) and refuses any other "
+            "checkout; the project is the registry page whose github is origin's repo, so it "
+            "needs no main checkout. It runs the same rules on the tracked files, built from the "
+            "same home facts, with the clone's root as the home's root; as on any machine, ~ is "
+            "the running user's home directory. leak_deny patterns are searched on the lines "
+            "the clone adds against the default branch, as last fetched, and a clone lacking "
+            "that branch or its history with HEAD, such as a shallow one, is refused, so fetch "
+            "it with fetch-depth: 0. --root takes no --staged and no checkout."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--staged",
@@ -82,8 +122,24 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         help="a project's main checkout, or a ticket worktree path `kaizen ticket start` printed "
         "(default: the checkout the command runs in)",
     )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        metavar="ROOT",
+        help="the CI form: check the home's own clone at ROOT, wherever it is, as the project "
+        "whose github is origin's repo; for a home's CI",
+    )
     parser.set_defaults(handler=_command)
 
 
+CI_STEP = "kaizen project leak-check --root ."
+"""The step a home's CI runs."""
+
+
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    leak_check_project(run, args.checkout, home=home, staged=args.staged)
+    if args.root is not None and (args.staged or args.checkout is not None):
+        raise RefusalError(
+            "project leak-check: --root takes no --staged and no checkout",
+            "drop --staged and the checkout, or drop --root",
+        )
+    leak_check_project(run, args.checkout, home=home, staged=args.staged, root=args.root)
