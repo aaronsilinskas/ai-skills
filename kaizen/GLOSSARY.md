@@ -122,3 +122,8 @@ _Avoid_: hook config (that is the whole file), hook manifest
 The kaizen release a home was last synced with, recorded in its home marker by `kaizen home sync` and `kaizen home init`.
 Every command compares it with the running release, and the synced files show it in the home's CI step.
 _Avoid_: pin, home version
+
+**Local build**:
+A kaizen installed from a checkout of its repo rather than a release from PyPI.
+When its version is not `X.Y.Z`, such as a `.dev` one, no command records it as a home's synced version, and `kaizen home sync --dry-run --allow-dev` previews what it would sync.
+_Avoid_: dev install, unreleased kaizen

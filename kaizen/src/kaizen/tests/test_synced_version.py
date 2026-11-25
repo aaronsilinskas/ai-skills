@@ -398,8 +398,7 @@ def test_a_local_build_dry_run_is_refused_when_the_home_records_no_synced_versio
     assert _kaizen(home, "home", "sync", "--dry-run", "--allow-dev", version=DEV) == 1
 
     assert (
-        f"refused: home sync --dry-run --allow-dev: {MARKER} records no synced version to render"
-        " the local build's files for\n"
+        f"refused: home sync --dry-run --allow-dev: {MARKER} records no synced version\n"
         "  fix: run a release's `kaizen home sync` first"
     ) in capsys.readouterr().err
 
@@ -412,3 +411,30 @@ def test_a_release_build_ignores_allow_dev_and_syncs_as_usual(tmp_path, capsys):
 
     assert capsys.readouterr().out.splitlines()[-1] == f"recorded synced version 1.3.0 in {MARKER}"
     assert 'synced_version = "1.3.0"' in _marker(home)
+
+
+def test_a_release_build_dry_run_ignores_allow_dev_and_previews_its_own_version(tmp_path, capsys):
+    home = _synced(tmp_path, "1.2.3")
+    before = _tree(home)
+    capsys.readouterr()
+
+    assert (
+        _kaizen(home, "home", "sync", "--dry-run", "--allow-dev", version="1.3.0", latest=None) == 0
+    )
+
+    out = capsys.readouterr().out
+    assert f"would write {MARKER}:\n" in out
+    assert '+synced_version = "1.3.0"' in out
+    assert _tree(home) == before
+
+
+def test_a_local_build_sync_without_allow_dev_names_the_preview_in_its_fix(tmp_path, capsys):
+    home = _synced(tmp_path, "1.2.3")
+    capsys.readouterr()
+
+    assert _kaizen(home, "home", "sync", version=DEV) == 1
+
+    assert (
+        "; or, to preview a local build's synced files, run"
+        " `kaizen home sync --dry-run --allow-dev`"
+    ) in capsys.readouterr().err

@@ -131,19 +131,26 @@ def sync_home(
     install: Install,
     *,
     dry_run: bool = False,
-    allow_dev: bool = False,
+    preview: bool = False,
     say: Say = print,
 ) -> None:
     """Writes each of *home*'s ``changes`` for the running version, which it records as the
     synced version, one line each, or says nothing changed; then names a newer release when
-    there is one. With *dry_run*, prints each change's diff instead and writes nothing. Refuses
-    a running version that is not ``X.Y.Z``, which no home's CI could install, unless
-    *allow_dev* and *dry_run* preview it, and a home that still holds the old marker beside
-    ``kaizen.toml``."""
-    if allow_dev and Version.parse(install.version) is None:
-        version = _preview_version(home, install.version, dry_run=dry_run)
+    there is one. With *dry_run*, prints each change's diff instead and writes nothing.
+
+    With *preview*, for a local build, it is a dry run rendered for *home*'s recorded synced
+    version, so the diffs show only template changes.
+
+    Refuses: a running version that is not ``X.Y.Z``, which no home's CI could install, unless
+    *preview*; a *preview* of a home that records no synced version; and a home that still
+    holds the old marker beside ``kaizen.toml``."""
+    if preview:
+        dry_run = True
+        version = _recorded_version(
+            home, "home sync --dry-run --allow-dev", "run a release's `kaizen home sync` first"
+        )
     else:
-        version = recordable_version(install.version, "home sync")
+        version = recordable_version(install.version, "home sync", alternative=PREVIEW_FIX)
     refuse_old_marker_copy(home, "home sync")
     found = changes(home, version)
     if not found:
@@ -160,38 +167,38 @@ def sync_home(
         say(line)
 
 
-def _preview_version(home: Home, running: str, *, dry_run: bool) -> Version:
-    """The version a local build's preview renders for: *home*'s recorded synced version, so its
-    diffs show only template changes. Refuses unless *dry_run*, since a local build's version
-    can't be recorded, and when *home* records none."""
+PREVIEW_FIX = (
+    "to preview a local build's synced files, run `kaizen home sync --dry-run --allow-dev`"
+)
+
+
+def is_preview(running: str, *, allow_dev: bool, dry_run: bool) -> bool:
+    """Whether a sync of the *running* version is a local build's preview: *allow_dev* on a
+    version that is not ``X.Y.Z``. A release build ignores *allow_dev*. Refuses a local build's
+    *allow_dev* without *dry_run*, since its version can't be recorded."""
+    if not allow_dev or Version.parse(running) is not None:
+        return False
     if not dry_run:
-        raise _preview_only(running)
-    if home.synced_version is None:
         raise RefusalError(
-            f"home sync --dry-run --allow-dev: {home.marker} records no synced version to render"
-            " the local build's files for",
-            "run a release's `kaizen home sync` first",
+            f"home sync: --allow-dev is preview-only, so it needs --dry-run to run kaizen"
+            f" {running}, which is not X.Y.Z",
+            "add --dry-run to preview the synced files, or install a release to write them",
         )
+    return True
+
+
+def _recorded_version(home: Home, command: str, fix: str) -> Version:
+    if home.synced_version is None:
+        raise RefusalError(f"{command}: {home.marker} records no synced version", fix)
     return home.synced_version
-
-
-def _preview_only(running: str) -> RefusalError:
-    return RefusalError(
-        f"home sync: --allow-dev is preview-only, so it needs --dry-run to run kaizen {running},"
-        " which is not X.Y.Z",
-        "add --dry-run to preview the synced files, or install a release to write them",
-    )
 
 
 def check_home(home: Home, *, say: Say = print) -> None:
     """Prints each of *home*'s ``changes`` as a diff and refuses, naming them all, when there is
     any. Writes nothing, and renders for the synced version *home* records, the release its CI
     installs; refuses when it records none."""
-    if home.synced_version is None:
-        raise RefusalError(
-            f"home sync --check: {home.marker} records no synced version", "run `kaizen home sync`"
-        )
-    found = changes(home, home.synced_version)
+    version = _recorded_version(home, "home sync --check", "run `kaizen home sync`")
+    found = changes(home, version)
     for change in found:
         say(f"differs: {change.relative}\n{change.diff()}")
     if found:
@@ -271,9 +278,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:
+    preview = is_preview(install.version, allow_dev=args.allow_dev, dry_run=args.dry_run)
     if args.check:
-        if args.allow_dev and Version.parse(install.version) is None:
-            raise _preview_only(install.version)
         check_home(home)
     else:
-        sync_home(home, install, dry_run=args.dry_run, allow_dev=args.allow_dev)
+        sync_home(home, install, dry_run=args.dry_run, preview=preview)
