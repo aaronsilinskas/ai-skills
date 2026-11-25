@@ -13,10 +13,8 @@ import pytest
 from kaizen.shared.common import RefusalError
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check_text
-from kaizen.tests.leak_home import leak_home, leak_user
+from kaizen.tests.leak_home import VISIBILITY, leak_home, leak_user
 from kaizen.tests.ticket_shell import TILDE
-
-VISIBILITY = pytest.mark.parametrize("public", [True, False], ids=["public", "private"])
 
 
 @pytest.fixture

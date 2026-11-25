@@ -16,6 +16,7 @@ Each command's `--help` says what it checks and does; this map holds only what `
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
   git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo, through `real_git.py`, and never touch GitHub.
   Fixtures use generic homes, owners and paths.
+  `leak_home.py` builds the fixture home both leak check test files judge text in.
 - `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pytest and `line_length_check.py`, all through `uv`.
 - `kaizen/src/kaizen/tests/scripts.py`: loads each Python script in `kaizen/scripts/` by path for its tests, since the scripts sit outside the package.
 - `kaizen/scripts/release_check.py`: the release workflow's version and wheel checks, also runnable by hand.

@@ -3,7 +3,12 @@
 
 from pathlib import Path
 
+import pytest
+
 from kaizen.shared.home import Home
+
+VISIBILITY = pytest.mark.parametrize("public", [True, False], ids=["public", "private"])
+"""Runs a test for a public and a private project."""
 
 
 def leak_user(tmp_path: Path) -> Path:

@@ -39,7 +39,7 @@ def integration_branch(spec: int) -> str:
 
 def domain_docs_branch(spec: int) -> str:
     """The branch ``kaizen spec publish`` ships spec *spec*'s domain-doc edits on, and
-    ``kaizen ticket publish`` waits on."""
+    ``kaizen ticket publish`` waits for."""
     return f"{integration_branch(spec)}-domain-docs"
 
 
