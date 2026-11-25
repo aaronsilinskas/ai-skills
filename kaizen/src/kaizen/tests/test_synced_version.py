@@ -145,16 +145,6 @@ def test_sync_refuses_to_record_a_running_version_that_is_not_x_y_z(tmp_path, ca
     assert _marker(home) == before
 
 
-def test_sync_writes_the_version_into_the_old_marker_it_read(tmp_path):
-    home = _home(tmp_path, None)
-    (home / MARKER).rename(home / "mw.toml")
-
-    _kaizen(home, "home", "sync", version="1.2.3")
-
-    assert 'synced_version = "1.2.3"' in (home / "mw.toml").read_text()
-    assert not (home / MARKER).exists()
-
-
 # The check on every command
 
 

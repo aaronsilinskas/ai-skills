@@ -9,11 +9,9 @@ from pathlib import Path
 from kaizen.shared.common import RefusalError, Runner, Say
 from kaizen.shared.home import (
     MARKER,
-    OLD_MARKER,
     SETTINGS,
     Home,
     SettingsError,
-    refuse_old_marker_copy,
     with_synced_version,
 )
 from kaizen.shared.registry import invalid_pages
@@ -95,15 +93,15 @@ def changes(home: Home, version: Version) -> list[Change]:
                 f"merged the git stash deny rule into {SETTINGS}",
             )
         )
-    marker = (home.root / home.marker).read_text(encoding="utf-8")
+    marker = (home.root / MARKER).read_text(encoding="utf-8")
     recorded = with_synced_version(marker, version)
     if recorded != marker:
         found.append(
             Change(
-                home.marker,
+                MARKER,
                 marker,
                 recorded,
-                f"recorded synced version {version} in {home.marker}",
+                f"recorded synced version {version} in {MARKER}",
             )
         )
     return found
@@ -146,8 +144,7 @@ def sync_home(
     version, so the diffs show only template changes.
 
     Refuses: a running version that is not ``X.Y.Z``, which no home's CI could install, unless
-    *preview*; a *preview* of a home that records no synced version; and a home that still
-    holds the old marker beside ``kaizen.toml``."""
+    *preview*; and a *preview* of a home that records no synced version."""
     if preview:
         dry_run = True
         version = _recorded_version(
@@ -155,7 +152,6 @@ def sync_home(
         )
     else:
         version = recordable_version(install.version, "home sync", alternative=PREVIEW_FIX)
-    refuse_old_marker_copy(home, "home sync")
     found = changes(home, version)
     if not found:
         say(f"nothing changed: {IN_STEP}")
@@ -193,7 +189,7 @@ def is_preview(running: str, *, allow_dev: bool, dry_run: bool) -> bool:
 
 def _recorded_version(home: Home, command: str, fix: str) -> Version:
     if home.synced_version is None:
-        raise RefusalError(f"{command}: {home.marker} records no synced version", fix)
+        raise RefusalError(f"{command}: {MARKER} records no synced version", fix)
     return home.synced_version
 
 
@@ -249,9 +245,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "when kaizen's version is not X.Y.Z, such as a local build's, except in the "
             "--dry-run --allow-dev preview; when "
             f"{SETTINGS} is not a JSON object, its permissions not an object or its "
-            "permissions.deny not a list; when a synced file's path is not a file; and when the "
-            f"home holds both {MARKER} and {OLD_MARKER}, its old name, which writing {MARKER} "
-            f"would leave different (the fix is to delete {OLD_MARKER}).\n\n"
+            "permissions.deny not a list; and when a synced file's path is not a file.\n\n"
             "Then it asks PyPI, once and briefly, for kaizen's latest release, and prints the "
             "upgrade command when that is newer; a failed lookup prints nothing. No other kaizen "
             "command uses the network.\n\n"

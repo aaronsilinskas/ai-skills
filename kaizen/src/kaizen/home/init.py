@@ -152,16 +152,11 @@ class SettingsMerge:
         return settings_text(settings) if named or denied else None
 
     def _fix(self, exc: SettingsError) -> str:
-        if exc.variable is None or exc.value is None:
+        if exc.value is None:
             fix = f"fix {SETTINGS} so it holds {SETTINGS_SHAPE}"
         elif not same_root(exc.value, self.root, self.user_home):
             # The value is not printed: it may be another home's root.
-            fix = (
-                f"remove {exc.variable} from {SETTINGS}'s env if this repo is meant to be a new"
-                " home"
-            )
-        elif exc.names_old_variable:
-            fix = f"replace {exc.variable} in {SETTINGS}'s env with {ENV_VAR} set to {self.value}"
+            fix = f"remove {ENV_VAR} from {SETTINGS}'s env if this repo is meant to be a new home"
         else:
             # The same root in another form, such as absolute, which can hold a user name.
             fix = f"set {ENV_VAR} in {SETTINGS}'s env to {self.value} instead"
@@ -346,11 +341,10 @@ def _check_not_inside_home(root: Path, env: Mapping[str, str], user_home: Path) 
     point away from it; refuses otherwise. The refusals name no other root, so another home's path
     never reaches this one's output."""
     named = root_named_by_env(env, user_home)
-    if named is not None and named.root != root.resolve():
-        variable = named.variable
+    if named is not None and named != root.resolve():
         raise RefusalError(
-            f"home init: {variable} is set to a root other than {root}",
-            f"unset {variable}, or start a fresh session in {root}, then run init again",
+            f"home init: {ENV_VAR} is set to a root other than {root}",
+            f"unset {ENV_VAR}, or start a fresh session in {root}, then run init again",
         )
     if marker_at_or_above(root):
         raise RefusalError(

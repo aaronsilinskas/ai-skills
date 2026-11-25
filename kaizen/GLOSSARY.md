@@ -15,7 +15,6 @@ _Avoid_: workspace, hub
 
 **Home marker**:
 The file at a home's root, `kaizen.toml`, that declares it a home and holds its facts for kaizen: where its project registry is, what its leak check treats as its own or allowed, and its home settings.
-The first release also reads the marker under its old name, `mw.toml`, and the release after drops it.
 _Avoid_: config file, kaizen config
 
 **Project**:
