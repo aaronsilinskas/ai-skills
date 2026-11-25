@@ -9,7 +9,7 @@ from kaizen.shared.labels import Label, repo_labels
 from kaizen.shared.registry import Project, all_projects, resolve
 
 
-def sync_labels(
+def create_missing_labels(
     run: Runner,
     name: str | None = None,
     *,
@@ -20,13 +20,15 @@ def sync_labels(
     """Creates, in the GitHub repo of the project called *name* (default: every registered
     project), each of the home's workflow labels it lacks, and warns about one present with another
     colour or description, which it never edits. Every repo's labels are listed before any is
-    created, and a repo two projects share is synced once. Returns 1 when a creation failed, after
+    created, and a repo two projects share is handled once. Returns 1 when a creation failed, after
     trying every other one; 0 otherwise."""
     projects = [resolve(name, home.registry)] if name else all_projects(home.registry)
     labels_by_repo = {project.github: _present_labels(project, run) for project in projects}
     failed = False
     for repo, present in labels_by_repo.items():
-        failed |= not _sync_repo(repo, home.workflow_labels, present, run, dry_run, say)
+        failed |= not _create_missing_in_repo(
+            repo, home.workflow_labels, present, run, dry_run, say
+        )
     return 1 if failed else 0
 
 
@@ -38,7 +40,7 @@ def _present_labels(project: Project, run: Runner) -> dict[str, Label]:
     return repo_labels(repo, run, fix)
 
 
-def _sync_repo(
+def _create_missing_in_repo(
     repo: str,
     wanted: tuple[Label, ...],
     present: dict[str, Label],
@@ -109,4 +111,4 @@ def add_parser(subparsers: Subparsers) -> None:
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:
-    return sync_labels(run, args.project, home=home, dry_run=args.dry_run)
+    return create_missing_labels(run, args.project, home=home, dry_run=args.dry_run)

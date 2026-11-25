@@ -16,6 +16,7 @@ Each command's `--help` says what it checks and does; this map holds only what `
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
   git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo, through `real_git.py`, and never touch GitHub.
   Fixtures use generic homes, owners and paths; `test_fixture_names.py` fails on any other owner named in a repo reference there or in the templates.
+  `leak_home.py` builds the fixture home both leak check test files judge text in.
   `test_dry_run.py` runs every command's `--dry-run`, as listed by `commands.py`, and fails on any git or gh call it doesn't know as a query.
 - `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pytest and `line_length_check.py`, all through `uv`.
 - `kaizen/src/kaizen/tests/scripts.py`: loads each Python script in `kaizen/scripts/` by path for its tests, since the scripts sit outside the package.
@@ -55,7 +56,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
   The registry folder always comes from the `Home`, never from a default path.
   It also holds the starter README and page a new home gets, beside the parser so the two change together.
-- `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>` and a **docs change**'s `docs-<slug>`) and the merge subject that **integrates** a ticket.
+- `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>`, a **docs change**'s `docs-<slug>`, and the `spec-<N>-domain-docs` branch `spec publish` ships a spec's domain-doc edits on and `ticket publish` waits for) and the merge subject that **integrates** a ticket.
   Names are worked out from numbers, so the integration branch's history alone records which tickets are integrated.
   `find_integration_branch` says where a started spec's integration branch is: on `origin`, or only local, as `spec start --local` leaves it until the spec's first integration pushes it.
   Every command that reads an integration branch prefers `origin`'s, so a local copy matters only while `origin` lacks the branch, and the push that publishes it deletes the local copy, which `spec finish` would otherwise refuse as unmerged.

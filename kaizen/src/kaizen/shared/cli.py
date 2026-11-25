@@ -71,7 +71,7 @@ GROUPS = {
     ),
     "issue": ("read, link and publish issues", (issue_show, issue_link, issue_publish)),
     "project": (
-        "check the current project, or sync the workflow labels to the projects' repos",
+        "check the current project, or create the workflow labels the projects' repos lack",
         (project_leak_check, project_labels),
     ),
     "pr": ("wait on a pull request's checks", (wait,)),
