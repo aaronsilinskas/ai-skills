@@ -312,6 +312,14 @@ async function openPane($: EngineInterface): Promise<void> {
   await $.ui.open({ id: PANE, title: PANE_TITLE })
 }
 
+/**
+ * The `.catch` of every hook that gates a prompt, a tool call or a command: a
+ * fault in this plugin's own code leaves the verdict to the hooks beneath. Where
+ * the hook already called `next`, `next(e)` replays what that settled to, so
+ * nothing beneath runs twice and an error from beneath still propagates.
+ */
+const fallThrough = <E, R>(_$: unknown, e: E, next: (e: E) => R): R => next(e)
+
 export const register: Register = (on, options) => {
   notifyMode = options.notify === 'attention' || options.notify === 'none' ? options.notify : 'all'
 
@@ -391,7 +399,7 @@ export const register: Register = (on, options) => {
       await poll($).catch(ignore)
     }
     return result
-  })
+  }).catch(fallThrough)
 
   // ---------------------------------------------------------------------------
   // Status transitions
@@ -410,7 +418,7 @@ export const register: Register = (on, options) => {
     asking.clear()
     await setStatus($, { status: 'working', note: '' }, { quiet: true }).catch(ignore)
     return next(e)
-  })
+  }).catch(fallThrough)
 
   // tool.call → tool.check → (tool.judge in auto mode, or a person) → tool.run.
   on('tool.check', async ($, e, next) => {
@@ -427,19 +435,19 @@ export const register: Register = (on, options) => {
       })
     }
     return verdict
-  })
+  }).catch(fallThrough)
 
   on('tool.judge', async ($, e, next) => {
     const verdict = await next(e)
     // The classifier decided: nobody is asked. An `ask` still goes to a person.
     if (verdict.decision !== 'ask') await settleAsk($, e.tool_use_id).catch(ignore)
     return verdict
-  })
+  }).catch(fallThrough)
 
   on('tool.run', async ($, e, next) => {
     await settleAsk($, e.tool_use_id).catch(ignore)
     return next(e)
-  })
+  }).catch(fallThrough)
 
   on('tool.call', async ($, e, next) => {
     const isQuestion = e.tool === 'AskUserQuestion' || e.tool === 'ExitPlanMode'
@@ -455,7 +463,7 @@ export const register: Register = (on, options) => {
       const wasAsking = e.tool_use_id ? asking.delete(e.tool_use_id) : false
       if (wasAsking || isQuestion) await resume($).catch(ignore)
     }
-  })
+  }).catch(fallThrough)
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)

@@ -37,6 +37,8 @@ type World = {
   runs: string[][]
   /** Whether `/rename` refuses, as it does a bare one with no conversation to name. */
   renameRefused: boolean
+  /** Set, every file write fails with this message. */
+  writeError?: string
   /** Fires the timers `$.clock.after` booked, as if their time came. */
   fireTimers: () => Promise<void>
 }
@@ -73,6 +75,7 @@ function engine(on: On, opts: { rmError?: string; home?: string } = {}): World {
     return exited(0, '??\n')
   })
   on('fs.write', (_, e) => {
+    if (world.writeError !== undefined) return { deny: world.writeError } as never
     files.set(e.path, e.text)
     return { value: undefined }
   })
@@ -519,4 +522,60 @@ test('/sessions clean removes nothing when HOME is not an absolute path', async 
   await start($)
   expect((await $.command.run(sessionsClean)).text).toBe('The session board has not started yet.')
   expect(removals(w.runs)).toEqual([])
+})
+
+// --- gating hooks: the board's own faults never change what they gate --------
+
+test('a prompt outside the schema goes through untouched', async ($, on) => {
+  engine(on)
+  await start($)
+  expect(await $.prompt.submit({ text: 'hi', wait: false } as never)).toEqual({ text: 'hi' })
+})
+
+test('a permission verdict stands when the call it asks about is outside the schema', async ($, on) => {
+  engine(on)
+  on('tool.check', () => ({ decision: 'ask' as const }))
+  await start($)
+  const verdict = await $.tool.check({ input: {}, tool_use_id: 'call-1', approver: 'person' } as never)
+  expect(verdict).toEqual({ decision: 'ask' })
+})
+
+test("the classifier's verdict stands when the board cannot write its file", async ($, on) => {
+  const w = engine(on)
+  on('tool.check', () => ({ decision: 'ask' as const }))
+  on('tool.judge', () => ({ decision: 'allow' as const }))
+  await start($)
+  w.writeError = 'disk full'
+  await $.tool.check(permissionAsk)
+  expect(await $.tool.judge(permissionAsk)).toEqual({ decision: 'allow' })
+})
+
+test("a run's result stands when the board cannot write its file", async ($, on) => {
+  const w = engine(on)
+  on('tool.check', () => ({ decision: 'ask' as const }))
+  await start($)
+  w.writeError = 'disk full'
+  await $.tool.check(permissionAsk)
+  expect(await $.tool.run({ tool: 'Bash', command: 'git push', tool_use_id: 'call-1' } as never)).toEqual({ result: {} })
+})
+
+test("a question's result stands when its question is outside the schema", async ($, on) => {
+  engine(on)
+  await start($)
+  const call = { tool: 'AskUserQuestion', questions: [{ question: 7 }], tool_use_id: 'call-2' } as never
+  expect(await $.tool.call(call)).toEqual({ result: {} })
+})
+
+test("/rename's answer stands when the board cannot write its file", async ($, on) => {
+  const w = engine(on)
+  await start($)
+  w.writeError = 'disk full'
+  expect(await $.command.run(rename('board work'))).toEqual({ text: 'Session renamed to: board work' })
+})
+
+test('an error beneath a gating hook still reaches the caller', async ($, on) => {
+  engine(on)
+  await start($)
+  // Nothing beneath answers tool.check here, so the engine's dispatch fails.
+  await expect($.tool.check(permissionAsk)).rejects.toThrow('no implementation for tool.check')
 })
