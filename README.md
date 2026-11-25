@@ -93,6 +93,7 @@ Skills follow [Matt's authoring conventions](https://github.com/mattpocock/skill
 - An operative cross-skill call says `Call the Skill tool with "x"` (or `Call the Skill tool twice, for "x" and "y"`).
 - A user-invoked skill may call model-invoked skills, never another user-invoked one. In that case it tells the user to run `/x`.
 - Quote any `description:` that contains `: `.
+- A skill's directory takes its frontmatter `name:`, prefix included (`as-air-quality-data`).
 - Every skill ships `agents/openai.yaml` in Matt's shape. User-invoked skills set `policy.allow_implicit_invocation: false`.
 - Spell it "sub-agent".
 

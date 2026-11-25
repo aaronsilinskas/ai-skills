@@ -53,6 +53,19 @@ fail() { printf 'FAIL  %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 skip() { printf 'SKIP  %s\n' "$1"; }
 indent() { sed 's/^/      /'; }
 
+# Reports a Python check from its exit status and report file, which holds
+# its one-line summary on success, or its problems under *label* on failure.
+report() {
+  local status="$1" report_file="$2" label="$3"
+  if [[ $status -eq 0 ]]; then
+    pass "$(cat "$report_file")"
+  else
+    fail "$label:"
+    indent <"$report_file"
+  fi
+  rm -f "$report_file"
+}
+
 # ── Check 1: Conventions ───────────────────────────────────────────────────
 echo "== Check 1: conventions =="
 
@@ -76,7 +89,7 @@ fi
 # Its output goes to a file, not $(...): bash 3.2 mis-parses the quotes in a
 # heredoc inside command substitution.
 run_convention_check() {
-  local report_file status
+  local report_file
   report_file="$(mktemp)"
   python3 - "$1" >"$report_file" 2>&1 <<'PY'
 import glob, os, re, sys
@@ -200,14 +213,7 @@ if problems:
     sys.exit(1)
 print(summary)
 PY
-  status=$?
-  if [[ $status -eq 0 ]]; then
-    pass "$(cat "$report_file")"
-  else
-    fail "$2:"
-    indent <"$report_file"
-  fi
-  rm -f "$report_file"
+  report $? "$report_file" "$2"
 }
 
 run_convention_check descriptions "description: frontmatter that doesn't parse as YAML"
@@ -223,7 +229,7 @@ echo "== Check 2: wiring parity =="
 # failure with its second. Like run_convention_check, it writes the report to
 # a file, not $(...).
 run_parity_check() {
-  local report_file status
+  local report_file
   report_file="$(mktemp)"
   python3 - "$1" >"$report_file" 2>&1 <<'PY'
 import glob, json, os, re, sys
@@ -251,7 +257,7 @@ if check == "skills":
     # On-disk skills are skills/<bucket>/<skill> directories; README table
     # links look like "skills/<bucket>/<skill>/SKILL.md".
     on_disk = {p.rstrip("/").split("skills/", 1)[1] for p in glob.glob("skills/*/*/")}
-    listed = re.findall(r"\(skills/([^/]+/[^/]+)/SKILL\.md\)", readme)
+    listed = re.findall(r"skills/([^/]+/[^/]+)/SKILL\.md", readme)
     problems = compare("skill", on_disk, listed, "README")
     summary = f"{len(on_disk)} skills wired consistently across disk and README"
 
@@ -259,12 +265,15 @@ elif check == "plugins":
     on_disk = {os.path.basename(p.rstrip("/")) for p in glob.glob("plugins/*/")}
     with open(".claude-plugin/marketplace.json") as f:
         entries = json.load(f).get("plugins", [])
-    listed = [os.path.basename(os.path.normpath(e.get("source", ""))) for e in entries]
+    listed = [e.get("name", "") for e in entries]
     problems = compare("plugin", on_disk, listed, ".claude-plugin/marketplace.json")
-    problems += compare("plugin", on_disk, re.findall(r"\(plugins/([^/]+)/README\.md\)", readme), "README")
+    problems += compare("plugin", on_disk, re.findall(r"plugins/([^/]+)/README\.md", readme), "README")
     for name, entry in zip(listed, entries):
+        if entry.get("source") != f"./plugins/{name}":
+            problems.append(f"{name}: marketplace.json source is {entry.get('source')!r}, not './plugins/{name}'")
         manifest = f"plugins/{name}/.claude-plugin/plugin.json"
         if not os.path.isfile(manifest):
+            problems.append(f"{name}: no {manifest}")
             continue
         with open(manifest) as f:
             version = json.load(f).get("version")
@@ -288,14 +297,7 @@ if problems:
     sys.exit(1)
 print(summary)
 PY
-  status=$?
-  if [[ $status -eq 0 ]]; then
-    pass "$(cat "$report_file")"
-  else
-    fail "$2:"
-    indent <"$report_file"
-  fi
-  rm -f "$report_file"
+  report $? "$report_file" "$2"
 }
 
 run_parity_check skills "skills on disk and in the README differ"
@@ -312,21 +314,24 @@ from urllib.parse import unquote
 
 # Not checked: Matt's copies, which this repo doesn't own, and kaizen's
 # templates, whose links resolve in the repo they are rendered into.
-SKIP = (".claude/skills/", "kaizen/src/kaizen/shared/templates/")
+EXCLUDED = (".claude/skills/", "kaizen/src/kaizen/shared/templates/")
 
-INLINE = re.compile(r"!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?[^)]*\)")
-REFERENCE = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?([^\s>]+)")
+# An inline link's target is <angle-bracketed>, or runs to whitespace or the
+# closing paren, allowing one level of balanced parens inside.
+INLINE = re.compile(r"\]\(\s*(?:<([^>\n]*)>|((?:[^()\s]|\([^()\s]*\))+))")
+# A reference definition; [^1]: starts a footnote, not a link.
+REFERENCE = re.compile(r"^\s{0,3}\[(?!\^)[^\]]+\]:\s*(?:<([^>\n]*)>|(\S+))")
 FENCE = re.compile(r"\s*(`{3,}|~{3,})")
 SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 
 tracked = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True, check=True).stdout.split("\0")
-targets = set()
+targets = {"."}
 for path in filter(None, tracked):
     while path:
         targets.add(path)
         path = os.path.dirname(path)
 
-docs = sorted(p for p in tracked if p.endswith(".md") and not p.startswith(SKIP))
+docs = sorted(p for p in tracked if p.endswith(".md") and not p.startswith(EXCLUDED))
 problems = []
 for doc in docs:
     fence = None
@@ -336,13 +341,13 @@ for doc in docs:
             if m:
                 if fence is None:
                     fence = m.group(1)
-                elif m.group(1).startswith(fence):
+                elif m.group(1).startswith(fence) and not line[m.end():].strip():
                     fence = None
                 continue
             if fence:
                 continue
             line = re.sub(r"(`+).*?\1", "", line)
-            for link in INLINE.findall(line) + REFERENCE.findall(line):
+            for link in (a or b for a, b in INLINE.findall(line) + REFERENCE.findall(line)):
                 if SCHEME.match(link) or link.startswith("#"):
                     continue
                 path = unquote(link.split("#", 1)[0].split("?", 1)[0])
@@ -360,13 +365,7 @@ if problems:
     sys.exit(1)
 print(f"every relative link in {len(docs)} Markdown files resolves")
 PY
-if [[ $? -eq 0 ]]; then
-  pass "$(cat "$links_file")"
-else
-  fail "broken relative links:"
-  indent <"$links_file"
-fi
-rm -f "$links_file"
+report $? "$links_file" "broken relative links"
 
 # Runs a command, printing PASS with *label* when it exits 0, or FAIL with its
 # output when it doesn't.
@@ -389,6 +388,7 @@ echo "== Check 4: plugins (claude plugin validate and test) =="
 if command -v claude >/dev/null 2>&1; then
   run_quiet "claude plugin validate ." claude plugin validate .
   for plugin in plugins/*/; do
+    [[ -d $plugin ]] || continue
     run_quiet "claude plugin test ${plugin%/}" claude plugin test "${plugin%/}"
   done
 else
