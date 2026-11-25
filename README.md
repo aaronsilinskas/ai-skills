@@ -1,8 +1,8 @@
 # Agent Skills
 
-[Matt Pocock's skills](https://github.com/mattpocock/skills) give a coding agent a solid engineering loop: specs, tickets, TDD, review. They leave some gaps. Nothing in them holds production code or tests to a written quality bar, pushes back on comments that restate the code, knows that a CircuitPython frame loop can't allocate, or parks a half-formed idea somewhere you'll find it again.
+A few extra, optional [Agent Skills](https://agentskills.io/) that build on [Matt Pocock's skills](https://github.com/mattpocock/skills), for people who want them. They add quality bars for production code and tests, a push-back pass on comments, rules for embedded Python on constrained hardware, and a quick way to park an idea as an issue.
 
-This repo is an overlay of [Agent Skills](https://agentskills.io/) that fills those gaps. It sits on top of Matt's skills and depends on them: install his first. Huge thanks to Matt for the foundation.
+The overlay sits on top of Matt's skills and depends on them, so install his first. Huge thanks to Matt for the foundation.
 
 The repo also hosts two Claude Code plugins and kaizen, a workflow CLI. None of them needs the skills.
 
