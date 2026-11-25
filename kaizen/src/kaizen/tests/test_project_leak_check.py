@@ -330,7 +330,7 @@ def test_root_in_a_clone_lacking_the_default_branchs_history_is_refused_before_a
 
 
 def test_root_judges_paths_as_at_the_registered_root_not_the_clones(tmp_path):
-    """A CI clone at ``~/work/r/r`` would otherwise allow ``~/work`` as its own ancestor."""
+    """A CI clone under the user directory would otherwise allow its own ancestors there."""
     clone = Path.home() / "work" / "r" / "r"
     shell = Shell(
         {
