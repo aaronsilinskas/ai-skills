@@ -1,6 +1,6 @@
 ---
 name: air-quality-data
-description: "Retrieve live air quality data by running scripts from this skill. Use this skill whenever the user wants to fetch, check, or compare air quality data, AQI values, PM2.5, PM10, or pollutant levels for any location, even if they just say 'what's the air quality near me' or 'is it safe to go outside'. Works globally including non-US cities (Tokyo, Seoul, London, Paris, etc.) via OpenAQ government monitors. Also use when combining data across multiple sources or applying correction factors to sensor readings. Runs Python scripts directly against EPA AirNow, PurpleAir, IQAir, and OpenAQ, with no API knowledge required."
+description: "Fetch live air quality (AQI, PM2.5, PM10, pollutants) for any place, including non-US cities, by running scripts against EPA AirNow, PurpleAir, IQAir and OpenAQ. Use when the user asks about or compares air quality somewhere, combines sources, or wants sensor readings corrected."
 argument-hint: "location or query (e.g. 'AQI in Tokyo' or a zip code)"
 ---
 
@@ -23,6 +23,7 @@ cat > ~/.config/air-quality-data/.env << 'EOF'
 AIRNOW_API_KEY=your_key_here
 PURPLEAIR_API_KEY=your_key_here
 IQAIR_API_KEY=your_key_here
+OPENAQ_API_KEY=your_key_here
 EOF
 ```
 
