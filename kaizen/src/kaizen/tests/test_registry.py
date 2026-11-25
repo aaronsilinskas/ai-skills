@@ -3,6 +3,7 @@
 Pages are written to a temporary ``projects/`` directory.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -212,36 +213,13 @@ def test_the_starter_readme_describes_every_key_the_parser_reads(tmp_path, monke
     assert sorted(key for key in read if f"- `{key}` (" not in readme) == []
 
 
-def test_a_page_lists_its_denied_patterns_compiled(tmp_path):
-    projects = _projects(tmp_path, BASE + r"leak_deny: zephyr, internal/, (^|[^\w/])#[0-9]+" + "\n")
+@pytest.mark.parametrize("line", ["leak_deny: zephyr, (unclosed", "owner_notes: anything"])
+def test_a_key_the_registry_does_not_read_is_ignored(tmp_path, line):
+    with_key = resolve("proto", _projects(tmp_path, BASE + line + "\n"))
+    (tmp_path / "plain").mkdir()
+    without = resolve("proto", _projects(tmp_path / "plain", BASE))
 
-    denied = resolve("proto", projects).leak_deny
-
-    assert [pattern.pattern for pattern in denied] == ["zephyr", "internal/", r"(^|[^\w/])#[0-9]+"]
-
-
-def test_a_denied_pattern_matches_case_insensitively(tmp_path):
-    projects = _projects(tmp_path, BASE + "leak_deny: zephyr\n")
-
-    (denied,) = resolve("proto", projects).leak_deny
-
-    assert denied.match("ZEPHYR")
-
-
-def test_a_page_without_leak_deny_denies_nothing(tmp_path):
-    assert resolve("proto", _projects(tmp_path, BASE)).leak_deny == ()
-
-
-@pytest.mark.parametrize("pattern", ["(unclosed", "[[:alpha:]]"])
-def test_a_denied_pattern_that_does_not_compile_is_refused_naming_the_page(tmp_path, pattern):
-    projects = _projects(tmp_path, BASE + f"leak_deny: zephyr, {pattern}\n")
-
-    with pytest.raises(RefusalError) as refusal:
-        resolve("proto", projects)
-
-    assert f"proto.md: leak_deny entry '{pattern}' is not a regular expression" in str(
-        refusal.value
-    )
+    assert replace(without, page=with_key.page) == with_key
 
 
 @pytest.mark.parametrize("key", ["path", "worktree_root"])

@@ -17,7 +17,7 @@ def _check_pr_text(title: str, body: str, project: Project, home: Home) -> None:
     """Refuses when a PR's *title* or *body* for *project* points outside *home*, before any
     ``gh`` call sends them."""
     texts = {"PR title": title, "PR body as sent": body}
-    leak_check_text(texts, home, public=project.public, denied=project.leak_deny)
+    leak_check_text(texts, home, public=project.public)
 
 
 class PullRequest(TypedDict):
@@ -140,7 +140,7 @@ def pr_body(
     file's) ending with the home's PR footer (``with_footer``). It is the one place a ship's
     body is built, so the text the leak check reads is the text GitHub gets.
     """
-    lines = "".join(f"{_closing_line(project, issue)}\n" for issue in closes)
+    lines = "".join(f"Closes #{issue}\n" for issue in closes)
     body = (f"{lines}\n" if lines else "") + with_footer(text, home.pr_footer)
     _check_pr_text(title, body, project, home)
     return PrBody(body)
@@ -148,28 +148,10 @@ def pr_body(
 
 def closes_issue(body: str, github: str, issue: int) -> bool:
     """Whether *body* already closes *issue* of *github* with one of GitHub's closing keywords,
-    by either reference ``_closing_line`` writes: ``#<issue>`` or ``<owner>/<repo>#<issue>``."""
+    by either reference: ``#<issue>`` or ``<owner>/<repo>#<issue>``."""
     keyword = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
     ref = rf"(?:{re.escape(github)})?#{issue}"
     return re.search(rf"\b{keyword}:?\s+{ref}\b", body, re.IGNORECASE) is not None
-
-
-def _closing_line(project: Project, issue: int) -> str:
-    """The line that closes *issue*: ``Closes #<issue>``, or ``Closes <owner>/<repo>#<issue>``
-    when one of the project's denied patterns matches the short form; refuses when the two forms
-    are both denied, since no body could then close the issue."""
-    forms = (f"Closes #{issue}", f"Closes {project.github}#{issue}")
-    denied: list[str] = []
-    for line in forms:
-        matching = [p.pattern for p in project.leak_deny if p.search(line)]
-        if not matching:
-            return line
-        denied += [p for p in matching if p not in denied]
-    raise RefusalError(
-        f"the project's denied pattern(s) {', '.join(denied)} deny both forms of the line"
-        f" that closes #{issue}: {' and '.join(forms)}",
-        f"narrow leak_deny on {project.page} so it allows one of them, then rerun",
-    )
 
 
 def with_footer(text: str, footer: str) -> str:

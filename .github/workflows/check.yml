@@ -20,8 +20,7 @@ jobs:
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
       - name: Check command
-        # Its home leak scan diffs against origin's default branch, which fetch-depth 0 fetches.
-        # kaizen's build also works out its version from the kaizen-v* tags fetch-depth 0 fetches.
+        # kaizen's build works out its version from the kaizen-v* tags fetch-depth 0 fetches.
         # The full leak check needs a home's facts, which no runner has, so it runs on the
         # contributor's machine.
         run: bash scripts/check.sh

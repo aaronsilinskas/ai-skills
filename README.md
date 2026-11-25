@@ -114,10 +114,8 @@ It runs every check even after a failure, prints a PASS, FAIL or SKIP line for e
 2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table, and the README lists no skill that isn't on disk.
 3. **Script lint:** `skills/engineering/wizard/template.sh` passes `bash -n` (and `shellcheck`, when installed). With no `wizard` skill in this repo, it reports SKIP.
 4. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's own check, whose script lists its steps.
-5. **Home leak scan tests:** `scripts/test_home_leak_scan.py` passes.
-6. **Home leak scan:** `scripts/home_leak_scan.py --branch` fails when a line the branch adds since its merge base with `origin`'s default branch holds a path under a user's home directory (a tilde path, or an absolute macOS, Linux or Windows home path), and lists each file and line. It scans every commit on the branch, so on an integration branch it covers every ticket already integrated. It needs no home's facts. It reports SKIP when the branch adds nothing since the default branch (as on `main` itself), or when there is no `origin` default branch or merge base to compare against, such as in a shallow clone.
 
-CI (`.github/workflows/check.yml`) runs the same command on every pull request and on pushes to `main`. To scan against another base, run `python3 scripts/home_leak_scan.py <base> HEAD`.
+CI (`.github/workflows/check.yml`) runs the same command on every pull request and on pushes to `main`.
 
 ## Upstream
 

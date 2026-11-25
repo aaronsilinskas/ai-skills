@@ -5,6 +5,7 @@ git and gh are replaced by a recording runner and the registry by a temporary ``
 directory, so no repo, network or real project page is touched.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -13,8 +14,6 @@ from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
 from kaizen.tests.conftest import Kaizen
 from kaizen.tests.ticket_shell import (
-    ADDED_DENIED,
-    DENIED,
     FOOTER,
     HOME_FOOTER,
     RELAY,
@@ -22,7 +21,6 @@ from kaizen.tests.ticket_shell import (
     Reply,
     Shell,
     cli_home,
-    deny,
     failed,
     home_for,
     write_marker,
@@ -1001,56 +999,6 @@ def test_ship_refuses_a_pr_title_pointing_outside_the_home_before_any_gh_call(tm
     assert not shell.ran("gh")
 
 
-@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
-def test_ship_refuses_a_denied_pattern_on_a_line_the_branch_adds_to_the_default_branch(
-    tmp_path, dry_run
-):
-    projects, worktree, body = _setup(tmp_path)
-    deny(projects)
-    shell = _shell(added=ADDED_DENIED)
-
-    with pytest.raises(RefusalError, match=rf"docs/a\.md:4: denied pattern {DENIED}"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
-
-    (diff,) = shell.ran("diff", "--no-color")
-    assert diff[:3] == ["git", "-C", str(worktree)]
-    assert diff[diff.index("--merge-base") + 1] == "origin/main"
-    assert not shell.ran("push")
-
-
-@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
-def test_ship_refuses_a_pr_body_holding_a_denied_pattern(tmp_path, dry_run):
-    projects, worktree, body = _setup(tmp_path)
-    deny(projects)
-    body.write_text(f"Fixes the {DENIED.title()} board.\n")
-    shell = _shell()
-
-    with pytest.raises(
-        RefusalError, match=f"PR body as sent line 3: denied pattern {DENIED.title()}"
-    ):
-        ship(
-            worktree,
-            "Fix the board",
-            body,
-            shell,
-            home=home_for(projects),
-            say=_quiet,
-            dry_run=dry_run,
-        )
-
-    assert not shell.ran("push")
-
-
-def test_ship_passes_a_denied_word_the_branch_adds_no_line_with(tmp_path):
-    projects, worktree, body = _setup(tmp_path)
-    deny(projects)
-    shell = _shell(leaks=f"docs/a.md:1:the {DENIED} board, see owner/proto\n")
-
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
-
-    assert shell.ran("push")
-
-
 def _ship_in_home(tmp_path: Path, settings: str, body_text: str, prs: str = "[]") -> _ShipShell:
     """Run ``kaizen ticket ship`` on a ``relay`` ticket in a fixture home whose marker holds
     *settings*, with a body file holding *body_text*, while the branch has the PRs *prs*."""
@@ -1143,44 +1091,15 @@ def _gh_calls(shell: Shell) -> list[list[str]]:
 
 @pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
 @pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
-def test_a_denied_pattern_matching_only_the_footer_refuses_before_any_gh_call(
-    tmp_path, dry_run, prs
-):
+def test_a_footer_pointing_outside_the_home_refuses_before_any_gh_call(tmp_path, dry_run, prs):
     projects, worktree, body = _setup(tmp_path)
-    deny(projects, denied="Generated with")
+    home = replace(home_for(projects), pr_footer=f"see {TILDE}/dev/elsewhere/notes")
     shell = _shell(prs=prs)
 
-    with pytest.raises(RefusalError, match="PR body as sent line 5: denied pattern Generated with"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
+    with pytest.raises(RefusalError, match="PR body as sent line 5: outside path"):
+        ship(worktree, TITLE, body, shell, home=home, say=_quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []
-
-
-@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
-def test_a_denied_pattern_matching_both_forms_of_the_closes_line_refuses_before_any_gh_call(
-    tmp_path, dry_run
-):
-    projects, worktree, body = _setup(tmp_path)
-    deny(projects, denied="closes")
-    shell = _shell()
-
-    with pytest.raises(RefusalError, match=r"deny both forms of the line that closes #1358"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
-
-    assert _gh_calls(shell) == []
-
-
-@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
-def test_a_denied_short_closes_line_is_written_with_the_full_reference(tmp_path, prs):
-    projects, worktree, body = _setup(tmp_path)
-    deny(projects, denied=r"\s#1358")
-    shell = _shell(prs=prs)
-
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
-
-    assert shell.bodies == [
-        f"Closes owner/proto#1358\n\nWrites the state once per Reboot.\n\n{FOOTER}\n"
-    ]
 
 
 def test_a_body_closing_the_issue_by_its_full_reference_gets_no_closes_line(tmp_path):
@@ -1191,11 +1110,3 @@ def test_a_body_closing_the_issue_by_its_full_reference_gets_no_closes_line(tmp_
     ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\nFixes owner/proto#1358\n\n{FOOTER}\n"]
-
-
-def test_a_refusal_names_every_pattern_denying_either_form_of_the_closes_line(tmp_path):
-    projects, worktree, body = _setup(tmp_path)
-    deny(projects, denied=r"\s#1358, proto#1358")
-
-    with pytest.raises(RefusalError, match=r"pattern\(s\) \\s#1358, proto#1358 deny both"):
-        ship(worktree, TITLE, body, _shell(), home=home_for(projects), say=_quiet)

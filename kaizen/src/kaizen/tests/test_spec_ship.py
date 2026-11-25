@@ -4,6 +4,7 @@ git and gh are replaced by a recording runner and the registry by a temporary ``
 directory, so no repo, network or real project page is touched.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -12,8 +13,6 @@ from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
 from kaizen.spec.ship import ship
 from kaizen.tests.ticket_shell import (
-    ADDED_DENIED,
-    DENIED,
     FOOTER,
     HOME_FOOTER,
     RELAY,
@@ -21,7 +20,6 @@ from kaizen.tests.ticket_shell import (
     Reply,
     Shell,
     cli_home,
-    deny,
     failed,
     home_for,
     sub_issue_json,
@@ -367,46 +365,6 @@ def test_ship_sends_a_private_projects_pr_body_with_an_own_reference(tmp_path):
     assert shell.bodies[0].startswith(f"{CLOSES}part of /fixture/home/docs\n")
 
 
-@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
-def test_ship_refuses_a_denied_pattern_on_a_line_the_integration_branch_adds_to_the_default(
-    tmp_path, dry_run
-):
-    projects, body = _setup(tmp_path)
-    deny(projects)
-    shell = _shell(tmp_path, added=ADDED_DENIED)
-
-    with pytest.raises(RefusalError, match=rf"docs/a\.md:4: denied pattern {DENIED}"):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
-
-    (diff,) = shell.ran("diff")
-    assert diff[diff.index("--merge-base") :][:3] == [
-        "--merge-base",
-        "origin/main",
-        "origin/spec-25",
-    ]
-    assert not shell.ran("pr", "create")
-
-
-def test_ship_refuses_a_pr_body_holding_a_denied_pattern(tmp_path):
-    projects, body = _setup(tmp_path)
-    deny(projects)
-    body.write_text(f"Adds the {DENIED} lifecycle.\n")
-    shell = _shell(tmp_path)
-
-    with pytest.raises(RefusalError, match=f"PR body as sent line 3: denied pattern {DENIED}"):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=True)
-
-
-def test_ship_passes_a_denied_word_the_integration_branch_adds_no_line_with(tmp_path):
-    projects, body = _setup(tmp_path)
-    deny(projects)
-    shell = _shell(tmp_path, leaks=f"origin/spec-25:docs/a.md:1:the {DENIED} of owner/proto\n")
-
-    ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
-
-    assert shell.ran("pr", "create")
-
-
 def _ship_in_home(tmp_path: Path, settings: str, body_text: str, prs: str = "[]") -> _ShipShell:
     """Run ``kaizen spec ship 25`` in ``relay`` in a fixture home whose marker holds *settings*,
     with a body file holding *body_text*, while ``spec-25`` has the PRs *prs*."""
@@ -470,55 +428,12 @@ def _gh_pr_calls(shell: Shell) -> list[list[str]]:
 
 @pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
 @pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
-def test_a_denied_pattern_matching_only_the_footer_refuses_before_any_gh_call(
-    tmp_path, dry_run, prs
-):
+def test_a_footer_pointing_outside_the_home_refuses_before_any_gh_call(tmp_path, dry_run, prs):
     projects, body = _setup(tmp_path)
-    deny(projects, denied="Generated with")
+    home = replace(home_for(projects), pr_footer=f"see {TILDE}/dev/elsewhere/notes")
     shell = _shell(tmp_path, prs=prs)
 
-    with pytest.raises(RefusalError, match="denied pattern Generated with"):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
-
-    assert _gh_calls(shell) == []
-
-
-@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
-@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
-def test_a_denied_pattern_matching_both_forms_of_a_tickets_closes_line_refuses_before_the_pr(
-    tmp_path, dry_run, prs
-):
-    projects, body = _setup(tmp_path)
-    deny(projects, denied=r"#29\b")
-    shell = _shell(tmp_path, prs=prs)
-
-    with pytest.raises(RefusalError, match=r"deny both forms of the line that closes #29"):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
-
-    assert _gh_pr_calls(shell) == []
-
-
-@pytest.mark.parametrize("prs", ["[]", OPEN_PRS], ids=["new PR", "open PR"])
-def test_a_denied_short_closes_line_is_written_with_the_full_reference(tmp_path, prs):
-    projects, body = _setup(tmp_path)
-    deny(projects, denied=r"\s#28\b")
-    shell = _shell(tmp_path, prs=prs)
-
-    ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
-
-    (sent,) = shell.bodies
-    assert sent.startswith("Closes #25\nCloses owner/proto#28\nCloses #29\n\n")
-
-
-@pytest.mark.parametrize("dry_run", [False, True], ids=["ship", "dry-run"])
-def test_a_denied_pattern_matching_both_forms_of_the_specs_closes_line_refuses_before_any_gh_call(
-    tmp_path, dry_run
-):
-    projects, body = _setup(tmp_path)
-    deny(projects, denied=r"#25\b")
-    shell = _shell(tmp_path)
-
-    with pytest.raises(RefusalError, match=r"deny both forms of the line that closes #25"):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, dry_run=dry_run)
+    with pytest.raises(RefusalError, match="PR body as sent line 5: outside path"):
+        ship(25, TITLE, body, shell, home=home, say=_quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []

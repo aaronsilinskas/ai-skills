@@ -302,7 +302,7 @@ def check_text(tickets: list[Ticket], project: Project, home: Home) -> None:
     for ticket in tickets:
         texts[f"ticket {ticket.key} title"] = ticket.title
         texts[f"ticket {ticket.key} body"] = _read_body(ticket)
-    leak_check_text(texts, home, public=project.public, denied=project.leak_deny)
+    leak_check_text(texts, home, public=project.public)
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.common import RefusalError
-from kaizen.tests.ticket_shell import DENIED, RELAY, SITE, TILDE, Shell, deny
+from kaizen.tests.ticket_shell import RELAY, SITE, TILDE, Shell
 from kaizen.ticket.publish import (
     DomainDocsError,
     ManifestError,
@@ -356,29 +356,3 @@ def test_a_private_projects_ticket_body_with_an_own_reference_is_published(kaize
     )
 
     assert len(shell.ran("issue", "create")) == 1
-
-
-@pytest.mark.parametrize("dry_run", [True, False], ids=["dry run", "real run"])
-def test_a_ticket_body_holding_a_denied_pattern_is_refused_before_any_gh_call(
-    kaizen, tmp_path, capsys, dry_run
-):
-    deny(tmp_path / "cli-home" / "projects", "site")
-    shell = _publishing_shell(SITE)
-
-    argv = ["ticket", "publish", _bodies(tmp_path, f"Why the {DENIED} goes.\n")]
-    assert kaizen(argv + (["--dry-run"] if dry_run else []), run=shell) == 1
-
-    err = capsys.readouterr().err
-    assert (
-        f"ticket t0 body line 1: denied pattern {DENIED}"
-        " (fix: remove the text, or change the project's leak_deny)" in err
-    )
-    assert not shell.ran("gh")
-
-
-def test_a_pattern_another_project_denies_passes(kaizen, tmp_path):
-    deny(tmp_path / "cli-home" / "projects", "site")
-    shell = _publishing_shell(RELAY)
-
-    argv = ["ticket", "publish", _bodies(tmp_path, f"Why the {DENIED} goes.\n"), "--dry-run"]
-    assert kaizen(argv, run=shell) == 0

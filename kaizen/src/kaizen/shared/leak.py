@@ -1,9 +1,8 @@
 """The **leak check**: run on a project's checkout before any push or PR publishes it.
 
 It refuses committed text that points outside the current home (see
-``docs/adr/0002-homes-never-reference-each-other.md``), and text a project denies. The first three
-rules are allowlists built from the home's own facts: a search finds candidates, and whatever the
-home doesn't cover is refused. The last is the project's own denylist.
+``docs/adr/0002-homes-never-reference-each-other.md``). Each rule is an allowlist built from the
+home's own facts: a search finds candidates, and whatever the home doesn't cover is refused.
 
 - *own reference* (public projects only): one of the home's own leak patterns.
 - *outside path*: a local absolute path, ``~/`` or the user's home directory followed by more,
@@ -14,9 +13,6 @@ home doesn't cover is refused. The last is the project's own denylist.
   registered project's ``github`` names but whose repo is neither registered nor allowed.
   Third-party owners are never flagged, and the boundary is per repo, since one owner holds repos
   in more than one home.
-- *denied pattern*: a match for one of the project's own ``leak_deny`` patterns (see
-  ``kaizen.shared.registry``), public or private. It searches only what is being published, the
-  lines a commit or push adds and the text sent to GitHub, never text already in the tree.
 """
 
 import re
@@ -45,7 +41,6 @@ class Rule(Enum):
         "unregistered repo",
         f"register it in the home's registry, {_FIX_BY_ALLOWING}, or remove the text",
     )
-    DENIED_PATTERN = ("denied pattern", "remove the text, or change the project's leak_deny")
 
     def __init__(self, label: str, fix: str) -> None:
         self.label = label
@@ -121,8 +116,6 @@ def leak_check(
     *,
     public: bool,
     staged: bool = False,
-    denied: tuple[re.Pattern[str], ...] = (),
-    base: str | None = None,
     user_home: Path | None = None,
 ) -> None:
     """Refuses, listing each offending file, line, rule and fix, when *checkout*'s files point
@@ -132,22 +125,12 @@ def leak_check(
     tree, for a push of a commit that is not checked out; or, when *staged*, the index, for a
     commit about to be made. *user_home* is what ``~`` means (default: the current user's home
     directory).
-
-    The project's *denied* patterns are searched only on the lines being published: those the
-    index adds to ``HEAD`` when *staged*, otherwise those the searched tree adds since its merge
-    base with *base*, which *denied* needs.
     """
     if staged and revision:
         raise ValueError("leak_check: pass a revision or staged, not both")
-    if denied and not staged and base is None:
-        raise ValueError("leak_check: denied patterns need a base, or staged")
     rules = _Rules.for_home(home, public, user_home or Path.home())
     lines = _candidates(checkout, run, revision, staged, rules.literals)
-    findings = _findings(rules, lines)
-    if denied:
-        source = ["--cached"] if staged else ["--merge-base", str(base), *filter(None, [revision])]
-        findings += _findings_denied(denied, added_lines(checkout, run, source))
-    _refuse(findings, "committed text", "fix each line as it says, then commit")
+    _refuse(_findings(rules, lines), "committed text", "fix each line as it says, then commit")
 
 
 def leak_check_text(
@@ -155,7 +138,6 @@ def leak_check_text(
     home: Home,
     *,
     public: bool,
-    denied: tuple[re.Pattern[str], ...] = (),
     user_home: Path | None = None,
 ) -> None:
     """Refuses, listing each offending text, line, rule and fix, when text ``kaizen`` is about to
@@ -163,31 +145,15 @@ def leak_check_text(
     call.
 
     *texts* maps what each text is (such as ``"PR body"``) to the text. A *public* project also
-    runs the own-reference rule, and every line is searched for the project's *denied* patterns.
+    runs the own-reference rule.
     """
     rules = _Rules.for_home(home, public, user_home or Path.home())
-    lines = numbered_lines(texts, " line ")
-    findings = _findings(rules, lines) + _findings_denied(denied, lines)
-    _refuse(findings, "text for GitHub", "fix each line as it says, then rerun")
-
-
-def numbered_lines(texts: Mapping[str, str], separator: str) -> list[tuple[str, str]]:
-    """Every line of *texts*, which maps a label to its text, as ``(where, line)`` pairs the leak
-    check reads: *where* is the label, *separator*, then the 1-based line number."""
-    return [
-        (f"{label}{separator}{number}", line)
+    lines = [
+        (f"{label} line {number}", line)
         for label, text in texts.items()
         for number, line in enumerate(text.splitlines(), 1)
     ]
-
-
-def leak_check_denied(
-    lines: list[tuple[str, str]], denied: tuple[re.Pattern[str], ...], what: str
-) -> None:
-    """Refuses, listing each ``(where, text)`` line of *lines* that matches one of a project's
-    *denied* patterns, for text about to be published that the other entry points can't judge
-    alone, such as a working tree's uncommitted additions. *what* names that text."""
-    _refuse(_findings_denied(denied, lines), what, "fix each line as it says, then rerun")
+    _refuse(_findings(rules, lines), "text for GitHub", "fix each line as it says, then rerun")
 
 
 class LeakFoundError(RefusalError):
@@ -210,18 +176,6 @@ def _findings(rules: _Rules, lines: list[tuple[str, str]]) -> list[str]:
         _finding(where, rule, match)
         for where, text in lines
         for rule, match in rules.findings(text)
-    ]
-
-
-def _findings_denied(
-    denied: tuple[re.Pattern[str], ...], lines: list[tuple[str, str]]
-) -> list[str]:
-    """One finding for each match of a *denied* pattern in *lines*."""
-    return [
-        _finding(where, Rule.DENIED_PATTERN, match.group().strip())
-        for where, text in lines
-        for pattern in denied
-        for match in pattern.finditer(text)
     ]
 
 
@@ -254,39 +208,6 @@ def _candidates(
             line = line.removeprefix(f"{revision}:")
         file, number, text = line.split(":", 2)
         lines.append((f"{file}:{number}", text))
-    return lines
-
-
-_HUNK = re.compile(r"@@ -\S+ \+(\d+)")
-
-
-def added_lines(
-    checkout: Path, run: Runner, source: list[str], paths: tuple[str, ...] = ()
-) -> list[tuple[str, str]]:
-    """``(file:line, text)`` for each line ``git diff`` adds with *source* (its revision
-    arguments), limited to *paths* when given, numbered as in the new file. Binary files add no
-    lines."""
-    # Fixed prefixes, rename detection and raw file text, whatever the user's git config; a
-    # renamed file adds only the lines it changes.
-    options = ["--no-color", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/"]
-    git = ["git", "-C", str(checkout), "-c", "core.quotePath=false", "diff", *options, "-M", "-U0"]
-    out = run([*git, *source, "--", *paths])
-    lines: list[tuple[str, str]] = []
-    file, number, in_hunk = "", 0, False
-    # Split on newlines only: an added line may hold another character ``splitlines`` splits on.
-    for line in out.split("\n"):
-        if line.startswith("diff "):
-            in_hunk = False
-        elif not in_hunk and line.startswith("+++ "):
-            # git ends the name with a tab when it holds a space.
-            file = line[4:].rstrip("\t").strip('"').removeprefix("b/")
-        elif hunk := _HUNK.match(line):
-            number, in_hunk = int(hunk.group(1)), True
-        elif in_hunk and line.startswith("+"):
-            lines.append((f"{file}:{number}", line[1:]))
-            number += 1
-        elif in_hunk and line.startswith(" "):
-            number += 1  # a context line, where diff.interHunkContext joins two hunks
     return lines
 
 

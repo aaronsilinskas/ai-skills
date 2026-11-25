@@ -11,12 +11,9 @@ import pytest
 from kaizen.shared.common import RefusalError
 from kaizen.spec.integrate import integrate
 from kaizen.tests.ticket_shell import (
-    ADDED_DENIED,
-    DENIED,
     RELAY,
     Reply,
     Shell,
-    deny,
     failed,
     home_for,
 )
@@ -178,26 +175,3 @@ def test_a_mid_run_error_follows_the_steps_already_done(kaizen, capsys):
     assert out[-1].startswith("removed scratch worktree ")
     assert captured.err.startswith("error: git push failed")
     assert not shell.ran("branch", "-D")
-
-
-def test_a_denied_pattern_on_a_line_the_merge_adds_to_the_integration_branch_is_refused(tmp_path):
-    projects = _setup(tmp_path)
-    deny(projects)
-    shell = _shell(added=ADDED_DENIED)
-
-    with pytest.raises(RefusalError, match=rf"docs/a\.md:4: denied pattern {DENIED}"):
-        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
-
-    (diff,) = shell.ran("diff")
-    assert diff[diff.index("--merge-base") + 1] == "origin/spec-25"
-    assert not shell.ran("push")
-
-
-def test_a_denied_word_the_merge_adds_no_line_with_is_pushed(tmp_path):
-    projects = _setup(tmp_path)
-    deny(projects)
-    shell = _shell(grep=f"docs/a.md:1:the {DENIED} of owner/proto\n")
-
-    integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
-
-    assert shell.ran("push")

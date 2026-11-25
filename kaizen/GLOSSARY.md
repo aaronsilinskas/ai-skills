@@ -43,7 +43,7 @@ _Avoid_: test command, test suite (when the whole check is meant)
 
 **Leak check**:
 The search run before a commit, or before anything from a project is published, that refuses text pointing outside its home.
-It refuses references to the home in a public project; in any project, local paths and repos of the home's owners that the home neither registers nor allows; and any pattern a project's registry page denies for that project, searched only in the lines and text being published.
+It refuses references to the home in a public project, and in any project, local paths and repos of the home's owners that the home neither registers nor allows.
 _Avoid_: leak grep, public-repo check
 
 ### Ticket work
