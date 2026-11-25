@@ -2,7 +2,6 @@
 registry README, and its directory in the home's Claude Code settings."""
 
 import argparse
-import difflib
 import json
 import re
 import subprocess
@@ -11,15 +10,22 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
+from kaizen.shared.common import (
+    RefusalError,
+    Runner,
+    Say,
+    Subparsers,
+    run_or_refuse,
+    unified_diff,
+)
 from kaizen.shared.home import (
+    DIRECTORIES,
     SETTINGS,
     Home,
     SettingsError,
-    add_permission_entries,
+    add_directory,
     home_path,
     read_settings,
-    same_root,
     settings_text,
 )
 from kaizen.shared.registry import (
@@ -39,7 +45,6 @@ Ask = Callable[[str], str]
 """Shows a prompt on a terminal and returns the line typed; raises ``EOFError`` when the input
 ends. ``input`` is the real one."""
 
-_DIRECTORIES = "additionalDirectories"
 _NAME = re.compile(r"[\w.-]+")
 _SUMMARY = {key.name: key.summary for key in KEYS}
 
@@ -73,11 +78,18 @@ class Field:
     """The answers it takes, as its prompt shows them."""
     problem: Callable[[str], str | None]
     """What is wrong with an answer, or ``None`` when it is valid."""
-    required: bool = False
     detect: Detect | None = None
     default: Callable[[Path], str] | None = None
-    """For an optional field, what the registry assumes when the page leaves it out, as its
-    prompt offers it; empty for none."""
+    """For an optional key, what the registry assumes when the page leaves it out, as its
+    prompt offers it; empty for none. A key with no default is required."""
+
+    @property
+    def required(self) -> bool:
+        return self.default is None
+
+    @property
+    def boolean(self) -> bool:
+        return self.problem is _bool_problem
 
 
 def _detect_github(run: Runner, path: Path, settled: dict[str, Value]) -> Value | None:
@@ -118,77 +130,76 @@ def _detect_code_paths(run: Runner, path: Path, settled: dict[str, Value]) -> Va
     return Value(", ".join(directories), "detected", "the top-level tracked directories")
 
 
-def _not_repo(answer: str) -> str | None:
+def _repo_problem(answer: str) -> str | None:
     return None if GITHUB_REPO.fullmatch(answer) else f"{answer!r} is not owner/repo"
 
 
-def _not_bool(answer: str) -> str | None:
+def _bool_problem(answer: str) -> str | None:
     return None if answer in ("true", "false") else f"{answer!r} is not true or false"
 
 
-def _not_text(answer: str) -> str | None:
+def _command_problem(answer: str) -> str | None:
     if answer in ("true", "false"):
         return f"{answer!r} would read as a boolean, not a command"
     return None if answer else "it is empty"
 
 
-def _not_list(answer: str) -> str | None:
+def _list_problem(answer: str) -> str | None:
     return None if any(entry.strip() for entry in answer.split(",")) else "it lists nothing"
 
 
-def _not_path(answer: str) -> str | None:
+def _path_problem(answer: str) -> str | None:
     if Path(answer).is_absolute() or answer.startswith("~/"):
         return None
     return f"{answer!r} is not absolute or from ~/"
 
 
-def _not_links(answer: str) -> str | None:
+def _links_problem(answer: str) -> str | None:
     if any(char in answer for char in "*?"):
         return "a worktree link is linked by name, so it can't be a glob"
     entries = [Path(entry.strip()) for entry in answer.split(",") if entry.strip()]
     if any(entry.is_absolute() or ".." in entry.parts for entry in entries):
         return "list paths relative to the project root, with no '..' parts"
-    return _not_list(answer)
+    return _list_problem(answer)
 
 
 FIELDS = (
-    Field("github", "--github", "owner/repo", _not_repo, True, _detect_github),
-    Field("public", "--public or --private", "true/false", _not_bool, True, _detect_public),
-    Field("check", "--check", f"a shell command, or {NO_CHECK}", _not_text, True, _detect_check),
+    Field("github", "--github", "owner/repo", _repo_problem, detect=_detect_github),
+    Field("public", "--public or --private", "true/false", _bool_problem, detect=_detect_public),
+    Field("check", "--check", f"a shell command, or {NO_CHECK}", _command_problem, _detect_check),
     Field(
         "code_paths",
         "--code-paths",
         "comma-separated paths",
-        _not_list,
-        True,
-        _detect_code_paths,
+        _list_problem,
+        detect=_detect_code_paths,
     ),
     Field(
         "worktree_root",
         "--worktree-root",
         "absolute or ~/ path",
-        _not_path,
+        _path_problem,
         default=lambda path: str(path / WORKTREES),
     ),
     Field(
         "auto_merge_paths",
         "--auto-merge-paths",
         "comma-separated paths",
-        _not_list,
+        _list_problem,
         default=lambda path: "",
     ),
     Field(
         "auto_merge_comment_only",
         "--auto-merge-comment-only",
         "true/false",
-        _not_bool,
+        _bool_problem,
         default=lambda path: "false",
     ),
     Field(
         "worktree_links",
         "--worktree-links",
         "comma-separated paths",
-        _not_links,
+        _links_problem,
         default=lambda path: "",
     ),
 )
@@ -213,7 +224,8 @@ def add_project(
     Each field comes from *given* (its flag's value), else, on a terminal (*ask*), from the
     answer to its prompt, which offers what was detected; else from what was detected, else
     from its default. Every check, and every refusal, comes before the first write."""
-    root = _checkout_root(run, path, name, home)
+    _refuse_taken_name(name, home)
+    root = _checkout_root(run, path, home)
     say(f"path: {root}")
     for field in FIELDS:
         if field.key in given and (problem := field.problem(given[field.key])):
@@ -234,13 +246,15 @@ def add_project(
 
     relative = page.relative_to(home.root).as_posix()
     readme_relative = readme.relative_to(home.root).as_posix()
+    kept = f"{SETTINGS} already lists {root}, or it is the home's own root"
     if dry_run:
         say(f"would write {relative}:\n{text}")
-        say(f"would change {readme_relative}:\n{_diff(readme_relative, readme_now, readme_new)}")
+        readme_diff = unified_diff(readme_relative, readme_now, readme_new)
+        say(f"would change {readme_relative}:\n{readme_diff}")
         if settings_new is not None:
-            say(f"would change {SETTINGS}:\n{_diff(SETTINGS, settings_now, settings_new)}")
+            say(f"would change {SETTINGS}:\n{unified_diff(SETTINGS, settings_now, settings_new)}")
         else:
-            say(f"{SETTINGS} already lists {root}, or it is the home's own root")
+            say(kept)
         say("dry run: nothing written")
         return
     page.write_text(text, encoding="utf-8")
@@ -251,16 +265,14 @@ def add_project(
         settings = home.root / SETTINGS
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(settings_new, encoding="utf-8")
-        say(f"added {root} to permissions.{_DIRECTORIES} in {SETTINGS}")
+        say(f"added {root} to permissions.{DIRECTORIES} in {SETTINGS}")
     else:
-        say(f"{SETTINGS} already lists {root}, or it is the home's own root")
+        say(kept)
     say(f"next: run `kaizen project labels {name}` to create the workflow labels its repo lacks")
 
 
-def _checkout_root(run: Runner, path: Path | None, name: str, home: Home) -> Path:
-    """*path*, resolved (default: the root of the git checkout the command runs in), once it is
-    a git checkout's root that no project registers, and *name* once it has no page; refuses
-    otherwise."""
+def _refuse_taken_name(name: str, home: Home) -> None:
+    """Refuses a *name* that can't name a page, or whose page exists."""
     if not _NAME.fullmatch(name) or name == "README":
         raise RefusalError(
             f"project add: {name!r} can't name a project page",
@@ -271,14 +283,20 @@ def _checkout_root(run: Runner, path: Path | None, name: str, home: Home) -> Pat
             f"project add: project {name} already has a page, {home.registry / name}.md",
             "pick another name, or edit that page",
         )
+
+
+def _checkout_root(run: Runner, path: Path | None, home: Home) -> Path:
+    """*path*, resolved (default: the root of the git checkout the command runs in), once it is
+    a git checkout's root that no project registers; refuses otherwise."""
     if path is None:
-        toplevel = run_or_refuse(
-            ["git", "rev-parse", "--show-toplevel"],
-            run,
-            "project add: this command runs in no git checkout",
-            "run it from the project's main checkout, or pass its path",
-        ).strip()
-        path = Path(toplevel).resolve()
+        path = Path(
+            run_or_refuse(
+                ["git", "rev-parse", "--show-toplevel"],
+                run,
+                "project add: this command runs in no git checkout",
+                "run it from the project's main checkout, or pass its path",
+            ).strip()
+        )
     path = path.expanduser().resolve()
     toplevel = run_or_refuse(
         ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
@@ -316,13 +334,15 @@ def _settle(
             value = _ask(field, root, detected, ask, say) if ask else detected
         if value is None and field.required:
             missing.append(field)
+        elif value is None and field.default is not None:
+            say(f"{field.key}: {field.default(root) or 'none'} (the default, left off the page)")
         elif value is not None:
             say(f"{field.key}: {value.text} ({value.shown()})")
             settled[field.key] = value
     if missing:
         listed = "".join(f"\n  {field.key}: {_SUMMARY[field.key]}" for field in missing)
         raise RefusalError(
-            f"project add: {len(missing)} required field(s) have no value, and stdin is not a"
+            f"project add: {len(missing)} required key(s) have no value, and stdin is not a"
             f" terminal to ask:{listed}",
             "pass " + ", ".join(field.flag for field in missing),
         )
@@ -334,6 +354,8 @@ def _ask(field: Field, root: Path, detected: Value | None, ask: Ask, say: Say) -
     detected or its default, asked again until the answer is valid. ``None`` when an optional
     field keeps its default."""
     say(f"{field.key}: {_SUMMARY[field.key]}")
+    if field.detect is not None and detected is None:
+        say("  nothing detected")
     if detected is not None:
         offer = f" [{detected.text}] ({detected.source}; Enter accepts)"
     elif field.default is not None:
@@ -372,31 +394,14 @@ def _settings_change(home: Home, root: Path) -> tuple[str | None, str | None]:
         return now, None
     try:
         data = read_settings(home.root)
-        permissions = data.get("permissions", {})
-        listed = permissions.get(_DIRECTORIES, []) if isinstance(permissions, dict) else []
-        listed = listed if isinstance(listed, list) else []
-        if any(isinstance(e, str) and same_root(e, root, Path.home()) for e in listed):
+        if not add_directory(data, root, Path.home()):
             return now, None
-        tilde = bool(listed) and all(isinstance(e, str) and e.startswith("~") for e in listed)
-        entry = home_path(root, Path.home()) if tilde else str(root)
-        add_permission_entries(data, _DIRECTORIES, [entry])
     except SettingsError as exc:
         raise RefusalError(
             f"project add: {exc}",
-            f"fix {SETTINGS} so it holds a JSON object whose permissions.{_DIRECTORIES} is a list",
+            f"fix {SETTINGS} so it holds a JSON object whose permissions.{DIRECTORIES} is a list",
         ) from exc
     return now, settings_text(data)
-
-
-def _diff(relative: str, before: str | None, after: str) -> str:
-    lines = difflib.unified_diff(
-        [] if before is None else before.splitlines(),
-        after.splitlines(),
-        "/dev/null" if before is None else f"a/{relative}",
-        f"b/{relative}",
-        lineterm="",
-    )
-    return "\n".join(lines)
 
 
 def terminal() -> Ask | None:
@@ -409,13 +414,14 @@ def terminal() -> Ask | None:
 
 def add_parser(subparsers: Subparsers) -> None:
     keys = "".join(f"  {key.name}: {key.summary}\n" for key in KEYS)
+    required = ", ".join(field.key for field in FIELDS if field.required)
     parser = subparsers.add_parser(
         "add",
         help="register a project with the home: its page, README link and settings entry",
         description=(
             "Register the git checkout at PATH (default: the current directory) as the project "
             "NAME. It writes the registry page NAME.md, links it in the registry README's list "
-            f"of pages, and adds PATH to permissions.{_DIRECTORIES} in the home's {SETTINGS} "
+            f"of pages, and adds PATH to permissions.{DIRECTORIES} in the home's {SETTINGS} "
             "when missing, keeping every other key and entry (the file is rewritten as JSON "
             "indented by two spaces). The entry is spelled from ~ when every entry there is, "
             "and absolute otherwise; the page's path is from ~ under your user directory.\n\n"
@@ -425,7 +431,7 @@ def add_parser(subparsers: Subparsers) -> None:
             "top-level tracked directories. When stdin is a terminal, it prompts for every key "
             "no flag gives, offering the detected value or default; Enter accepts it. Without "
             "a terminal it never prompts, and refuses, listing each required key "
-            "(github, public, check, code_paths) with neither a flag nor a detected value. "
+            f"({required}) with neither a flag nor a detected value. "
             "The keys:\n"
             f"{keys}\n"
             "It refuses, before writing anything: a name that already has a page, a path that "
@@ -439,7 +445,9 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.add_argument(
         "path", nargs="?", type=Path, help="the project's main checkout (default: here)"
     )
-    parser.add_argument("--github", help="the GitHub repo, owner/repo")
+    for field in FIELDS:
+        if not field.boolean:
+            parser.add_argument(field.flag, help=_SUMMARY[field.key])
     visibility = parser.add_mutually_exclusive_group()
     visibility.add_argument(
         "--public", dest="public", action="store_const", const="true", help="the repo is public"
@@ -447,18 +455,11 @@ def add_parser(subparsers: Subparsers) -> None:
     visibility.add_argument(
         "--private", dest="public", action="store_const", const="false", help="it is private"
     )
-    parser.add_argument("--check", help=f"the check command, or {NO_CHECK}")
-    parser.add_argument("--code-paths", help="comma-separated paths a docs change may not touch")
-    parser.add_argument("--worktree-root", help="where its ticket worktrees go")
-    parser.add_argument(
-        "--auto-merge-paths", help="comma-separated paths a docs PR may auto-merge for"
-    )
     parser.add_argument(
         "--auto-merge-comment-only",
         action=argparse.BooleanOptionalAction,
-        help="auto-merge a ticket's PR that only shrinks Python comments and docstrings",
+        help=_SUMMARY["auto_merge_comment_only"],
     )
-    parser.add_argument("--worktree-links", help="comma-separated git-ignored paths to symlink")
     parser.add_argument(
         "--dry-run",
         action="store_true",

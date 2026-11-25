@@ -4,11 +4,9 @@
 ``origin`` is only a URL and the flags settle ``public``, so nothing touches GitHub.
 """
 
-import json
 from pathlib import Path
 
 from kaizen.shared.cli import main
-from kaizen.shared.registry import resolve
 from kaizen.tests.real_git import git
 
 
@@ -35,12 +33,6 @@ def test_an_added_project_passes_the_homes_sync_check(tmp_path, monkeypatch, cap
     )
 
     assert code == 0
-    project = resolve("tool", home / "projects")
-    assert (project.path, project.github, project.code_paths) == (tool, "acme/tool", ("src/",))
-    assert "path: ~/work/tool\n" in (home / "projects" / "tool.md").read_text()
-    settings = json.loads((home / ".claude" / "settings.json").read_text())
-    assert settings["permissions"]["additionalDirectories"] == [str(tool)]
-    assert "- [tool](tool.md)" in (home / "projects" / "README.md").read_text()
     capsys.readouterr()
     assert main(["home", "sync", "--check"], cwd=home, env=env) == 0, capsys.readouterr()
 

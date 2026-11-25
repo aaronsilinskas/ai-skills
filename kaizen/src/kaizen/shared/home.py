@@ -279,15 +279,40 @@ def add_permission_entries(data: dict[str, object], key: str, entries: list[str]
     after the entries already there, and returns whether any was missing. Every other key and
     entry keeps its order. Raises ``SettingsError`` when ``permissions`` is not an object or
     that list is not a list."""
+    listed = _permission_list(data, key)
+    missing = [entry for entry in entries if entry not in listed]
+    listed.extend(missing)
+    return bool(missing)
+
+
+DIRECTORIES = "additionalDirectories"
+"""The settings' ``permissions`` list of the directories outside the home a session may use."""
+
+
+def add_directory(data: dict[str, object], path: Path, user_home: Path) -> bool:
+    """Adds *path* to ``permissions.additionalDirectories`` in the settings *data*, unless an
+    entry already names it, and returns whether it did. The entry is written from ``~`` when
+    every entry there is, and absolute otherwise. Raises ``SettingsError`` as
+    ``add_permission_entries`` does."""
+    listed = _permission_list(data, DIRECTORIES)
+    spelled = [entry for entry in listed if isinstance(entry, str)]
+    if any(same_root(entry, path, user_home) for entry in spelled):
+        return False
+    from_tilde = bool(listed) and len(spelled) == len(listed)
+    from_tilde = from_tilde and all(entry.startswith("~") for entry in spelled)
+    entry = home_path(path, user_home) if from_tilde else str(path)
+    return add_permission_entries(data, DIRECTORIES, [entry])
+
+
+def _permission_list(data: dict[str, object], key: str) -> list[object]:
+    """The list ``permissions.<key>`` of the settings *data*, made empty when absent."""
     permissions = data.setdefault("permissions", {})
     if not isinstance(permissions, dict):
         raise SettingsError("has permissions that are not a JSON object")
     listed = permissions.setdefault(key, [])
     if not isinstance(listed, list):
         raise SettingsError(f"has a permissions.{key} that is not a JSON list")
-    missing = [entry for entry in entries if entry not in listed]
-    listed.extend(missing)
-    return bool(missing)
+    return listed
 
 
 def name_home(data: dict[str, object], path: str) -> bool:

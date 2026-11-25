@@ -2,11 +2,10 @@
 kaizen's templates, or, with ``--check``, fail on any difference."""
 
 import argparse
-import difflib
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, unified_diff
 from kaizen.shared.home import (
     MARKER,
     SETTINGS,
@@ -47,15 +46,8 @@ class Change:
 
     def diff(self) -> str:
         """The difference from its text now to its synced text, as a unified diff."""
-        before = [] if self.current is None else self.current.splitlines()
-        lines = difflib.unified_diff(
-            before,
-            self.synced.splitlines(),
-            "/dev/null" if self.current is None else f"a/{self.relative}",
-            f"b/{self.relative}",
-            lineterm="",
-        )
-        return "\n".join(lines) or "(they differ only in line endings or the final newline)"
+        diff = unified_diff(self.relative, self.current, self.synced)
+        return diff or "(they differ only in line endings or the final newline)"
 
     def apply(self, root: Path) -> str:
         """Writes the synced text; returns the line of output."""

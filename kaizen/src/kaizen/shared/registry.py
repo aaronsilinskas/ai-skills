@@ -477,6 +477,8 @@ KEYS = (
 """Every key a page may set, in the order a page lists them."""
 
 _README_WIDTH = 100
+_NBSP = "\u00a0"
+"""Holds a code span's spaces while the README wraps, so no span breaks across lines."""
 
 _STARTER_README = """\
 # Projects
@@ -494,8 +496,8 @@ its page only points at them. `kaizen project add` writes a project's page and l
 
 {pages}"""
 
-PAGES_HEADING = "## Pages"
-_PAGE_LINK = re.compile(r"- \[(?P<name>[^\]]+)\]\((?P=name)\.md\)")
+_PAGES_HEADING = "## Pages"
+_PAGE_LINK = re.compile(r"- \[(?P<name>[^\]]+)\]\((?P=name)\.md\).*")
 
 
 def starter_readme(pages: list[str]) -> str:
@@ -520,11 +522,8 @@ def _wrap(item: str) -> str:
     return wrapped.replace(_NBSP, " ")
 
 
-_NBSP = "\u00a0"
-
-
 def _pages_section(pages: list[str]) -> str:
-    return f"{PAGES_HEADING}\n\n" + "".join(f"{_page_link(name)}\n" for name in pages)
+    return f"{_PAGES_HEADING}\n\n" + "".join(f"{_page_link(name)}\n" for name in pages)
 
 
 def _page_link(name: str) -> str:
@@ -533,9 +532,14 @@ def _page_link(name: str) -> str:
 
 def with_page_listed(readme: str, name: str) -> str:
     """The registry README *readme* with a link to page *name* in its list of page links, in
-    name order among them; a README with no such list gets a **Pages** section at its end."""
+    name order among them; with no such list, under its **Pages** heading, or in a **Pages**
+    section added at its end."""
     lines = readme.splitlines()
     linked = {i: m["name"] for i, line in enumerate(lines) if (m := _PAGE_LINK.fullmatch(line))}
+    if not linked and _PAGES_HEADING in lines:
+        at = lines.index(_PAGES_HEADING) + 1
+        lines[at:at] = ["", _page_link(name)]
+        return "\n".join(lines) + "\n"
     if not linked:
         above = readme.rstrip("\n") + "\n\n" if readme.strip() else ""
         return above + _pages_section([name])

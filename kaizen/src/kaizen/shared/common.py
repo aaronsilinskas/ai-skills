@@ -1,6 +1,7 @@
 """Plumbing every ``kaizen`` command shares: the runner seam and refusals."""
 
 import argparse
+import difflib
 import subprocess
 from collections.abc import Callable
 
@@ -27,6 +28,19 @@ class StepFailedError(Exception):
 
     def __init__(self, step: str, detail: str) -> None:
         super().__init__(f"{step} failed:\n{detail}")
+
+
+def unified_diff(relative: str, before: str | None, after: str) -> str:
+    """The unified diff from *before* (``None`` for a file that is absent) to *after*, for the
+    file at *relative*; empty when they differ only in line endings or the final newline."""
+    lines = difflib.unified_diff(
+        [] if before is None else before.splitlines(),
+        after.splitlines(),
+        "/dev/null" if before is None else f"a/{relative}",
+        f"b/{relative}",
+        lineterm="",
+    )
+    return "\n".join(lines)
 
 
 def run_subprocess(cmd: list[str]) -> str:

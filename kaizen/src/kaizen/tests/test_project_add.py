@@ -9,8 +9,10 @@ import pytest
 from kaizen.project.add import add_project
 from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
-from kaizen.shared.registry import resolve
+from kaizen.shared.registry import KEYS, resolve
 from kaizen.tests.ticket_shell import RELAY, Reply, Shell, cli_home, failed, home_for
+
+KEYS_BY_NAME = {key.name: key for key in KEYS}
 
 FLAGS = [
     *("--github", "acme/tool", "--public", "--check", "bash scripts/check.sh"),
@@ -124,6 +126,41 @@ def test_a_readme_with_no_pages_list_gets_one(tmp_path):
     assert readme.read_text() == "# Projects\n\nNotes.\n\n## Pages\n\n- [tool](tool.md)\n"
 
 
+def test_a_pages_heading_with_no_links_gets_the_first(tmp_path):
+    home = cli_home(tmp_path)
+    readme = home / "projects" / "README.md"
+    readme.write_text("# Projects\n\n## Pages\n")
+    checkout = _checkout(tmp_path)
+
+    assert _add(home, ["tool", str(checkout), *FLAGS], _shell(checkout)) == 0
+
+    assert readme.read_text() == "# Projects\n\n## Pages\n\n- [tool](tool.md)\n"
+
+
+def test_a_link_with_a_note_after_it_counts_as_listed(tmp_path):
+    home = cli_home(tmp_path)
+    readme = home / "projects" / "README.md"
+    readme.write_text("# Projects\n\n- [relay](relay.md): the API\n- [web](web.md)\n")
+    checkout = _checkout(tmp_path)
+
+    assert _add(home, ["tool", str(checkout), *FLAGS], _shell(checkout)) == 0
+
+    assert readme.read_text() == (
+        "# Projects\n\n- [relay](relay.md): the API\n- [tool](tool.md)\n- [web](web.md)\n"
+    )
+
+
+def test_the_defaults_left_off_the_page_are_shown(tmp_path, capsys):
+    home = cli_home(tmp_path)
+    checkout = _checkout(tmp_path)
+
+    assert _add(home, ["tool", str(checkout), *FLAGS], _shell(checkout)) == 0
+
+    out = capsys.readouterr().out
+    assert f"worktree_root: {checkout}/.claude/worktrees (the default, left off the page)" in out
+    assert "worktree_links: none (the default, left off the page)" in out
+
+
 def _settings(home: Path) -> Path:
     return home / ".claude" / "settings.json"
 
@@ -187,11 +224,15 @@ def test_the_next_step_is_creating_the_labels(tmp_path, capsys):
     assert "next: run `kaizen project labels tool`" in capsys.readouterr().out
 
 
-def test_detected_values_fill_the_fields_no_flag_gives_and_are_shown(tmp_path, capsys):
-    home = cli_home(tmp_path)
-    checkout = _checkout(tmp_path)
+def _with_check_script(checkout: Path) -> Path:
     (checkout / "scripts").mkdir()
     (checkout / "scripts" / "check.sh").write_text("true\n")
+    return checkout
+
+
+def test_detected_values_fill_the_fields_no_flag_gives(tmp_path):
+    home = cli_home(tmp_path)
+    checkout = _with_check_script(_checkout(tmp_path))
 
     assert _add(home, ["tool", str(checkout)], _shell(checkout)) == 0
 
@@ -199,6 +240,14 @@ def test_detected_values_fill_the_fields_no_flag_gives_and_are_shown(tmp_path, c
     assert (project.github, project.public) == ("acme/tool", True)
     assert project.check == "bash scripts/check.sh"
     assert project.code_paths == ("src/", "tests/")
+
+
+def test_each_detected_value_is_shown_with_its_source(tmp_path, capsys):
+    home = cli_home(tmp_path)
+    checkout = _with_check_script(_checkout(tmp_path))
+
+    assert _add(home, ["tool", str(checkout)], _shell(checkout)) == 0
+
     out = capsys.readouterr().out
     assert "github: acme/tool (detected from origin, git@github.com:acme/tool.git)" in out
     assert "public: true (detected from GitHub, acme/tool is PUBLIC)" in out
@@ -226,7 +275,7 @@ def test_without_a_terminal_each_missing_required_field_is_refused_with_its_expl
     assert _add(home, ["tool", str(checkout), "--code-paths", "src/"], shell) == 1
 
     err = capsys.readouterr().err
-    assert "refused: project add: 3 required field(s) have no value" in err
+    assert "refused: project add: 3 required key(s) have no value" in err
     assert "  github: the project's GitHub repo, `owner/repo`." in err
     assert "  public: " in err
     assert "  check: " in err
@@ -315,11 +364,14 @@ def _add_asking(tmp_path: Path, terminal: _Terminal, given: dict[str, str], line
     return resolve("tool", home / "projects")
 
 
-def test_a_terminal_is_asked_each_field_no_flag_gives_with_its_explanation_and_default(tmp_path):
-    terminal = _Terminal("", "", "none", "", "", "", "", "")
-    lines: list[str] = []
+_ACCEPT_ALL = ("", "", "none", "", "", "", "", "")
+"""Answers accepting every offer, and ``none`` for ``check``, which detects nothing here."""
 
-    project = _add_asking(tmp_path, terminal, {}, lines)
+
+def test_a_terminal_is_asked_each_field_no_flag_gives_in_page_order(tmp_path):
+    terminal = _Terminal(*_ACCEPT_ALL)
+
+    _add_asking(tmp_path, terminal, {}, [])
 
     assert [prompt.split(" ")[0] for prompt in terminal.prompts] == [
         "github",
@@ -331,15 +383,27 @@ def test_a_terminal_is_asked_each_field_no_flag_gives_with_its_explanation_and_d
         "auto_merge_comment_only",
         "worktree_links",
     ]
-    assert (
-        terminal.prompts[0]
-        == "github (owner/repo) [acme/tool] (detected from origin; Enter accepts): "
-    )
-    assert (
-        terminal.prompts[1] == "public (true/false) [true] (detected from GitHub; Enter accepts): "
+
+
+def test_a_prompt_shows_the_keys_explanation_options_and_detected_value(tmp_path):
+    terminal = _Terminal(*_ACCEPT_ALL)
+    lines: list[str] = []
+
+    _add_asking(tmp_path, terminal, {}, lines)
+
+    assert "github: the project's GitHub repo, `owner/repo`." in lines
+    assert terminal.prompts[0] == (
+        "github (owner/repo) [acme/tool] (detected from origin; Enter accepts): "
     )
     assert terminal.prompts[2] == "check (a shell command, or none): "
-    assert "github: the project's GitHub repo, `owner/repo`." in lines
+    assert lines[lines.index(f"check: {KEYS_BY_NAME['check'].summary}") + 1] == (
+        "  nothing detected"
+    )
+
+
+def test_enter_accepts_the_detected_value_or_the_default(tmp_path):
+    project = _add_asking(tmp_path, _Terminal(*_ACCEPT_ALL), {}, [])
+
     assert (project.github, project.public, project.check) == ("acme/tool", True, "none")
     assert project.code_paths == ("src/", "tests/")
     assert project.worktree_root == tmp_path / "tool" / ".claude/worktrees"
