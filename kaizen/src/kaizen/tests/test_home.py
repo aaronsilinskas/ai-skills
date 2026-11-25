@@ -230,90 +230,23 @@ def test_fresh_home_is_the_home_find_home_reads_from_the_fresh_marker(tmp_path):
     assert fresh_home(root, "acme/home", "/fixture/acme", version) == find_home(root, {})
 
 
-@pytest.mark.parametrize(
-    ("marker", "variable", "warnings"),
-    [
-        ("kaizen.toml", "KAIZEN_HOME", []),
-        ("kaizen.toml", "MW_HOME", ["MW_HOME"]),
-        ("mw.toml", "KAIZEN_HOME", ["mw.toml"]),
-        ("mw.toml", "MW_HOME", ["MW_HOME", "mw.toml"]),
-    ],
-)
-def test_each_marker_and_variable_name_finds_the_home_warning_about_each_old_name(
-    tmp_path, marker, variable, warnings
+def test_a_directory_holding_only_the_old_marker_name_is_not_a_home_and_draws_no_warning(
+    tmp_path, capsys
 ):
-    root = _home(tmp_path / "home", name=marker)
-    project = tmp_path / "project"
-    project.mkdir()
-    said: list[str] = []
-
-    home = find_home(project, {variable: str(root)}, warn=said.append)
-
-    assert home.root == root.resolve()
-    assert home.leak_own == ("acme/home", "/fixture/acme")
-    assert len(said) == len(warnings)
-    for line, old in zip(said, warnings, strict=True):
-        new = {"MW_HOME": "KAIZEN_HOME", "mw.toml": "kaizen.toml"}[old]
-        assert old in line and new in line and "\n" not in line
-
-
-def test_the_old_marker_found_by_the_upward_search_warns_naming_the_new_one(tmp_path):
     root = _home(tmp_path / "home", name="mw.toml")
-    said: list[str] = []
 
-    assert find_home(root, {}, warn=said.append).root == root.resolve()
-    assert len(said) == 1 and "mw.toml" in said[0] and "kaizen.toml" in said[0]
-
-
-def test_both_markers_with_the_same_bytes_pass_with_the_warning(tmp_path):
-    root = _home(_home(tmp_path / "home"), name="mw.toml")
-    said: list[str] = []
-
-    assert find_home(root, {}, warn=said.append).root == root.resolve()
-    assert len(said) == 1 and "mw.toml" in said[0] and "kaizen.toml" in said[0]
-
-
-def test_both_markers_with_different_bytes_are_refused_before_any_other_check(tmp_path):
-    malformed_new_marker = "registry = \n"
-    root = _home(_home(tmp_path / "home", malformed_new_marker), MARKER, name="mw.toml")
-
-    with pytest.raises(RefusalError) as refusal:
+    with pytest.raises(RefusalError, match="no home found"):
         find_home(root, {})
 
-    message = str(refusal.value)
-    assert "kaizen.toml" in message and "mw.toml" in message
-    assert re.search(r"fix: keep kaizen\.toml.*delete mw\.toml", message)
+    assert capsys.readouterr().err == ""
 
 
-def test_both_variables_naming_the_same_root_pass_with_the_warning(tmp_path):
+def test_the_old_variable_name_is_ignored_without_a_warning(tmp_path, capsys):
     root = _home(tmp_path / "home")
-    said: list[str] = []
-    env = {"KAIZEN_HOME": str(root), "MW_HOME": str(root) + "/"}
+    project = tmp_path / "project"
+    project.mkdir()
 
-    assert find_home(tmp_path, env, warn=said.append).root == root.resolve()
-    assert len(said) == 1 and "MW_HOME" in said[0] and "KAIZEN_HOME" in said[0]
+    with pytest.raises(RefusalError, match="no home found"):
+        find_home(project, {"MW_HOME": str(root)})
 
-
-def test_both_variables_naming_different_roots_are_refused_before_any_other_check(tmp_path):
-    roots_without_markers = tmp_path / "first", tmp_path / "second"
-    env = dict(zip(("KAIZEN_HOME", "MW_HOME"), map(str, roots_without_markers), strict=True))
-
-    with pytest.raises(RefusalError) as refusal:
-        find_home(tmp_path, env)
-
-    message = str(refusal.value)
-    assert "KAIZEN_HOME and MW_HOME name different roots" in message
-    assert re.search(r"fix: keep KAIZEN_HOME.*unset MW_HOME", message)
-    assert str(tmp_path) not in message
-
-
-def test_differing_markers_in_another_home_than_the_variable_names_are_refused_unnamed(tmp_path):
-    root = _home(tmp_path / "home")
-    other = _home(_home(tmp_path / "other-home", "registry = \n"), name="mw.toml")
-
-    with pytest.raises(RefusalError) as refusal:
-        find_home(other, {"KAIZEN_HOME": str(root)})
-
-    message = str(refusal.value)
-    assert f"a directory at or above {other} holds both kaizen.toml and mw.toml" in message
-    assert str(other) not in message.replace(f"a directory at or above {other}", "")
+    assert capsys.readouterr().err == ""

@@ -46,6 +46,7 @@ kaizen project leak-check
 
 `kaizen --help` lists the groups, and `kaizen <group> --help` lists each group's commands.
 Every command that changes anything checks its preconditions first and has a `--dry-run`.
+Every run ends its stderr with `kaizen: exit <code>`, whichever name you invoked it by, so `kaizen ... 2>&1 | tail` always keeps the outcome.
 
 `kaizen spec start <N>` pushes a spec's integration branch, `spec-<N>`, to `origin` at once.
 `kaizen spec start <N> --local` creates it only as a local branch instead, so a spec's tickets can start before anything is pushed.
@@ -75,20 +76,6 @@ done
 ```
 
 The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
-
-## Move an existing home to the new names
-
-A home made before kaizen's first release uses the old names, `mw.toml` and `MW_HOME`.
-The first release reads them with a warning, so the home keeps working while you move it:
-
-1. Install the release: `uv tool install kaizen-kit@latest`.
-2. Rename the home marker `mw.toml` to `kaizen.toml`, and the variable `MW_HOME` to `KAIZEN_HOME`, wherever it is set, such as the env of the home's `.claude/settings.json`.
-3. Run `kaizen home sync` from the home's root, and commit what it changed.
-4. Add `uvx --refresh-package kaizen-kit --from kaizen-kit==<synced version> kaizen home sync --check` to the home's CI, with the version `kaizen.toml` now records.
-
-The release after the first refuses the old names.
-
-Every run ends its stderr with `kaizen: exit <code>`, whichever name you invoked it by, so `kaizen ... 2>&1 | tail` always keeps the outcome.
 
 ## Develop
 

@@ -387,9 +387,9 @@ def _subprocess_home(tmp_path: Path) -> Path:
 
 
 def test_piped_kaizen_output_ends_with_the_error_after_every_progress_line(tmp_path):
-    # Run from a fixture home, with the repo on the import path and neither KAIZEN_HOME nor
-    # MW_HOME, so the CLI's defaults (the cwd and the process environment) find that home.
-    env = {k: v for k, v in os.environ.items() if k not in ("KAIZEN_HOME", "MW_HOME")}
+    # Run from a fixture home, with the repo on the import path and no KAIZEN_HOME, so the
+    # CLI's defaults (the cwd and the process environment) find that home.
+    env = {k: v for k, v in os.environ.items() if k != "KAIZEN_HOME"}
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
     result = subprocess.run(
         [sys.executable, "-c", _PIPED_FAILURE],
@@ -413,7 +413,7 @@ def test_piped_kaizen_output_ends_with_the_error_after_every_progress_line(tmp_p
 def test_either_installed_name_ends_its_stderr_with_the_kaizen_exit_trailer(tmp_path, name):
     # The console scripts sit beside the interpreter that runs the tests.
     script = Path(sys.executable).parent / name
-    env = {k: v for k, v in os.environ.items() if k not in ("KAIZEN_HOME", "MW_HOME")}
+    env = {k: v for k, v in os.environ.items() if k != "KAIZEN_HOME"}
     result = subprocess.run(
         [str(script), "issue", "show", "1"],
         cwd=tmp_path,
@@ -483,46 +483,6 @@ def test_a_malformed_marker_is_refused_before_any_command_runs(tmp_path, capsys)
     assert shell.calls == []
 
 
-def test_a_home_under_the_old_names_runs_its_command_after_a_warning_per_old_name(tmp_path, capsys):
-    home = cli_home(tmp_path)
-    (home / "kaizen.toml").rename(home / "mw.toml")
-    shell = Shell({("rev-parse", "--show-toplevel"): f"{RELAY}\n"})
-
-    code = main(["project", "leak-check"], run=shell, cwd=tmp_path, env={"MW_HOME": str(home)})
-
-    assert code == 0
-    warnings = [line for line in capsys.readouterr().err.splitlines() if line.startswith("warning")]
-    assert len(warnings) == 2
-    assert "MW_HOME" in warnings[0] and "KAIZEN_HOME" in warnings[0]
-    assert "mw.toml" in warnings[1] and "kaizen.toml" in warnings[1]
-
-
-def test_both_markers_differing_are_refused_with_exit_1_before_any_command_runs(tmp_path, capsys):
-    home = cli_home(tmp_path)
-    (home / "mw.toml").write_text("registry = [\n")
-    shell = Shell({})
-
-    assert main(["project", "leak-check"], run=shell, cwd=home, env={}) == 1
-
-    err = capsys.readouterr().err
-    assert err.startswith(f"refused: home: {home.resolve()} holds both kaizen.toml and mw.toml")
-    assert "fix: keep kaizen.toml" in err
-    assert shell.calls == []
-
-
-def test_both_variables_differing_are_refused_with_exit_1_before_any_command_runs(tmp_path, capsys):
-    home = cli_home(tmp_path)
-    env = {"KAIZEN_HOME": str(home), "MW_HOME": str(tmp_path / "elsewhere")}
-    shell = Shell({})
-
-    assert main(["project", "leak-check"], run=shell, cwd=home, env=env) == 1
-
-    err = capsys.readouterr().err
-    assert err.startswith("refused: home: KAIZEN_HOME and MW_HOME name different roots")
-    assert "fix: keep KAIZEN_HOME" in err
-    assert shell.calls == []
-
-
 def test_home_init_is_the_only_command_that_runs_without_a_home():
     exempt = []
     for group, (_, commands) in GROUPS.items():
@@ -586,7 +546,7 @@ sys.exit(code)
 def _run_with_closed_pipe(tmp_path, *, stderr_too: bool) -> subprocess.CompletedProcess:
     """Runs ``kaizen spec start`` with stdout (and stderr, if *stderr_too*) writing into a pipe
     whose reader has already gone, as `kaizen ... | head` leaves it once head exits."""
-    env = {k: v for k, v in os.environ.items() if k not in ("KAIZEN_HOME", "MW_HOME")}
+    env = {k: v for k, v in os.environ.items() if k != "KAIZEN_HOME"}
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
     reader, writer = os.pipe()
     os.close(reader)

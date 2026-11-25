@@ -296,15 +296,14 @@ def test_outside_a_git_repo_is_refused(tmp_path, capsys):
     assert _written(root) == []
 
 
-@pytest.mark.parametrize("name", ["kaizen.toml", "mw.toml"])
-def test_a_marker_under_either_name_at_the_root_is_refused(tmp_path, capsys, name):
+def test_a_marker_at_the_root_is_refused(tmp_path, capsys):
     root = _repo(tmp_path)
-    (root / name).write_text("")
+    (root / "kaizen.toml").write_text("")
 
     assert _init(tmp_path, root) == 1
 
     assert capsys.readouterr().err.startswith("refused: home init: a kaizen.toml is already in")
-    assert _written(root) == [name]
+    assert _written(root) == ["kaizen.toml"]
 
 
 def test_a_marker_above_the_root_is_refused_without_naming_where(tmp_path, capsys):
@@ -321,18 +320,15 @@ def test_a_marker_above_the_root_is_refused_without_naming_where(tmp_path, capsy
     assert _written(root) == []
 
 
-@pytest.mark.parametrize("variable", ["KAIZEN_HOME", "MW_HOME"])
-def test_either_variable_naming_another_root_is_refused_without_its_value(
-    tmp_path, capsys, variable
-):
+def test_kaizen_home_naming_another_root_is_refused_without_its_value(tmp_path, capsys):
     root = _repo(tmp_path)
     other = tmp_path / "other-home"
 
-    assert _init(tmp_path, root, env=_env(tmp_path, **{variable: str(other)})) == 1
+    assert _init(tmp_path, root, env=_env(tmp_path, KAIZEN_HOME=str(other))) == 1
 
     err = capsys.readouterr().err
-    assert f"refused: home init: {variable} is set to a root other than" in err
-    assert f"unset {variable}, or start a fresh session" in err
+    assert "refused: home init: KAIZEN_HOME is set to a root other than" in err
+    assert "unset KAIZEN_HOME, or start a fresh session" in err
     assert "other-home" not in err
     assert _written(root) == []
 
@@ -579,89 +575,6 @@ def test_settings_with_the_same_root_in_another_form_are_told_to_use_the_tilde_f
     err = capsys.readouterr().err
     assert f"fix: set KAIZEN_HOME in .claude/settings.json's env to {TILDE_ROOT} instead" in err
     assert "remove KAIZEN_HOME" not in err
-
-
-def test_mw_home_naming_this_root_is_accepted_with_a_warning_and_kaizen_home_written(
-    tmp_path, capsys
-):
-    root = _repo(tmp_path)
-
-    assert _init(tmp_path, root, env=_env(tmp_path, MW_HOME=TILDE_ROOT)) == 0
-
-    warnings = [line for line in capsys.readouterr().err.splitlines() if "MW_HOME" in line]
-    assert len(warnings) == 1 and warnings[0].startswith("warning: ")
-    assert "KAIZEN_HOME" in warnings[0]
-    assert _settings(root) == {"env": {"KAIZEN_HOME": TILDE_ROOT}, "permissions": {"deny": DENY}}
-
-
-def test_both_variables_naming_different_roots_are_refused_naming_which_to_keep(tmp_path, capsys):
-    root = _repo(tmp_path)
-    env = _env(tmp_path, KAIZEN_HOME=TILDE_ROOT, MW_HOME=str(tmp_path / "other-home"))
-
-    assert _init(tmp_path, root, env=env) == 1
-
-    err = capsys.readouterr().err
-    assert err.startswith("refused: home: KAIZEN_HOME and MW_HOME name different roots")
-    assert "fix: keep KAIZEN_HOME" in err
-    assert _written(root) == []
-
-
-def test_differing_variables_are_refused_before_a_marker_above_the_root(tmp_path, capsys):
-    root = _repo(tmp_path)
-    (root.parent / "kaizen.toml").write_text("")
-    env = _env(tmp_path, KAIZEN_HOME=TILDE_ROOT, MW_HOME=str(tmp_path / "other-home"))
-
-    assert _init(tmp_path, root, env=env) == 1
-
-    assert "KAIZEN_HOME and MW_HOME name different roots" in capsys.readouterr().err
-
-
-def test_init_never_writes_the_old_marker_or_variable(tmp_path):
-    root = _repo(tmp_path)
-
-    _init(tmp_path, root)
-
-    assert "mw.toml" not in _written(root)
-    assert "MW_HOME" not in (root / ".claude" / "settings.json").read_text()
-
-
-def test_settings_whose_env_sets_mw_home_to_this_home_get_it_renamed_in_place(tmp_path):
-    root = _repo(tmp_path)
-    _write(root, ".claude/settings.json", f'{{"env": {{"A": "1", "MW_HOME": "{TILDE_ROOT}"}}}}')
-
-    assert _init(tmp_path, root) == 0
-
-    assert list(_settings(root)["env"].items()) == [("A", "1"), ("KAIZEN_HOME", TILDE_ROOT)]
-
-
-def test_settings_with_mw_home_set_to_another_root_are_refused_naming_the_old_variable(
-    tmp_path, capsys
-):
-    root = _repo(tmp_path)
-    _write(root, ".claude/settings.json", '{"env": {"MW_HOME": "/other-home"}}\n')
-
-    assert _init(tmp_path, root) == 1
-
-    err = capsys.readouterr().err
-    assert err.startswith("refused: home init: .claude/settings.json already sets MW_HOME to a")
-    assert "fix: remove MW_HOME from .claude/settings.json's env" in err
-    assert "other-home" not in err
-    assert _written(root) == [".claude/settings.json"]
-
-
-def test_settings_with_mw_home_set_to_this_root_in_another_form_are_told_the_new_setting(
-    tmp_path, capsys
-):
-    root = _repo(tmp_path)
-    _write(root, ".claude/settings.json", f'{{"env": {{"MW_HOME": "{root}"}}}}')
-
-    assert _init(tmp_path, root) == 1
-
-    err = capsys.readouterr().err
-    assert (
-        f"fix: replace MW_HOME in .claude/settings.json's env with KAIZEN_HOME set to {TILDE_ROOT}"
-        in err
-    )
 
 
 def test_settings_already_naming_this_home_are_kept_byte_for_byte(tmp_path):

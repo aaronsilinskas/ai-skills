@@ -42,7 +42,7 @@ from kaizen.pr import wait
 from kaizen.project import labels as project_labels
 from kaizen.project import leak_check as project_leak_check
 from kaizen.shared.common import RefusalError, Runner, StepFailedError, run_subprocess
-from kaizen.shared.home import find_home, warn_on_stderr
+from kaizen.shared.home import MARKER, find_home
 from kaizen.shared.version import Install, LatestRelease, check_synced_version, latest_on_pypi
 from kaizen.spec import finish as spec_finish
 from kaizen.spec import integrate
@@ -146,7 +146,7 @@ def _run(
             check_synced_version(
                 install.version,
                 home.synced_version,
-                home.marker,
+                MARKER,
                 warn_on_stderr,
                 syncing=getattr(args, "records_version", False) and not args.check,
             )
@@ -169,6 +169,11 @@ def _run(
     # though the shell reports tail's exit status.
     print(f"kaizen: exit {code}{outcome}", file=sys.stderr)
     return code
+
+
+def warn_on_stderr(line: str) -> None:
+    """Prints a ``warning:`` line on stderr, beside the outcome rather than the progress."""
+    print(f"warning: {line}", file=sys.stderr)
 
 
 def _failed(message: str) -> tuple[int, str]:
