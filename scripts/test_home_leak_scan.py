@@ -17,7 +17,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from home_leak_scan import Finding, main, scan  # noqa: E402
+from home_leak_scan import SKIPPED, Finding, main, scan  # noqa: E402
 
 TILDE = "~"
 MAC_HOME = "/".join(["", "Users", "alice"])
@@ -107,8 +107,8 @@ class ScanTest(unittest.TestCase):
         self.assertEqual(found, [Finding("b.md", 5, f"{MAC_HOME}/x")])
 
 
-class MainTest(unittest.TestCase):
-    """main() against a real repository: only the lines head adds since base are scanned."""
+class RepoTest(unittest.TestCase):
+    """A real repository with one base commit, for running main() in."""
 
     def setUp(self) -> None:
         self.repo = tempfile.mkdtemp()
@@ -146,6 +146,10 @@ class MainTest(unittest.TestCase):
             os.chdir(cwd)
         return status, out.getvalue()
 
+
+class MainTest(RepoTest):
+    """main() against a real repository: only the lines head adds since base are scanned."""
+
     def test_head_adding_a_home_path_fails_listing_only_the_added_line(self) -> None:
         self.write("old.md", f"already here {TILDE}/dev\n")
         self.write("new.md", f"one\ntwo\nthree {MAC_HOME}/x\n")
@@ -175,6 +179,74 @@ class MainTest(unittest.TestCase):
 
         self.assertEqual(status, 2)
         self.assertIn("usage", out)
+
+
+class BranchTest(RepoTest):
+    """main(["--branch"]): what HEAD adds since its merge base with origin's default branch."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.git("checkout", "-q", "-b", "topic")
+
+    def publish_base(self, branch: str = "main", *, as_origin_head: bool = False) -> None:
+        self.git("update-ref", f"refs/remotes/origin/{branch}", self.base)
+        if as_origin_head:
+            self.git("symbolic-ref", "refs/remotes/origin/HEAD", f"refs/remotes/origin/{branch}")
+
+    def test_home_path_added_by_an_earlier_commit_on_the_branch_fails(self) -> None:
+        self.publish_base()
+        self.write("new.md", f"one\n{MAC_HOME}/x\n")
+        self.commit("adds the path")
+        self.write("later.md", "clean\n")
+        self.commit("clean commit on top")
+
+        status, out = self.run_main("--branch")
+
+        self.assertEqual(status, 1, out)
+        self.assertIn(f"new.md:2: {MAC_HOME}/x", out)
+
+    def test_branch_adding_no_home_path_passes(self) -> None:
+        self.publish_base()
+        self.write("new.md", "nothing personal\n")
+        self.commit("head")
+
+        status, out = self.run_main("--branch")
+
+        self.assertEqual(status, 0, out)
+
+    def test_default_branch_named_by_origin_head_is_the_base(self) -> None:
+        self.publish_base("trunk", as_origin_head=True)
+        self.write("new.md", f"{LINUX_HOME}/x\n")
+        self.commit("head")
+
+        status, out = self.run_main("--branch")
+
+        self.assertEqual(status, 1, out)
+
+    def test_head_on_the_default_branch_tip_skips(self) -> None:
+        self.publish_base()
+
+        status, out = self.run_main("--branch")
+
+        self.assertEqual(status, SKIPPED, out)
+        self.assertIn("adds nothing since origin/main", out)
+
+    def test_no_remote_default_branch_skips_naming_the_reason(self) -> None:
+        status, out = self.run_main("--branch")
+
+        self.assertEqual(status, SKIPPED, out)
+        self.assertIn("no origin/main", out)
+
+    def test_no_merge_base_with_the_default_branch_skips(self) -> None:
+        self.git("checkout", "-q", "--orphan", "unrelated")
+        self.write("other.md", "other history\n")
+        self.git("update-ref", "refs/remotes/origin/main", self.commit("unrelated"))
+        self.git("checkout", "-q", "topic")
+
+        status, out = self.run_main("--branch")
+
+        self.assertEqual(status, SKIPPED, out)
+        self.assertIn("no merge base", out)
 
 
 if __name__ == "__main__":

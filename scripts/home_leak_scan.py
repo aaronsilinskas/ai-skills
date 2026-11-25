@@ -2,16 +2,20 @@
 """home_leak_scan.py: refuse a path under a user's home directory in the lines a change adds.
 
     python3 scripts/home_leak_scan.py <base> <head>
+    python3 scripts/home_leak_scan.py --branch
 
 Scans only the lines that <head> adds since its merge base with <base> (git diff base...head),
-never removed or unchanged ones. A home path is a tilde path with more after it, a user name after the
+never removed or unchanged ones. With --branch, <base> is origin's default branch (what
+origin/HEAD names, else origin/main) and <head> is HEAD; it skips, exiting 3 with a SKIP line,
+when HEAD adds nothing since that branch, or when there is no such branch or merge base. A home path is a tilde path with more after it, a user name after the
 tilde included, or an absolute path under a macOS, Linux or Windows home directory that names a
 user.
 Placeholders such as a ``<name>`` or ``$USER`` segment name no user and pass, and so does the
 macOS ``Shared`` folder, which is no user's home.
 
 It needs no home's facts and reads nothing outside the repository, so CI can run it on any
-runner. Exits 0 when clean, 1 listing each file, line and path found, 2 on a usage or git error.
+runner. Exits 0 when clean, 1 listing each file, line and path found, 2 on a usage or git error,
+3 when --branch skips.
 """
 
 import re
@@ -28,6 +32,8 @@ _HOME_PATH = re.compile(
     rf"|(?<![\w.-])/(?:Users/(?!Shared\b)|home/)\w[^{_PATH_END}]*"
     r"|(?i:\b[a-z]:(?:\\{1,2}|/)users(?:\\{1,2}|/)\w+)"
 )
+SKIPPED = 3
+_FALLBACK_DEFAULT = "origin/main"
 _HUNK = re.compile(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
 
@@ -63,9 +69,32 @@ def scan(diff: str) -> list[Finding]:
     return found
 
 
+def _git(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=False)
+
+
+def _branch_base() -> tuple[str | None, str]:
+    """The base for --branch, or None and why the scan skips."""
+    origin_head = _git("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+    base = origin_head.stdout.strip() if origin_head.returncode == 0 else _FALLBACK_DEFAULT
+    if _git("rev-parse", "--verify", "--quiet", f"refs/remotes/{base}").returncode != 0:
+        return None, f"no {base} to compare against (no remote, or not fetched)"
+    if _git("merge-base", base, "HEAD").returncode != 0:
+        return None, f"no merge base between {base} and HEAD (a shallow clone?)"
+    if _git("merge-base", "--is-ancestor", "HEAD", base).returncode == 0:
+        return None, f"HEAD adds nothing since {base}"
+    return base, ""
+
+
 def main(argv: list[str]) -> int:
+    if argv == ["--branch"]:
+        branch_base, why = _branch_base()
+        if branch_base is None:
+            print(f"SKIP: {why}")
+            return SKIPPED
+        argv = [branch_base, "HEAD"]
     if len(argv) != 2:
-        print("usage: home_leak_scan.py <base> <head>", file=sys.stderr)
+        print("usage: home_leak_scan.py <base> <head> | --branch", file=sys.stderr)
         return 2
     base, head = argv
     result = subprocess.run(
