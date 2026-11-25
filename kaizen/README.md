@@ -1,11 +1,17 @@
 # kaizen
 
-Agents that run the same workflow across several repos do the mechanical parts a little differently each time: a worktree branched from the wrong place, a PR pushed without the leak check, a home's shared agent docs drifting from the release that wrote them.
-kaizen is a command-line tool that does those parts the same way every time, so the agents and skills only make the judgement calls.
-It starts ticket worktrees, ships PRs through a leak check, publishes specs and issues, and keeps a home's shared agent docs in step with its templates.
+Run coding agents across several repositories, some public and some private, and two things go wrong.
+The agents do the mechanical steps a little differently each time, such as branching a ticket's work from the wrong place.
+And details of the private repositories, such as their names, local file paths or links to their notes, slip into a public repository's commits, pull requests and issues.
 
-It works from a **home**: a git repo where agent sessions start, holding a registry of the projects it works on, the agent docs those sessions follow, and the facts its leak check needs.
-It needs only the Python standard library at runtime.
+kaizen is a command-line tool that does those steps the same way every time, so the agents only make the judgement calls.
+Before a commit, pull request or issue goes out, kaizen checks its text and refuses to send it if it would expose a private repository; this is the leak check.
+kaizen also gives each ticket its own git worktree, opens the pull request, and publishes specs and issues.
+
+kaizen keeps its setup in one git repository you choose, the **home**.
+Your agent sessions start there, and it lists the repositories they work on and holds the workflow instructions the agents follow.
+Those instructions come from kaizen's templates, so after an upgrade one command brings them up to date and every session follows the same rules.
+kaizen needs only the Python standard library at runtime.
 
 ## Quick start
 
@@ -24,7 +30,7 @@ Then, in the git repo you want as your home (one with a GitHub `origin`), previe
 kaizen home init --dry-run
 ```
 
-It prints its checks and every file it would write in full, such as the project registry, the synced agent docs and `kaizen.toml`, and writes nothing.
+It prints its checks and every file it would write in full, such as the list of repositories, the workflow instructions and `kaizen.toml`, and writes nothing.
 Run it again without `--dry-run` to make the home; it ends with a checklist of the steps only you can do, such as registering your projects.
 
 ## Upgrade
@@ -33,7 +39,7 @@ Install without a version pin.
 `uv tool upgrade` leaves an install made with `kaizen-kit==X.Y.Z` at that version, printing "Nothing to upgrade".
 To move to the latest release, pinned or not, run `uv tool install kaizen-kit@latest`.
 
-After upgrading, run `kaizen home sync` in each home to bring its synced files back in step.
+After upgrading, run `kaizen home sync` in each home to bring its workflow instructions (the synced files) up to date with the new templates.
 A home records the release that last synced it as its synced version, in `kaizen.toml`.
 Every command compares the two: a newer install warns to run `kaizen home sync`, and an older one refuses until you run `uv tool install kaizen-kit@latest`.
 
