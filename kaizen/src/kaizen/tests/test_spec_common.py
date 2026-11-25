@@ -5,6 +5,7 @@ import pytest
 from kaizen.shared.branch import (
     IntegrationBranch,
     TicketBranch,
+    domain_docs_branch,
     find_integration_branch,
     integration_branch,
     integration_merge_message,
@@ -19,6 +20,10 @@ from kaizen.tests.ticket_shell import Shell, failed
 
 def test_a_specs_integration_branch_is_named_from_its_number_alone():
     assert integration_branch(25) == "spec-25"
+
+
+def test_a_specs_domain_docs_branch_is_named_from_its_number():
+    assert domain_docs_branch(25) == "spec-25-domain-docs"
 
 
 def test_a_spec_ticket_branch_names_the_spec_issue_and_slug():

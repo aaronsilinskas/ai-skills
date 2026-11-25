@@ -285,6 +285,15 @@ def test_the_spec_groups_help_names_more_than_publishing(tmp_path, capsys):
     assert "publish a grilled spec and run" in out
 
 
+def test_the_project_groups_help_says_it_creates_the_workflow_labels(tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        main(["project", "--help"], cwd=tmp_path, env={})
+
+    out = " ".join(capsys.readouterr().out.split())
+    assert "create the workflow labels the projects' repos lack" in out
+    assert "sync" not in out
+
+
 def test_kaizen_routes_spec_finish_to_its_command(kaizen, capsys):
     pr = '[{"number": 40, "state": "MERGED", "url": "u", "headRefOid": "abc123"}]'
     shell = Shell(
