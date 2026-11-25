@@ -28,7 +28,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError
+from kaizen.shared.common import RefusalError, Say
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
 from kaizen.shared.registry import GITHUB_REPO
 from kaizen.shared.version import Version
@@ -88,9 +88,7 @@ class Home:
     records none."""
 
 
-def find_home(
-    start: Path, env: Mapping[str, str], warn: Callable[[str], None] = lambda _: None
-) -> Home:
+def find_home(start: Path, env: Mapping[str, str], warn: Say = lambda _: None) -> Home:
     """The home ``KAIZEN_HOME`` in *env* names, or the nearest one upward from *start*.
 
     Inside a linked git worktree of the ``KAIZEN_HOME`` home, such as one of its ticket
@@ -109,18 +107,18 @@ def find_home(
                 f"home: {ENV_VAR} is {value}, which has no {MARKER}",
                 f"set {ENV_VAR} to the root of the home that holds {MARKER}",
             )
-        if found and found != named:
-            if not _is_worktree_of(found, named):
-                # Only the variable's root is named: the other home's path must not reach this
-                # one's output.
-                raise RefusalError(
-                    f"home: {ENV_VAR} names {named}, but kaizen runs inside the tree"
-                    f" of a different {MARKER}",
-                    f"run kaizen from inside {named} or one of its registered projects",
-                )
-            warn(f"home: using the worktree {found}; {ENV_VAR} names {named}")
-            return _read_marker(found)
+        if found and found != named and not _is_worktree_of(found, named):
+            # Only the variable's root is named: the other home's path must not reach this
+            # one's output.
+            raise RefusalError(
+                f"home: {ENV_VAR} names {named}, but kaizen runs inside the tree"
+                f" of a different {MARKER}",
+                f"run kaizen from inside {named} or one of its registered projects",
+            )
     root = named or found
+    if named and found and found != named:
+        warn(f"home: using the worktree {found}; {ENV_VAR} names {named}")
+        root = found
     if root is None:
         raise RefusalError(
             f"home: no home found: {ENV_VAR} is unset and no {MARKER} is in {start} or above it",

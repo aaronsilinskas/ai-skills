@@ -50,7 +50,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `RefusalError(check, fix)` is raised before anything mutating runs; `StepFailedError(step, detail)` is a failed step after earlier steps changed things.
 - `shared/home.py`: home discovery and the files that make a new home.
   It defines the home marker's name and the environment variable that names a home.
-  `find_home(start, env)` returns a `Home` (root, registry folder, leak facts and the **home settings**) or refuses with a fix.
+  `find_home(start, env, warn)` returns a `Home` (root, registry folder, leak facts and the **home settings**) or refuses with a fix.
   It reads the marker with `tomllib`, the one place kaizen reads TOML.
   Inside a linked worktree of the `KAIZEN_HOME` home, such as a ticket worktree of the home itself, the worktree is the home, so commands read and write its files rather than the main checkout's.
   The CLI prints one `warning:` line when that happens, naming both roots.

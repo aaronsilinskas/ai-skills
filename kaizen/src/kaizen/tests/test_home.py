@@ -241,3 +241,14 @@ def test_the_old_variable_name_is_ignored_without_a_warning(tmp_path, capsys):
         find_home(project, {"MW_HOME": str(root)})
 
     assert capsys.readouterr().err == ""
+
+
+def test_kaizen_home_alone_from_outside_its_tree_does_not_warn(tmp_path):
+    root = _home(tmp_path / "home")
+    project = tmp_path / "project"
+    project.mkdir()
+    warnings: list[str] = []
+
+    find_home(project, {"KAIZEN_HOME": str(root)}, warnings.append)
+
+    assert warnings == []
