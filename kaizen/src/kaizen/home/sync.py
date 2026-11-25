@@ -126,13 +126,24 @@ def _text(current: bytes | None) -> str | None:
 IN_STEP = "every synced file and setting is in step"
 
 
-def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say = print) -> None:
+def sync_home(
+    home: Home,
+    install: Install,
+    *,
+    dry_run: bool = False,
+    allow_dev: bool = False,
+    say: Say = print,
+) -> None:
     """Writes each of *home*'s ``changes`` for the running version, which it records as the
     synced version, one line each, or says nothing changed; then names a newer release when
     there is one. With *dry_run*, prints each change's diff instead and writes nothing. Refuses
-    a running version that is not ``X.Y.Z``, which no home's CI could install, and a home that
-    still holds the old marker beside ``kaizen.toml``."""
-    version = recordable_version(install.version, "home sync")
+    a running version that is not ``X.Y.Z``, which no home's CI could install, unless
+    *allow_dev* and *dry_run* preview it, and a home that still holds the old marker beside
+    ``kaizen.toml``."""
+    if allow_dev and Version.parse(install.version) is None:
+        version = _preview_version(home, install.version, dry_run=dry_run)
+    else:
+        version = recordable_version(install.version, "home sync")
     refuse_old_marker_copy(home, "home sync")
     found = changes(home, version)
     if not found:
@@ -147,6 +158,29 @@ def sync_home(home: Home, install: Install, *, dry_run: bool = False, say: Say =
         say("dry run: nothing written")
     if line := newer_release(install.version, install.latest):
         say(line)
+
+
+def _preview_version(home: Home, running: str, *, dry_run: bool) -> Version:
+    """The version a local build's preview renders for: *home*'s recorded synced version, so its
+    diffs show only template changes. Refuses unless *dry_run*, since a local build's version
+    can't be recorded, and when *home* records none."""
+    if not dry_run:
+        raise _preview_only(running)
+    if home.synced_version is None:
+        raise RefusalError(
+            f"home sync --dry-run --allow-dev: {home.marker} records no synced version to render"
+            " the local build's files for",
+            "run a release's `kaizen home sync` first",
+        )
+    return home.synced_version
+
+
+def _preview_only(running: str) -> RefusalError:
+    return RefusalError(
+        f"home sync: --allow-dev is preview-only, so it needs --dry-run to run kaizen {running},"
+        " which is not X.Y.Z",
+        "add --dry-run to preview the synced files, or install a release to write them",
+    )
 
 
 def check_home(home: Home, *, say: Say = print) -> None:
@@ -192,7 +226,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "replacing it, or else inserting it above the first table.\n\n"
             "It refuses, before writing anything: when the installed kaizen is older than the "
             f"home's synced version, so a sync never rolls a home back (the fix is `{UPGRADE}`); "
-            "when kaizen's version is not X.Y.Z, such as a local build's; when "
+            "when kaizen's version is not X.Y.Z, such as a local build's, except in the "
+            "--dry-run --allow-dev preview; when "
             f"{SETTINGS} is not a JSON object, its permissions not an object or its "
             "permissions.deny not a list; when a synced file's path is not a file; and when the "
             f"home holds both {MARKER} and {OLD_MARKER}, its old name, which writing {MARKER} "
@@ -201,6 +236,13 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "upgrade command when that is newer; a failed lookup prints nothing. No other kaizen "
             "command uses the network.\n\n"
             "With --dry-run it prints each change as a diff and writes nothing.\n\n"
+            "With --dry-run --allow-dev, a local build, whose version is not X.Y.Z, previews "
+            "what it would sync: this is the way to check a template change against a real home "
+            "before release. It renders for the home's recorded synced version, so the diffs "
+            "show only template changes, prints each change as a diff, and writes nothing: no "
+            "synced file, no settings merge and no synced version. It makes no network call, and "
+            "refuses when the marker records no synced version. --allow-dev without --dry-run "
+            "is refused as preview-only, and a release build ignores it.\n\n"
             "With --check it compares instead, rendering for the home's recorded synced version, "
             "which is the release a home's CI runs it with: it passes when nothing would change, "
             "and otherwise prints each difference and fails, naming every file, with the fix "
@@ -219,11 +261,19 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         dest="check",
         help="fail, listing every difference, unless the home is in step; write nothing",
     )
+    parser.add_argument(
+        "--allow-dev",
+        action="store_true",
+        help="with --dry-run, preview a local build's synced files and diffs against the home, "
+        "to check a template change before release; a release build ignores it",
+    )
     parser.set_defaults(handler=_command, needs_install=True, records_version=True)
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:
     if args.check:
+        if args.allow_dev and Version.parse(install.version) is None:
+            raise _preview_only(install.version)
         check_home(home)
     else:
-        sync_home(home, install, dry_run=args.dry_run)
+        sync_home(home, install, dry_run=args.dry_run, allow_dev=args.allow_dev)

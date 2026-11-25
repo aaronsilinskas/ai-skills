@@ -92,6 +92,7 @@ One module per command; each group's `--help` lists them.
   Its output and files name no home but the new one (ADR 0002), and the marker is written last, so a failure partway leaves none and a rerun finishes the rest.
   `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
   Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
+  `sync --dry-run --allow-dev` is the one path that runs a local build, whose version is not `X.Y.Z`: it renders for the home's recorded synced version and only prints, so a local build's version is never recorded.
   `sync` must refuse a home holding both markers, since writing one leaves them different, which every later command refuses; read-only commands, `--check` among them, pass such a home with a warning.
   It never touches the home overlay, the hook config or any other file the home owns.
   `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.

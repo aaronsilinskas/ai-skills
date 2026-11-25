@@ -22,6 +22,10 @@ To run an unreleased change, install a local build from a checkout of this repo,
 uv tool install ./kaizen
 ```
 
+A local build's version is not `X.Y.Z`, so `kaizen home sync` refuses to record it.
+To check a template change against a real home before release, run `kaizen home sync --dry-run --allow-dev` from a local build in that home.
+It prints each synced file it would write and its diff against the home's copy, rendered for the home's recorded synced version, and writes nothing.
+
 Either way puts two commands on your path, `kaizen` and its short alias `kz`.
 They are the same program; docs and hooks spell out `kaizen`.
 
