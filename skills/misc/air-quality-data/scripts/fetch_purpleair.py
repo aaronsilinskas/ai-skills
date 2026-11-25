@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch air quality data from the PurpleAir API.
 
-Reads PURPLEAIR_API_KEY from the environment or ~/.config/as-air-quality-data/.env.
+Reads PURPLEAIR_API_KEY from the environment or ~/.config/air-quality-data/.env.
 Applies the EPA 2021 PM2.5 correction factor.
 Outputs JSON to stdout.
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import requests
 
-ENV_FILE = Path.home() / ".config" / "as-air-quality-data" / ".env"
+ENV_FILE = Path.home() / ".config" / "air-quality-data" / ".env"
 
 
 def load_env_file():

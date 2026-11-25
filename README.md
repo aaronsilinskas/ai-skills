@@ -22,7 +22,7 @@ An optional overlay of [Agent Skills](https://agentskills.io/) on top of [Matt P
 
 | Skill | Invoked by | Description |
 | --- | --- | --- |
-| [as-air-quality-data](skills/misc/as-air-quality-data/SKILL.md) | You or model | Fetch and compare air quality data (AQI, PM2.5/PM10) via EPA AirNow, PurpleAir, IQAir, and OpenAQ. |
+| [air-quality-data](skills/misc/air-quality-data/SKILL.md) | You or model | Fetch and compare air quality data (AQI, PM2.5/PM10) via EPA AirNow, PurpleAir, IQAir, and OpenAQ. |
 
 ## What this overlay adds
 
@@ -33,7 +33,7 @@ Each skill here fills a gap in Matt's skills. None of them shares a name with on
 - **`embedded-python`:** Python rules for CircuitPython, MicroPython and other constrained hardware, where allocations and GC pauses matter: no allocation on hot paths, mutate in place, plain loops, runtime-safe typing. The model reaches it while writing the code, not only at review.
 - **`test-quality`:** a quality bar for the tests themselves (naming, one behavior per test, coverage traced to guarantees) plus per-language mocking guides, run as its own review pass. Matt's `tdd` owns the red-green loop.
 - **`to-idea`:** captures a discovery as a lightweight `idea`-labeled issue, a stub to revisit rather than a spec. It reads the label from the project's triage-labels doc.
-- **`as-air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
+- **`air-quality-data`:** fetches live AQI and pollutant readings from EPA AirNow, PurpleAir, IQAir and OpenAQ through bundled scripts.
 
 ## Installation
 
@@ -93,7 +93,7 @@ Skills follow [Matt's authoring conventions](https://github.com/mattpocock/skill
 - An operative cross-skill call says `Call the Skill tool with "x"` (or `Call the Skill tool twice, for "x" and "y"`).
 - A user-invoked skill may call model-invoked skills, never another user-invoked one. In that case it tells the user to run `/x`.
 - Quote any `description:` that contains `: `.
-- A skill's directory takes its frontmatter `name:`, prefix included (`as-air-quality-data`).
+- A skill's directory takes its frontmatter `name:`.
 - Every skill ships `agents/openai.yaml` in Matt's shape. User-invoked skills set `policy.allow_implicit_invocation: false`.
 - Spell it "sub-agent".
 

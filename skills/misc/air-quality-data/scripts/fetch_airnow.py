@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch air quality data from the EPA AirNow API.
 
-Reads AIRNOW_API_KEY from the environment or ~/.config/as-air-quality-data/.env.
+Reads AIRNOW_API_KEY from the environment or ~/.config/air-quality-data/.env.
 Outputs JSON to stdout.
 """
 
@@ -14,7 +14,7 @@ from pathlib import Path
 import requests
 
 BASE_URL = "https://www.airnowapi.org/aq"
-ENV_FILE = Path.home() / ".config" / "as-air-quality-data" / ".env"
+ENV_FILE = Path.home() / ".config" / "air-quality-data" / ".env"
 
 
 def load_env_file():

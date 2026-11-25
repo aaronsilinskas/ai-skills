@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch air quality data from the IQAir (AirVisual) API v2.
 
-Reads IQAIR_API_KEY from the environment or ~/.config/as-air-quality-data/.env.
+Reads IQAIR_API_KEY from the environment or ~/.config/air-quality-data/.env.
 Outputs JSON to stdout.
 """
 
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import requests
 
-ENV_FILE = Path.home() / ".config" / "as-air-quality-data" / ".env"
+ENV_FILE = Path.home() / ".config" / "air-quality-data" / ".env"
 
 
 def load_env_file():
