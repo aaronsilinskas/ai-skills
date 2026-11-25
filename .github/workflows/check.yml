@@ -20,14 +20,7 @@ jobs:
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
       - name: Check command
+        # Its home leak scan diffs against origin's default branch, which fetch-depth 0 fetches.
+        # The full leak check needs a home's facts, which no runner has, so it runs on the
+        # contributor's machine.
         run: bash scripts/check.sh
-
-      # The full leak check needs a home's facts, which no runner has, so it runs on the
-      # contributor's machine. This scan needs none: it refuses home-directory paths in the
-      # lines the PR adds.
-      - name: Home leak scan
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 -B scripts/home_leak_scan.py "$BASE_SHA" "$HEAD_SHA"
