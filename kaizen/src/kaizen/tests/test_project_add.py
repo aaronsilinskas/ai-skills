@@ -10,7 +10,7 @@ from kaizen.project.add import add_project
 from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
 from kaizen.shared.registry import KEYS, resolve
-from kaizen.tests.ticket_shell import RELAY, Reply, Shell, cli_home, failed, home_for
+from kaizen.tests.ticket_shell import RELAY, TILDE, Reply, Shell, cli_home, failed, home_for
 
 KEYS_BY_NAME = {key.name: key for key in KEYS}
 
@@ -99,7 +99,7 @@ def test_a_path_under_the_user_directory_is_written_from_tilde(tmp_path, monkeyp
 
     assert _add(home, ["tool", str(checkout), *FLAGS], _shell(checkout)) == 0
 
-    assert "path: ~/tool\n" in (home / "projects" / "tool.md").read_text()
+    assert f"path: {TILDE}/tool\n" in (home / "projects" / "tool.md").read_text()
 
 
 def test_the_page_is_listed_in_the_readmes_pages_list_in_name_order(tmp_path):
@@ -169,7 +169,7 @@ def test_the_directory_is_added_to_the_settings_keeping_every_other_key(tmp_path
     home = cli_home(tmp_path)
     _settings(home).parent.mkdir()
     before = {
-        "env": {"KAIZEN_HOME": "~/home"},
+        "env": {"KAIZEN_HOME": "/fixture/home"},
         "permissions": {"additionalDirectories": ["/fixture/relay"], "deny": ["Bash(x)"]},
     }
     _settings(home).write_text(json.dumps(before))
@@ -179,7 +179,7 @@ def test_the_directory_is_added_to_the_settings_keeping_every_other_key(tmp_path
 
     after = json.loads(_settings(home).read_text())
     assert after == {
-        "env": {"KAIZEN_HOME": "~/home"},
+        "env": {"KAIZEN_HOME": "/fixture/home"},
         "permissions": {
             "additionalDirectories": ["/fixture/relay", str(checkout)],
             "deny": ["Bash(x)"],
@@ -190,7 +190,7 @@ def test_the_directory_is_added_to_the_settings_keeping_every_other_key(tmp_path
 def test_a_settings_file_spelling_directories_from_tilde_gets_one_too(tmp_path, monkeypatch):
     home = cli_home(tmp_path)
     _settings(home).parent.mkdir()
-    listed = {"permissions": {"additionalDirectories": ["~/elsewhere"]}}
+    listed = {"permissions": {"additionalDirectories": [f"{TILDE}/elsewhere"]}}
     _settings(home).write_text(json.dumps(listed))
     checkout = _checkout(tmp_path)
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -198,13 +198,13 @@ def test_a_settings_file_spelling_directories_from_tilde_gets_one_too(tmp_path, 
     assert _add(home, ["tool", str(checkout), *FLAGS], _shell(checkout)) == 0
 
     entries = json.loads(_settings(home).read_text())["permissions"]["additionalDirectories"]
-    assert entries == ["~/elsewhere", "~/tool"]
+    assert entries == [f"{TILDE}/elsewhere", f"{TILDE}/tool"]
 
 
 def test_a_directory_the_settings_already_list_is_left_alone(tmp_path, monkeypatch, capsys):
     home = cli_home(tmp_path)
     _settings(home).parent.mkdir()
-    text = '{"permissions": {"additionalDirectories": ["~/tool"]}}'
+    text = json.dumps({"permissions": {"additionalDirectories": [f"{TILDE}/tool"]}})
     _settings(home).write_text(text)
     checkout = _checkout(tmp_path)
     monkeypatch.setenv("HOME", str(tmp_path))
