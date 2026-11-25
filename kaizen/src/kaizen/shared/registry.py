@@ -191,16 +191,27 @@ def _toplevel(run: Runner, path: Path | None = None) -> Path:
 
 def all_projects(projects_dir: Path) -> list[Project]:
     """Every project with a page, in name order."""
-    return [
-        _parse(page.stem, page)
-        for page in sorted(projects_dir.glob("*.md"))
-        if page.name != "README.md"
-    ]
+    return [_parse(page.stem, page) for page in _pages(projects_dir)]
+
+
+def invalid_pages(projects_dir: Path) -> list[tuple[Path, RefusalError]]:
+    """Each page that ``all_projects`` would refuse, in name order, with its refusal."""
+    found = []
+    for page in _pages(projects_dir):
+        try:
+            _parse(page.stem, page)
+        except RefusalError as refusal:
+            found.append((page, refusal))
+    return found
+
+
+def _pages(projects_dir: Path) -> list[Path]:
+    return [page for page in sorted(projects_dir.glob("*.md")) if page.name != "README.md"]
 
 
 def _parse(name: str, page: Path) -> Project:
     fields = _frontmatter(page)
-    path = _expand(_field(page, fields, "path", str))
+    path = _path_field(page, fields, "path")
     github = _field(page, fields, "github", str)
     if not _GITHUB_REPO.fullmatch(github):
         raise RefusalError(
@@ -208,11 +219,11 @@ def _parse(name: str, page: Path) -> Project:
             "set it to the GitHub repo, such as owner/example",
         )
     public = _field(page, fields, "public", bool)
-    root = fields.get("worktree_root")
-    if root is None:
-        worktree_root = path / WORKTREES
-    else:
-        worktree_root = _expand(_field(page, fields, "worktree_root", str))
+    worktree_root = (
+        _path_field(page, fields, "worktree_root")
+        if "worktree_root" in fields
+        else path / WORKTREES
+    )
     check = _field(page, fields, "check", str) if "check" in fields else None
     code_paths = _comma_list(page, fields, "code_paths")
     auto_merge_paths = _comma_list(page, fields, "auto_merge_paths")
@@ -358,8 +369,17 @@ def _field[T](page: Path, fields: dict[str, str | bool], key: str, kind: type[T]
     return value
 
 
-def _expand(path: str) -> Path:
-    return Path(path).expanduser()
+def _path_field(page: Path, fields: dict[str, str | bool], key: str) -> Path:
+    """The page's *key* as a path, ``~`` expanded; refuses a relative one, which would resolve
+    against wherever a command runs."""
+    value = _field(page, fields, key, str)
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        raise RefusalError(
+            f"{page}: field '{key}' is {value!r}, not an absolute path or ~/…",
+            f"set '{key}' to the full path, such as ~/<dir>/{page.stem}",
+        )
+    return path
 
 
 _STARTER_README = """\
@@ -374,9 +394,9 @@ its page only points at them.
 
 ## Keys
 
-- `path` (required): the project's main checkout, `~` allowed. Every command that takes a
-  project name or runs from a project's root finds the project by it, and the leak check lets
-  the home's projects mention it.
+- `path` (required): the project's main checkout, absolute or from `~`. Every command that
+  takes a project name or runs from a project's root finds the project by it, and the leak check
+  lets the home's projects mention it.
 - `github` (required): the project's GitHub repo, `owner/repo`. The `kaizen ticket`, `kaizen spec`,
   `kaizen issue` and `kaizen pr` commands run `gh` against it, and the leak check lets the home's
   projects mention it and treats its owner as one of the home's owners.
@@ -384,9 +404,9 @@ its page only points at them.
   `kaizen ticket ship`, the `kaizen spec` commands, the publish commands and
   `kaizen project leak-check` run, keeps the home's own repo and path (`leak.own` in
   `kaizen.toml`) out of a public project.
-- `worktree_root` (optional): where `kaizen ticket start` puts the project's ticket worktrees;
-  default `<path>/.claude/worktrees`. The commands that take a ticket worktree find its project
-  by it, and the leak check lets the home's projects mention it.
+- `worktree_root` (optional): where `kaizen ticket start` puts the project's ticket worktrees,
+  absolute or from `~`; default `<path>/.claude/worktrees`. The commands that take a ticket
+  worktree find its project by it, and the leak check lets the home's projects mention it.
 - `check` (optional, but `kaizen spec integrate` refuses a project without it): the project's check
   command, a shell command run from the root of a fresh worktree, so it installs what it needs
   itself, or the literal `none` for a project with nothing to run. `kaizen spec integrate` runs it

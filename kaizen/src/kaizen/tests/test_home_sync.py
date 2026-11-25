@@ -330,3 +330,92 @@ def test_check_with_both_markers_passes_with_the_warning(tmp_path, capsys):
     assert _sync(home, "--check") == 0
 
     assert "warning: home: " in capsys.readouterr().err
+
+
+def _page(home: Path, name: str, text: str) -> str:
+    """Writes the registry page *name* of *home* as *text*; returns its path relative to *home*."""
+    relative = f"projects/{name}.md"
+    _write(home, relative, text)
+    return relative
+
+
+@pytest.mark.parametrize(
+    ("text", "problem"),
+    [
+        ("# no frontmatter\n", "no registry frontmatter"),
+        ("---\npath /fixture/bad\n---\n", "frontmatter line 'path /fixture/bad' is not"),
+        ("---\npath: /fixture/bad\npublic: false\n---\n", "missing field 'github'"),
+        ("---\npath: /fixture/bad\ngithub: bad\npublic: false\n---\n", "field 'github' is 'bad'"),
+        (
+            "---\npath: fixture/bad\ngithub: owner/bad\npublic: false\n---\n",
+            "field 'path' is 'fixture/bad', not an absolute path",
+        ),
+    ],
+    ids=["no frontmatter", "unparsed line", "missing key", "malformed key", "relative path"],
+)
+def test_check_fails_on_an_invalid_registry_page_naming_it_and_the_problem(
+    tmp_path, capsys, text, problem
+):
+    home = _synced(tmp_path)
+    relative = _page(home, "bad", text)
+    capsys.readouterr()
+
+    assert _sync(home, "--check") == 1
+
+    captured = capsys.readouterr()
+    assert f"invalid: {home / relative}: {problem}" in captured.out
+    assert captured.err.startswith(
+        f"refused: home sync --check: 1 registry page(s) are invalid: {relative}\n"
+    )
+
+
+def test_check_lists_every_invalid_page_beside_every_differing_file(tmp_path, capsys):
+    home = _synced(tmp_path)
+    pages = [_page(home, "a", "# none\n"), _page(home, "b", "---\npath: /fixture/b\n---\n")]
+    path = _edit(home)
+    capsys.readouterr()
+
+    assert _sync(home, "--check") == 1
+
+    captured = capsys.readouterr()
+    assert f"differs: {path}\n" in captured.out
+    assert captured.err.startswith(
+        f"refused: home sync --check: 2 registry page(s) are invalid: {', '.join(pages)};"
+        f" 1 file(s) differ from what sync writes: {path}\n"
+    )
+    assert "fix each page as its line says" in captured.err
+    assert "move home rules to the home overlay" in captured.err
+
+
+def test_check_skips_the_registry_readme(tmp_path, capsys):
+    home = _synced(tmp_path)
+    _page(home, "README", "# Projects\n")
+
+    assert _sync(home, "--check") == 0
+
+
+@pytest.mark.parametrize(
+    ("marker", "problem"),
+    [
+        ("registry = \n", "is not valid TOML"),
+        ('registry = "missing"\n[leak]\nown = ["owner/home"]\n', "names a registry folder that"),
+        ('[leak]\nown = ["owner/home"]\n', "is missing 'registry'"),
+    ],
+    ids=["not TOML", "missing registry folder", "missing key"],
+)
+def test_check_fails_on_an_invalid_marker_naming_it(tmp_path, capsys, marker, problem):
+    home = _synced(tmp_path)
+    (home / "kaizen.toml").write_text(marker)
+    capsys.readouterr()
+
+    assert _sync(home, "--check") == 1
+
+    assert capsys.readouterr().err.startswith(f"refused: home: {home / 'kaizen.toml'} {problem}")
+
+
+def test_sync_help_says_what_check_validates(tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        main(["home", "sync", "--help"], cwd=tmp_path, env={})
+
+    out = " ".join(capsys.readouterr().out.split())
+    assert "validates the home marker and every registry page" in out

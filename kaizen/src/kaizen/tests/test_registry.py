@@ -242,3 +242,25 @@ def test_a_denied_pattern_that_does_not_compile_is_refused_naming_the_page(tmp_p
     assert f"proto.md: leak_deny entry '{pattern}' is not a regular expression" in str(
         refusal.value
     )
+
+
+@pytest.mark.parametrize("key", ["path", "worktree_root"])
+def test_a_relative_path_is_refused_naming_the_page_and_key(tmp_path, key):
+    frontmatter = BASE.replace("path: /p", "path: p") if key == "path" else BASE + f"{key}: p\n"
+
+    with pytest.raises(RefusalError, match=rf"proto\.md: field '{key}' is 'p', not an absolute"):
+        resolve("proto", _projects(tmp_path, frontmatter))
+
+
+def test_invalid_pages_lists_each_bad_page_and_skips_good_ones_and_the_readme(tmp_path):
+    projects = _projects(tmp_path, BASE)
+    (projects / "README.md").write_text("# Projects\n")
+    (projects / "a.md").write_text("# none\n")
+    (projects / "b.md").write_text("---\npath: /b\n---\n")
+
+    found = registry.invalid_pages(projects)
+
+    assert [(page.name, refusal.check) for page, refusal in found] == [
+        ("a.md", f"{projects / 'a.md'}: no registry frontmatter"),
+        ("b.md", f"{projects / 'b.md'}: missing field 'github'"),
+    ]
