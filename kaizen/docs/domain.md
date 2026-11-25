@@ -102,6 +102,7 @@ One module per command; each group's `--help` lists them.
 - `home/`: `home init`, which makes the git repo it runs in a new home, and needs no home itself.
   Its output and files name no home but the new one (ADR 0002), and the marker is written last, so a failure partway leaves none and a rerun finishes the rest.
   `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
+  It overwrites local edits to synced files, leaving them to the home's git history (ADR 0004).
   `--check` also lists every registry page the registry's own parser refuses, through `invalid_pages`, so it and the commands that read a page never disagree; the marker is validated by `find_home` before any handler runs.
   Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
   A plain `sync` refuses a local build, whose version is not `X.Y.Z`, since it would record that version; `sync --dry-run --allow-dev` lets one preview instead, rendering for the home's recorded synced version and only printing.

@@ -101,11 +101,13 @@ _Avoid_: next tickets, ready list
 **Synced file**:
 A file in a home whose content kaizen renders from its templates, and which the home doesn't edit.
 `kaizen home sync` rewrites a copy that differs from the render, and `kaizen home sync --check` fails on one.
+A local edit is overwritten, and the home's git history keeps it (ADR 0004).
 _Avoid_: vendored file, template, generated file
 
 **Home overlay**:
 The home's own notes that sit beside its synced files and hold the rules only that home follows.
 It adds to the synced files and never edits them, and syncing never touches it.
+Syncing overwrites local edits to synced files, so a home's own rules belong here (ADR 0004).
 _Avoid_: override, customisation, local patch
 
 **Managed settings**:

@@ -228,7 +228,8 @@ def add_parser(subparsers: Subparsers) -> None:
             "upgraded or a template changes. It renders every synced file:\n"
             + "".join(f"  {synced.path}\n" for synced in SYNCED_FILES)
             + "and writes each one that is missing or differs, printing one line per file, or "
-            "that nothing changed.\n\n"
+            "that nothing changed. It overwrites any local edit to a synced file, which the "
+            "home's git diff shows and its history keeps.\n\n"
             f"It also merges the managed settings into {SETTINGS}: the git stash deny rule, whose "
             "entries it adds to permissions.deny when missing, keeping every other key and entry "
             "in order. When it adds an entry, it rewrites the whole file as JSON indented by "
