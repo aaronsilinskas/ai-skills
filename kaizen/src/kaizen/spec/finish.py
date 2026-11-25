@@ -7,6 +7,7 @@ from kaizen.shared.branch import (
     MAIN_CHECKOUT_NOTE,
     fast_forward_main_checkout,
     integration_branch,
+    local_branch_head,
     origin_has_branch,
     prune_tracking_ref,
 )
@@ -14,8 +15,7 @@ from kaizen.shared.common import RefusalError, Runner, Say
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, merged_pr
 from kaizen.shared.registry import resolve_current
-from kaizen.shared.worktree import list_worktrees
-from kaizen.spec.common import spec_sub_issues
+from kaizen.spec.common import refuse_checked_out, spec_sub_issues
 
 
 def finish(
@@ -39,11 +39,11 @@ def finish(
         rerun=f"kaizen spec finish {spec}",
     )
     say(f"PR #{pr['number']} is merged: {pr['url']}")
-    local = _local_head(checkout, branch, run)
+    local = local_branch_head(checkout, branch, run)
     if local:
         _refuse_unmerged_commits(branch, local, pr)
         say(f"{branch} head matches the merged PR's head {pr['headRefOid']}")
-        _refuse_checked_out(checkout, branch, run)
+        refuse_checked_out(checkout, branch, run, rerun=f"kaizen spec finish {spec}")
     stale = not origin_has_branch(checkout, branch, run)
     _report_open_sub_issues(project.github, spec, run, say)
 
@@ -83,24 +83,6 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
     finish(args.spec, run, home=home, dry_run=args.dry_run)
-
-
-def _local_head(checkout: str, branch: str, run: Runner) -> str | None:
-    """The commit the local *branch* points at, or ``None`` when there is no such branch."""
-    out = run(
-        ["git", "-C", checkout, "for-each-ref", "--format=%(objectname)", f"refs/heads/{branch}"]
-    )
-    return out.strip() or None
-
-
-def _refuse_checked_out(checkout: str, branch: str, run: Runner) -> None:
-    """Refuses when the main checkout or any of its worktrees is on *branch*."""
-    for worktree in list_worktrees(checkout, run):
-        if worktree.branch == branch:
-            raise RefusalError(
-                f"{branch} is checked out in {worktree.path}, so it can't be deleted",
-                f"switch {worktree.path} to another branch, then run `kaizen spec finish` again",
-            )
 
 
 def _refuse_unmerged_commits(branch: str, local: str, pr: PullRequest) -> None:

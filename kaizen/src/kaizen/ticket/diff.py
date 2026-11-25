@@ -64,12 +64,13 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         "diff",
         help="print a ticket's commits, stat and diff against its base",
         description=(
-            "Fetch only the ticket's base from origin: origin/spec-<N> for a spec's ticket,"
-            " else origin/<default branch>. Then print the base, whether it is an ancestor of"
-            " HEAD (and the merge that fixes it when not), the commits ahead (base..HEAD), the"
-            " stat and the diff (base...HEAD), and a note listing any uncommitted changes."
-            " Works for spec, lone and docs tickets. Only queries: never resets or changes the"
-            " worktree."
+            "Fetch only the ticket's base from origin: origin/spec-<N> for a spec's ticket"
+            " (or the local spec-<N>, fetching nothing, while a spec started with"
+            " `kaizen spec start --local` has it only locally), else origin/<default branch>."
+            " Then print the base, whether it is an ancestor of HEAD (and the merge that fixes"
+            " it when not), the commits ahead (base..HEAD), the stat and the diff"
+            " (base...HEAD), and a note listing any uncommitted changes. Works for spec, lone"
+            " and docs tickets. Only queries: never resets or changes the worktree."
         ),
     )
     parser.add_argument(

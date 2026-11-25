@@ -38,6 +38,10 @@ kaizen project leak-check
 `kaizen --help` lists the groups, and `kaizen <group> --help` lists each group's commands.
 Every command that changes anything checks its preconditions first and has a `--dry-run`.
 
+`kaizen spec start <N>` pushes a spec's integration branch, `spec-<N>`, to `origin` at once.
+`kaizen spec start <N> --local` creates it only as a local branch instead, so a spec's tickets can start before anything is pushed.
+`kaizen ticket start --spec`, `ticket diff` and `ticket compare` use the local branch while `origin` lacks it, and the spec's first `kaizen spec integrate` pushes it and deletes the local copy.
+
 Run kaizen inside a home (the tree under a directory holding `kaizen.toml`), or from one of its projects' roots with `KAIZEN_HOME` set to the home's root.
 To make the git repo you are in a new home, run `kaizen home init`.
 After upgrading kaizen, run `kaizen home sync` in each home to bring its synced files back in step.

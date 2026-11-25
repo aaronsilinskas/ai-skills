@@ -70,6 +70,7 @@ _Avoid_: issue-less ticket, docs PR
 
 **Integration branch**:
 The branch that collects every ticket of one spec, so that a single PR merges the whole spec into the project's default branch.
+It lives on `origin`, except that a spec started with `kaizen spec start --local` keeps it as a local branch until its first integration pushes it.
 _Avoid_: feature branch, spec branch
 
 **Integrate**:

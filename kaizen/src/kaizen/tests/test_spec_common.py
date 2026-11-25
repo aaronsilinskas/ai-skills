@@ -3,7 +3,9 @@
 import pytest
 
 from kaizen.shared.branch import (
+    IntegrationBranch,
     TicketBranch,
+    find_integration_branch,
     integration_branch,
     integration_merge_message,
     parse_integration_merge,
@@ -11,7 +13,7 @@ from kaizen.shared.branch import (
     spec_ticket_branch,
 )
 from kaizen.shared.common import RefusalError
-from kaizen.spec.common import SubIssue, has_integration_branch, spec_sub_issues
+from kaizen.spec.common import SubIssue, spec_sub_issues
 from kaizen.tests.ticket_shell import Shell, failed
 
 
@@ -34,15 +36,28 @@ def test_a_lone_ticket_branch_parses_to_no_spec():
     assert parse_ticket_branch("fix-22-kaizen-one-failure") == TicketBranch(22, None)
 
 
-def test_has_integration_branch_asks_origin_for_exactly_that_branch():
+def test_find_integration_branch_asks_origin_for_exactly_that_branch():
     shell = Shell({("ls-remote",): "abc123\trefs/heads/spec-25\n"})
 
-    assert has_integration_branch("/repo", 25, shell)
+    found = find_integration_branch("/repo", 25, shell)
+
+    assert found == IntegrationBranch("spec-25", on_origin=True)
+    assert found.ref == "origin/spec-25"
     assert shell.calls == [["git", "-C", "/repo", "ls-remote", "--heads", "origin", "spec-25"]]
 
 
-def test_has_integration_branch_is_false_when_origin_lacks_it():
-    assert not has_integration_branch("/repo", 25, Shell({("ls-remote",): ""}))
+def test_find_integration_branch_falls_back_to_a_local_branch_origin_lacks():
+    shell = Shell({("ls-remote",): "", ("for-each-ref",): "abc123\n"})
+
+    found = find_integration_branch("/repo", 25, shell)
+
+    assert found == IntegrationBranch("spec-25", on_origin=False)
+    assert found.ref == "spec-25"
+    assert shell.ran("for-each-ref")[0][-1] == "refs/heads/spec-25"
+
+
+def test_find_integration_branch_is_none_when_neither_origin_nor_the_clone_has_it():
+    assert find_integration_branch("/repo", 25, Shell({("ls-remote",): ""})) is None
 
 
 SUB_ISSUES = (
