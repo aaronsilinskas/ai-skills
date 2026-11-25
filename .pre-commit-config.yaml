@@ -1,0 +1,41 @@
+# .claude/skills/ holds upstream's copies, which this repo doesn't edit.
+exclude: ^\.claude/skills/
+repos:
+  - repo: local
+    hooks:
+      - id: kaizen-leak-check
+        name: kaizen leak check
+        entry: kaizen hook leak-check
+        language: system
+        pass_filenames: false
+      - id: kaizen-no-commit-to-branch
+        name: kaizen no commit to branch
+        entry: kaizen hook no-commit-to-branch
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: kaizen-prose-marks
+        name: kaizen prose marks
+        entry: kaizen hook prose-marks
+        language: system
+      - id: kaizen-section-banners
+        name: kaizen section banners
+        entry: kaizen hook section-banners
+        language: system
+      - id: kaizen-work-tracking
+        name: kaizen work-tracking references
+        entry: kaizen hook work-tracking
+        language: system
+      # kaizen's own ruff, from kaizen/uv.lock, so the hook and kaizen/scripts/check.sh agree.
+      - id: ruff-check
+        name: ruff check (kaizen)
+        entry: uv run --project kaizen ruff check --fix
+        language: system
+        types_or: [python, pyi]
+        files: ^kaizen/
+      - id: ruff-format
+        name: ruff format (kaizen)
+        entry: uv run --project kaizen ruff format
+        language: system
+        types_or: [python, pyi]
+        files: ^kaizen/
