@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from kaizen.shared.branch import is_ancestor, origin_has_branch
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, branch_prs
 from kaizen.shared.registry import (
@@ -84,7 +84,7 @@ def abandon(
     _say_issue_stays_open(ticket, say)
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "abandon",
         help="drop an unmerged ticket: close its PR, delete its branches, remove its worktree",

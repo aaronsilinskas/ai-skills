@@ -14,7 +14,7 @@ from kaizen.shared.branch import (
     remote_default_branch,
     spec_ticket_branch,
 )
-from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import Issue, IssueRef, body_and_comments_lines
 from kaizen.shared.registry import Project, refuse_undeclared_code_paths, resolve
@@ -180,7 +180,7 @@ def _refuse_bad_slug(slug: str) -> str:
     return slug
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "start",
         help="create the ticket worktree for an issue or a docs change",

@@ -192,3 +192,32 @@ def failed(cmd: str, stderr: str = "") -> subprocess.CalledProcessError:
 def _contains(cmd: list[str], words: tuple[str, ...]) -> bool:
     n = len(words)
     return any(tuple(cmd[i : i + n]) == words for i in range(len(cmd) - n + 1))
+
+
+class ShipShell(Shell):
+    """A ``Shell`` whose ``gh pr create`` opens *new_pr*, and which also keeps each body file
+    ``gh pr create`` or ``gh pr edit`` was given, and its text. A reply in *answers* replaces
+    either."""
+
+    def __init__(self, new_pr: str, answers: Mapping[tuple[str, ...], Reply]) -> None:
+        super().__init__({("pr", "create"): self._create, ("pr", "edit"): self._edit, **answers})
+        self.new_pr = new_pr
+        self.body_files: list[Path] = []
+        self.bodies: list[str] = []
+
+    def _create(self, cmd: list[str]) -> str:
+        self._keep_body(cmd)
+        return f"{self.new_pr}\n"
+
+    def _edit(self, cmd: list[str]) -> str:
+        self._keep_body(cmd)
+        return f"{cmd[cmd.index('edit') + 1]}\n"
+
+    def _keep_body(self, cmd: list[str]) -> None:
+        body_file = Path(cmd[cmd.index("--body-file") + 1])
+        self.body_files.append(body_file)
+        self.bodies.append(body_file.read_text())
+
+
+def quiet(_: str) -> None:
+    """A ``Say`` that prints nothing, for tests that don't read a command's output."""

@@ -56,7 +56,8 @@ NO_CHECK = "none"
 WORKTREES = ".claude/worktrees"
 """A project's worktree root when its page sets no ``worktree_root``, relative to its path."""
 
-_GITHUB_REPO = re.compile(r"[\w.-]+/[\w.-]+")
+GITHUB_REPO = re.compile(r"[\w.-]+/[\w.-]+")
+"""A GitHub repo named as ``owner/repo``."""
 # A GitHub remote URL in SSH (``git@github.com:o/r``, ``ssh://git@github.com/o/r``) or HTTPS
 # form, with or without ``.git``.
 _GITHUB_REMOTE = re.compile(
@@ -225,7 +226,7 @@ def _parse(name: str, page: Path) -> Project:
     fields = _frontmatter(page)
     path = _path_field(page, fields, "path")
     github = _field(page, fields, "github", str)
-    if not _GITHUB_REPO.fullmatch(github):
+    if not GITHUB_REPO.fullmatch(github):
         raise RefusalError(
             f"{page}: field 'github' is {github!r}, not owner/repo",
             "set it to the GitHub repo, such as owner/example",

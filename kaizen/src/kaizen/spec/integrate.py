@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 
 from kaizen.shared.branch import integration_branch, integration_merge_message
-from kaizen.shared.common import RefusalError, Runner, Say, push_rejected
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, push_rejected
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.registry import (
@@ -113,7 +113,7 @@ def integrate(
     say(f"deleted local branch {ticket.branch}")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "integrate",
         help="merge a finished spec ticket into its integration branch, check it and push",

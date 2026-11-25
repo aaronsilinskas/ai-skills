@@ -10,26 +10,23 @@ import pytest
 
 from kaizen.shared.common import RefusalError, run_subprocess
 from kaizen.spec.integrate import integrate
-from kaizen.tests.ticket_shell import home_for, install_hook
+from kaizen.tests.real_git import git
+from kaizen.tests.ticket_shell import home_for, install_hook, quiet
 
 SPEC = 25
 BRANCH = f"spec-{SPEC}-fix-7-add-greeting"
 
 
-def _git(*args: str | Path) -> str:
-    return run_subprocess(["git", *map(str, args)])
-
-
 def _commit(repo: Path, name: str, text: str) -> None:
     (repo / name).write_text(text)
-    _git("-C", repo, "add", name)
-    _git("-C", repo, "commit", "-q", "-m", f"Write {name}")
+    git("-C", repo, "add", name)
+    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
 
 
 def _clone(origin: Path, dest: Path) -> Path:
-    _git("clone", "-q", origin, dest)
-    _git("-C", dest, "config", "user.name", "Test")
-    _git("-C", dest, "config", "user.email", "test@example.com")
+    git("clone", "-q", origin, dest)
+    git("-C", dest, "config", "user.name", "Test")
+    git("-C", dest, "config", "user.email", "test@example.com")
     return dest
 
 
@@ -41,30 +38,30 @@ class Repos:
     ticket: Path
 
     def remote_tip(self) -> str:
-        return _git("-C", self.origin, "rev-parse", f"refs/heads/spec-{SPEC}").strip()
+        return git("-C", self.origin, "rev-parse", f"refs/heads/spec-{SPEC}").strip()
 
     def push_to_integration_branch(self, name: str, text: str) -> None:
         """Moves ``origin``'s integration branch from another clone, as a parallel run would."""
         other = self.origin.parent / f"other-{name}"
         if not other.exists():
             _clone(self.origin, other)
-        _git("-C", other, "fetch", "-q", "origin")
-        _git("-C", other, "checkout", "-q", "-B", f"spec-{SPEC}", f"origin/spec-{SPEC}")
+        git("-C", other, "fetch", "-q", "origin")
+        git("-C", other, "checkout", "-q", "-B", f"spec-{SPEC}", f"origin/spec-{SPEC}")
         _commit(other, name, text)
-        _git("-C", other, "push", "-q", "origin", f"spec-{SPEC}")
+        git("-C", other, "push", "-q", "origin", f"spec-{SPEC}")
 
 
 def _repos(tmp_path: Path, check: str = "test ! -e FAIL", public: bool = False) -> Repos:
     """A project ``proto`` with ``spec-25`` on origin and a ticket worktree with one commit."""
     origin = tmp_path / "origin.git"
-    _git("init", "-q", "--bare", "-b", "main", origin)
+    git("init", "-q", "--bare", "-b", "main", origin)
     checkout = _clone(origin, tmp_path / "proto")
     _commit(checkout, ".gitignore", ".claude/\n.venv\n")
-    _git("-C", checkout, "push", "-q", "origin", "main")
-    _git("-C", checkout, "push", "-q", "origin", f"main:spec-{SPEC}")
-    _git("-C", checkout, "fetch", "-q", "origin")
+    git("-C", checkout, "push", "-q", "origin", "main")
+    git("-C", checkout, "push", "-q", "origin", f"main:spec-{SPEC}")
+    git("-C", checkout, "fetch", "-q", "origin")
     ticket = checkout / ".claude" / "worktrees" / BRANCH
-    _git("-C", checkout, "worktree", "add", "-q", "-b", BRANCH, ticket, f"origin/spec-{SPEC}")
+    git("-C", checkout, "worktree", "add", "-q", "-b", BRANCH, ticket, f"origin/spec-{SPEC}")
     _commit(ticket, "greeting.txt", "hello\n")
 
     projects = tmp_path / "projects"
@@ -76,12 +73,8 @@ def _repos(tmp_path: Path, check: str = "test ! -e FAIL", public: bool = False) 
     return Repos(projects, origin, checkout, ticket)
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def _worktrees(repos: Repos) -> list[str]:
-    out = _git("-C", repos.checkout, "worktree", "list", "--porcelain")
+    out = git("-C", repos.checkout, "worktree", "list", "--porcelain")
     return [
         line.removeprefix("worktree ") for line in out.splitlines() if line.startswith("worktree ")
     ]
@@ -90,19 +83,19 @@ def _worktrees(repos: Repos) -> list[str]:
 def test_integrating_pushes_a_merge_of_the_ticket_and_leaves_no_worktree_or_branch(tmp_path):
     repos = _repos(tmp_path)
 
-    integrate(repos.ticket, run_subprocess, home=home_for(repos.projects), say=_quiet)
+    integrate(repos.ticket, run_subprocess, home=home_for(repos.projects), say=quiet)
 
     tip = f"refs/heads/spec-{SPEC}"
-    assert _git("-C", repos.origin, "show", f"{tip}:greeting.txt") == "hello\n"
-    parents = _git("-C", repos.origin, "rev-list", "--parents", "-n", "1", tip).split()
+    assert git("-C", repos.origin, "show", f"{tip}:greeting.txt") == "hello\n"
+    parents = git("-C", repos.origin, "rev-list", "--parents", "-n", "1", tip).split()
     assert len(parents) == 3, "a --no-ff merge commit has two parents"
-    assert BRANCH in _git("-C", repos.origin, "log", "-1", "--format=%s", tip)
+    assert BRANCH in git("-C", repos.origin, "log", "-1", "--format=%s", tip)
     assert _worktrees(repos) == [str(repos.checkout.resolve())]
-    assert not _git("-C", repos.checkout, "branch", "--list", BRANCH).strip()
+    assert not git("-C", repos.checkout, "branch", "--list", BRANCH).strip()
 
 
 def _integrate(repos: Repos, run=run_subprocess) -> None:
-    integrate(repos.ticket, run, home=home_for(repos.projects), say=_quiet)
+    integrate(repos.ticket, run, home=home_for(repos.projects), say=quiet)
 
 
 def test_a_conflict_is_refused_naming_its_files_and_leaves_no_scratch_worktree(tmp_path):
@@ -151,7 +144,7 @@ def test_a_push_rejected_because_the_tip_moved_is_refused_with_rerun(tmp_path):
     with pytest.raises(RefusalError, match=r"spec-25 moved(.|\n)*rerun"):
         _integrate(repos, racing)
 
-    assert _git("-C", repos.origin, "log", "-1", "--format=%s", "spec-25") == "Write other.txt\n"
+    assert git("-C", repos.origin, "log", "-1", "--format=%s", "spec-25") == "Write other.txt\n"
     assert _worktrees(repos) == [str(repos.checkout.resolve()), str(repos.ticket.resolve())]
 
 
@@ -160,7 +153,7 @@ def test_the_check_runs_from_the_scratch_worktrees_root_on_the_merged_result(tmp
 
     _integrate(repos)
 
-    assert "Integrate" in _git("-C", repos.origin, "log", "-1", "--format=%s", "spec-25")
+    assert "Integrate" in git("-C", repos.origin, "log", "-1", "--format=%s", "spec-25")
 
 
 def test_a_hook_installed_from_the_ticket_worktree_is_refused_with_the_reinstall_command(

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from kaizen.shared.comment_only import comment_only_problems
-from kaizen.shared.common import RefusalError, Runner, Say, push_rejected
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, push_rejected
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.pr import (
@@ -134,7 +134,7 @@ def ship(
     return Shipped(url)
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "ship",
         help="check a ticket worktree, push its branch and open (or update) its PR",

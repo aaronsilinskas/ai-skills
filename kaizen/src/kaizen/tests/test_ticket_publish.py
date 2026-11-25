@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.common import RefusalError
-from kaizen.tests.ticket_shell import RELAY, SITE, TILDE, Shell
+from kaizen.tests.ticket_shell import RELAY, SITE, TILDE, Shell, quiet
 from kaizen.ticket.publish import (
     DomainDocsError,
     ManifestError,
@@ -239,7 +239,7 @@ class _PrStates:
 
 def _wait(gh: _PrStates, timeout: float = 60, interval: float = 10) -> None:
     wait_for_domain_docs(
-        300, gh, sleep=gh.sleep, now=gh.now, timeout=timeout, interval=interval, log=lambda _: None
+        300, gh, sleep=gh.sleep, now=gh.now, timeout=timeout, interval=interval, log=quiet
     )
 
 

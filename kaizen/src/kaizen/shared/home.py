@@ -30,6 +30,7 @@ from pathlib import Path
 
 from kaizen.shared.common import RefusalError
 from kaizen.shared.labels import DEFAULT_WORKFLOW_LABELS, Label
+from kaizen.shared.registry import GITHUB_REPO
 from kaizen.shared.version import Version
 
 MARKER = "kaizen.toml"
@@ -41,7 +42,6 @@ PR_FOOTER = "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 SETTINGS = ".claude/settings.json"
 """The Claude Code settings file, relative to the home root, whose ``env`` sets ``KAIZEN_HOME``."""
 
-_REPO = re.compile(r"[\w.-]+/[\w.-]+")
 _COLOR = re.compile(r"[0-9a-fA-F]{6}")
 _LABEL_FIELDS = tuple(field.name for field in fields(Label))
 _COMMENT_WIDTH = 98
@@ -342,7 +342,7 @@ def _read_marker(root: Path) -> Home:
         raise refuse(_MALFORMED_ALLOW)
     paths = tuple(a for a in allow if a.startswith(("~/", "/")))
     repos = tuple(a for a in allow if a not in paths)
-    if not all(_REPO.fullmatch(repo) for repo in repos):
+    if not all(GITHUB_REPO.fullmatch(repo) for repo in repos):
         raise refuse(_MALFORMED_ALLOW)
     if broad := [p for p in paths if root.is_relative_to(Path(p).expanduser().resolve())]:
         raise refuse(

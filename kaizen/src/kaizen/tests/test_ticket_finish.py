@@ -18,6 +18,7 @@ from kaizen.tests.ticket_shell import (
     failed,
     home_for,
     install_hook,
+    quiet,
 )
 from kaizen.ticket.finish import finish
 
@@ -57,10 +58,6 @@ def _shell(**overrides: Reply) -> Shell:
     return Shell(answers)
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def _assert_nothing_removed(shell: Shell) -> None:
     assert not shell.ran("worktree", "remove")
     assert not shell.ran("branch", "-D")
@@ -71,7 +68,7 @@ def test_finish_removes_the_worktree_force_deletes_the_branch_and_prunes_in_that
     projects, worktree = _setup(tmp_path)
     shell = _shell()
 
-    finish(worktree, shell, home=home_for(projects), say=_quiet)
+    finish(worktree, shell, home=home_for(projects), say=quiet)
 
     repo = str(tmp_path / "proto")
     cleanup = (["worktree", "remove"], ["branch", "-D"], ["update-ref", "-d"])
@@ -86,7 +83,7 @@ def test_finish_prunes_only_this_branchs_remote_tracking_ref(tmp_path):
     projects, worktree = _setup(tmp_path)
     shell = _shell()
 
-    finish(worktree, shell, home=home_for(projects), say=_quiet)
+    finish(worktree, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("prune")
     assert not shell.ran("--prune")
@@ -96,7 +93,7 @@ def test_finish_keeps_the_remote_tracking_ref_while_origin_still_has_the_branch(
     projects, worktree = _setup(tmp_path)
     shell = _shell(remote_branch=f"a1b2c3d4\trefs/heads/{BRANCH}\n")
 
-    finish(worktree, shell, home=home_for(projects), say=_quiet)
+    finish(worktree, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("branch", "-D")
     assert not shell.ran("update-ref", "-d")
@@ -107,7 +104,7 @@ def test_finish_refuses_while_the_pr_is_still_open_and_removes_nothing(tmp_path)
     shell = _shell(pr=PR_MERGED.replace("MERGED", "OPEN"))
 
     with pytest.raises(RefusalError, match=r"PR #1385 .* is OPEN, not MERGED"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -117,7 +114,7 @@ def test_finish_refuses_a_branch_with_no_pr(tmp_path):
     shell = _shell(pr="[]")
 
     with pytest.raises(RefusalError, match=f"no PR from {BRANCH} in owner/proto"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -128,7 +125,7 @@ def test_finish_removes_a_branch_whose_head_the_merged_pr_built_on_after_fetchin
     projects, worktree = _setup(tmp_path)
     shell = _shell(head="0ld0ld00\n")
 
-    finish(worktree, shell, home=home_for(projects), say=_quiet)
+    finish(worktree, shell, home=home_for(projects), say=quiet)
 
     path = str(worktree)
     fetch = ["git", "-C", path, "fetch", "-q", "origin", "pull/1385/head"]
@@ -152,7 +149,7 @@ def test_finish_refuses_when_git_cannot_tell_whether_the_merged_pr_built_on_the_
     shell = _shell(head="0ld0ld00\n", ancestor=broken)
 
     with pytest.raises(RefusalError, match=r"could not compare(.|\n)*bad object"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -161,7 +158,7 @@ def test_a_dry_run_fetches_the_merged_prs_head_to_check_a_head_it_built_on(tmp_p
     projects, worktree = _setup(tmp_path)
     shell = _shell(head="0ld0ld00\n")
 
-    finish(worktree, shell, home=home_for(projects), dry_run=True, say=_quiet)
+    finish(worktree, shell, home=home_for(projects), dry_run=True, say=quiet)
 
     assert shell.ran("fetch", "-q", "origin", "pull/1385/head")
     _assert_nothing_removed(shell)
@@ -172,7 +169,7 @@ def test_finish_keeps_the_branch_when_its_head_has_commits_the_merged_pr_lacks(t
     shell = _shell(head="ffff9999\n", ancestor=failed("git merge-base --is-ancestor"))
 
     with pytest.raises(RefusalError, match=r"head ffff9999 is not PR #1385's head a1b2c3d4"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -183,7 +180,7 @@ def test_finish_refuses_when_it_cannot_fetch_the_merged_prs_head(tmp_path):
     shell = _shell(head="0ld0ld00\n", fetch_pr=fetch_failed)
 
     with pytest.raises(RefusalError, match=r"could not fetch PR #1385's head(.|\n)*remote"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("merge-base")
     _assert_nothing_removed(shell)
@@ -194,7 +191,7 @@ def test_finish_refuses_a_head_the_merged_pr_built_on_while_the_worktree_is_dirt
     shell = _shell(head="0ld0ld00\n", status=" M src/app.py\n")
 
     with pytest.raises(RefusalError, match="uncommitted changes"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -204,7 +201,7 @@ def test_finish_refuses_a_worktree_with_uncommitted_changes(tmp_path):
     shell = _shell(status=" M src/app.py\n?? notes.txt\n")
 
     with pytest.raises(RefusalError, match=r"uncommitted changes(.|\n)*notes\.txt"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -214,7 +211,7 @@ def test_finish_refuses_a_path_outside_every_project_worktree_root(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="not a registered project's ticket worktree"):
-        finish(tmp_path / "proto", shell, home=home_for(projects), say=_quiet)
+        finish(tmp_path / "proto", shell, home=home_for(projects), say=quiet)
 
     assert not shell.calls
 
@@ -224,7 +221,7 @@ def test_finish_refuses_a_worktree_whose_branch_is_not_a_ticket_branch(tmp_path)
     shell = _shell(branch="spike\n")
 
     with pytest.raises(RefusalError, match="on 'spike', not a fix-<issue>-<slug> ticket branch"):
-        finish(worktree, shell, home=home_for(projects), say=_quiet)
+        finish(worktree, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "list")
     _assert_nothing_removed(shell)
@@ -240,7 +237,7 @@ def test_finish_finds_the_project_from_a_worktree_under_its_worktree_root(tmp_pa
     )
     shell = _shell()
 
-    finish(tmp_path / "outside" / BRANCH, shell, home=home_for(projects), say=_quiet)
+    finish(tmp_path / "outside" / BRANCH, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("branch", "-D") == [
         ["git", "-C", str(tmp_path / "proto"), "branch", "-D", BRANCH]
@@ -264,7 +261,7 @@ def test_finish_fast_forwards_the_main_checkouts_default_branch_after_the_cleanu
     projects, worktree = _setup(tmp_path)
     shell = _shell()
 
-    finish(worktree, shell, home=home_for(projects), say=_quiet)
+    finish(worktree, shell, home=home_for(projects), say=quiet)
 
     repo = str(tmp_path / "proto")
     merge = ["git", "-C", repo, "merge", "--ff-only", "-q", "origin/main"]
@@ -327,7 +324,7 @@ def test_finish_refuses_a_spec_ticket_worktree_and_points_to_spec_integrate(tmp_
     shell = _shell(branch="spec-25-fix-1358-each-reboot\n")
 
     with pytest.raises(RefusalError, match=r"spec #25(.|\n)*kaizen spec integrate"):
-        finish(worktree, shell, home=home_for(projects), dry_run=dry_run, say=_quiet)
+        finish(worktree, shell, home=home_for(projects), dry_run=dry_run, say=quiet)
 
     _assert_nothing_removed(shell)
     assert not shell.ran("pr", "list")
@@ -362,7 +359,7 @@ def test_finish_refuses_while_the_shared_hook_runs_from_the_worktree(tmp_path, d
     shell = _shell()
 
     with pytest.raises(RefusalError, match=r"pre-commit hook(.|\n)*uv run pre-commit install"):
-        finish(worktree, shell, home=home_for(projects), dry_run=dry_run, say=_quiet)
+        finish(worktree, shell, home=home_for(projects), dry_run=dry_run, say=quiet)
 
     _assert_nothing_removed(shell)
 
@@ -374,7 +371,7 @@ def test_finish_removes_the_worktree_and_keeps_a_hook_installed_from_the_main_ch
     written = hook.read_text()
     shell = _shell()
 
-    finish(worktree, shell, home=home_for(projects), say=_quiet)
+    finish(worktree, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("worktree", "remove")
     assert hook.read_text() == written

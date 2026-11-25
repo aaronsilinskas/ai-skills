@@ -7,7 +7,7 @@ from collections.abc import Iterator
 
 from kaizen.hook.comments import LANGUAGES, Comment, comment_findings
 from kaizen.hook.common import add_files_argument, refuse
-from kaizen.shared.common import Runner
+from kaizen.shared.common import Runner, Subparsers
 from kaizen.shared.home import Home
 
 _REFERENCE = re.compile(
@@ -28,7 +28,7 @@ def _references(comment: Comment) -> Iterator[str]:
         yield match.group()
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "work-tracking",
         help="refuse comments that name a ticket, slice or bare issue number",

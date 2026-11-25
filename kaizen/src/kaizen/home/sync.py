@@ -6,7 +6,7 @@ import difflib
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import (
     MARKER,
     SETTINGS,
@@ -219,7 +219,7 @@ def check_home(home: Home, *, say: Say = print) -> None:
     say(f"home sync --check: {IN_STEP}")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "sync",
         help="re-render the home's synced files and merge its managed settings, or check both",
