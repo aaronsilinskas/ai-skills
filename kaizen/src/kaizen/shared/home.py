@@ -22,7 +22,6 @@ place that knows the marker's name, its format and ``KAIZEN_HOME``.
 
 import json
 import re
-import sys
 import textwrap
 import tomllib
 from collections.abc import Callable, Mapping
@@ -89,20 +88,15 @@ class Home:
     records none."""
 
 
-def warn_on_stderr(line: str) -> None:
-    """Prints a ``warning:`` line on stderr, beside the outcome rather than the progress."""
-    print(f"warning: {line}", file=sys.stderr)
-
-
 def find_home(start: Path, env: Mapping[str, str]) -> Home:
     """The home ``KAIZEN_HOME`` in *env* names, or the nearest one upward from *start*.
 
-    Refuses when neither finds a home, when they find different homes, or when the marker is
-    malformed. A linked git worktree of the ``KAIZEN_HOME`` home, such as a ticket worktree inside
-    its tree, counts as that home.
+    Refuses when ``KAIZEN_HOME`` names a root with no marker, when neither finds a home, when
+    they find different homes, or when the marker is malformed. A linked git worktree of the
+    ``KAIZEN_HOME`` home, such as a ticket worktree inside its tree, counts as that home.
     """
     value = env.get(ENV_VAR)
-    named = root_named_by_env(env, Path.home())
+    named = _expand(value, Path.home()) if value else None
     found = _search_upward(start.resolve())
     if named:
         if not (named / MARKER).is_file():

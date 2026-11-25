@@ -230,7 +230,9 @@ def test_fresh_home_is_the_home_find_home_reads_from_the_fresh_marker(tmp_path):
     assert fresh_home(root, "acme/home", "/fixture/acme", version) == find_home(root, {})
 
 
-def test_a_directory_holding_only_the_old_marker_name_is_not_a_home(tmp_path, capsys):
+def test_a_directory_holding_only_the_old_marker_name_is_not_a_home_and_draws_no_warning(
+    tmp_path, capsys
+):
     root = _home(tmp_path / "home", name="mw.toml")
 
     with pytest.raises(RefusalError, match="no home found"):
