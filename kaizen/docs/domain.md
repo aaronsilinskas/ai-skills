@@ -52,7 +52,8 @@ Paths below are relative to `kaizen/src/kaizen/`.
   It defines the home marker's name and the environment variable that names a home.
   `find_home(start, env)` returns a `Home` (root, registry folder, leak facts and the **home settings**) or refuses with a fix.
   It reads the marker with `tomllib`, the one place kaizen reads TOML.
-  A linked worktree of the home counts as that home, so commands work the same from a ticket worktree.
+  Inside a linked worktree of the `KAIZEN_HOME` home, such as a ticket worktree of the home itself, the worktree is the home, so commands read and write its files rather than the main checkout's.
+  The CLI prints one `warning:` line when that happens, naming both roots.
   It also renders a new home's marker, reads and writes the home's Claude Code settings, sets the home's root in their env, and adds entries to a `permissions` list, keeping every other key and entry: the one merge `home sync`'s managed settings and `project add`'s directory entry share.
   The marker's one line kaizen writes after `home init`, the synced version, is written by text, keeping every other byte, since the standard library writes no TOML.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and the resolvers that say which registered project a path or remote belongs to.

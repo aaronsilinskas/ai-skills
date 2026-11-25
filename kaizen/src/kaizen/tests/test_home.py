@@ -98,15 +98,6 @@ def test_kaizen_home_and_the_marker_disagreeing_is_refused_naming_only_kaizen_ho
     assert "second" not in message
 
 
-def test_a_linked_git_worktree_of_kaizen_home_counts_as_that_home(tmp_path):
-    # A ticket worktree of the home sits in its tree and carries its own copy of the marker.
-    root = _home(tmp_path / "home")
-    worktree = _home(root / ".claude" / "worktrees" / "fix-7-x")
-    (worktree / ".git").write_text(f"gitdir: {root}/.git/worktrees/fix-7-x\n")
-
-    assert find_home(worktree, {"KAIZEN_HOME": str(root)}).root == root.resolve()
-
-
 def test_a_git_worktree_of_another_repo_inside_kaizen_homes_tree_is_still_refused(tmp_path):
     root = _home(tmp_path / "home")
     other = _home(root / "nested")

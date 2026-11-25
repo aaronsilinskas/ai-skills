@@ -88,12 +88,17 @@ class Home:
     records none."""
 
 
-def find_home(start: Path, env: Mapping[str, str]) -> Home:
+def find_home(
+    start: Path, env: Mapping[str, str], warn: Callable[[str], None] = lambda _: None
+) -> Home:
     """The home ``KAIZEN_HOME`` in *env* names, or the nearest one upward from *start*.
 
+    Inside a linked git worktree of the ``KAIZEN_HOME`` home, such as one of its ticket
+    worktrees, the worktree is the home, so a command run there reads and writes the worktree's
+    files rather than the main checkout's; *warn* gets one line naming both roots.
+
     Refuses when ``KAIZEN_HOME`` names a root with no marker, when neither finds a home, when
-    they find different homes, or when the marker is malformed. A linked git worktree of the
-    ``KAIZEN_HOME`` home, such as a ticket worktree inside its tree, counts as that home.
+    they find different homes, or when the marker is malformed.
     """
     value = env.get(ENV_VAR)
     named = _expand(value, Path.home()) if value else None
@@ -104,14 +109,17 @@ def find_home(start: Path, env: Mapping[str, str]) -> Home:
                 f"home: {ENV_VAR} is {value}, which has no {MARKER}",
                 f"set {ENV_VAR} to the root of the home that holds {MARKER}",
             )
-        if found and found != named and not _is_worktree_of(found, named):
-            # Only the variable's root is named: the other home's path must not reach this
-            # one's output.
-            raise RefusalError(
-                f"home: {ENV_VAR} names {named}, but kaizen runs inside the tree"
-                f" of a different {MARKER}",
-                f"run kaizen from inside {named} or one of its registered projects",
-            )
+        if found and found != named:
+            if not _is_worktree_of(found, named):
+                # Only the variable's root is named: the other home's path must not reach this
+                # one's output.
+                raise RefusalError(
+                    f"home: {ENV_VAR} names {named}, but kaizen runs inside the tree"
+                    f" of a different {MARKER}",
+                    f"run kaizen from inside {named} or one of its registered projects",
+                )
+            warn(f"home: using the worktree {found}; {ENV_VAR} names {named}")
+            return _read_marker(found)
     root = named or found
     if root is None:
         raise RefusalError(

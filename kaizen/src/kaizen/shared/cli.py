@@ -160,7 +160,7 @@ def _checked_home(
 ) -> Home:
     """The home found from *start*, once the synced version check passes; *syncing* says the run
     records the running version, so the check only refuses an older install."""
-    home = find_home(start, environ)
+    home = find_home(start, environ, warn_on_stderr)
     check_synced_version(
         install.version, home.synced_version, MARKER, warn_on_stderr, syncing=syncing
     )
