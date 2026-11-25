@@ -23,8 +23,7 @@
 #   3. Script lint: skills/engineering/wizard/template.sh passes `bash -n`
 #      (and shellcheck too, when it is installed on the runner). Prints SKIP,
 #      not FAIL, when the template is absent.
-#   4. kaizen: kaizen/scripts/check.sh (lint, format, types, import contracts
-#      and tests of the kaizen package, and its synced files' line length)
+#   4. kaizen: kaizen/scripts/check.sh, the kaizen package's own check,
 #      exits 0.
 #   5. Home leak scan tests: scripts/test_home_leak_scan.py passes.
 #   6. Home leak scan: scripts/home_leak_scan.py --branch finds no path under a

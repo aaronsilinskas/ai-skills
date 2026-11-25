@@ -21,6 +21,8 @@ from kaizen.shared.version import Version
 
 LIMIT = 200
 _FENCE = re.compile(r"\s*(```|~~~)")
+_WIDE_VERSION = Version(99, 99, 99)
+"""A synced version as wide as a real one plausibly gets, since the synced files name it."""
 _SHOWN = 60
 """How many of a long line's characters its problem quotes, so the line can be searched for."""
 
@@ -39,19 +41,21 @@ def problems(rendered: Mapping[str, str]) -> list[str]:
 def _prose_lines(text: str) -> list[tuple[int, str]]:
     """*text*'s numbered lines, leaving out fenced code blocks and table rows."""
     prose = []
-    fenced = False
+    fence = ""
+    """The marker of the fenced code block the line is in, or empty outside one."""
     for number, line in enumerate(text.splitlines(), 1):
-        if _FENCE.match(line):
-            fenced = not fenced
-        elif not fenced and not line.lstrip().startswith("|"):
+        marker = _FENCE.match(line)
+        if marker and (not fence or marker.group(1) == fence):
+            fence = "" if fence else marker.group(1)
+        elif not fence and not line.lstrip().startswith("|"):
             prose.append((number, line))
     return prose
 
 
 def rendered_synced_files() -> dict[str, str]:
-    """Every synced file as a generic home renders it, for a release with a wide version."""
+    """Every synced file as a generic home with the default registry folder renders it."""
     root = Path("/home")
-    return render(Home(root=root, registry=root / REGISTRY, leak_own=()), Version(99, 99, 99))
+    return render(Home(root=root, registry=root / REGISTRY, leak_own=()), _WIDE_VERSION)
 
 
 def main() -> int:

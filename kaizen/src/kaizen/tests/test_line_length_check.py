@@ -24,6 +24,12 @@ def test_lines_inside_a_fenced_code_block_are_exempt():
     assert line_length_check.problems({"a.md": text}) == []
 
 
+def test_a_fence_of_the_other_marker_inside_a_fenced_code_block_does_not_close_it():
+    text = f"~~~\n```\n{LONG}\n~~~\n"
+
+    assert line_length_check.problems({"a.md": text}) == []
+
+
 def test_a_prose_line_after_a_fenced_code_block_is_checked():
     text = f"```\ncode\n```\n{LONG}\n"
 

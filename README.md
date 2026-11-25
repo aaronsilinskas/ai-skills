@@ -113,7 +113,7 @@ It runs every check even after a failure, prints a PASS, FAIL or SKIP line for e
 1. **Conventions:** no em-dash in any git-tracked file outside `.claude/skills/` (Matt's copies, which this repo doesn't own); every `description:` parses as YAML; every skill has an `agents/openai.yaml` whose `allow_implicit_invocation` matches its `disable-model-invocation`; and no user-invoked skill calls another user-invoked skill through the Skill tool (Matt's skills installed under `.claude/skills/` count too).
 2. **Wiring parity:** every `skills/<bucket>/<skill>` directory appears exactly once in a README bucket table, and the README lists no skill that isn't on disk.
 3. **Script lint:** `skills/engineering/wizard/template.sh` passes `bash -n` (and `shellcheck`, when installed). With no `wizard` skill in this repo, it reports SKIP.
-4. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's lint, format, types, import contracts and tests.
+4. **kaizen:** `kaizen/scripts/check.sh` passes: the kaizen package's own check, whose script lists its steps.
 5. **Home leak scan tests:** `scripts/test_home_leak_scan.py` passes.
 6. **Home leak scan:** `scripts/home_leak_scan.py --branch` fails when a line the branch adds since its merge base with `origin`'s default branch holds a path under a user's home directory (a tilde path, or an absolute macOS, Linux or Windows home path), and lists each file and line. It scans every commit on the branch, so on an integration branch it covers every ticket already integrated. It needs no home's facts. It reports SKIP when the branch adds nothing since the default branch (as on `main` itself), or when there is no `origin` default branch or merge base to compare against, such as in a shallow clone.
 
