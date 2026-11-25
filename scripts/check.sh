@@ -307,15 +307,16 @@ run_quiet "scripts/test_home_leak_scan.py" \
 
 # ── Check 6: Home leak scan ────────────────────────────────────────────────
 echo
-echo "== Check 6: home leak scan (origin's default branch...HEAD) =="
+echo "== Check 6: home leak scan (scripts/home_leak_scan.py --branch) =="
+# Exit 3 is the scan's skip: nothing to compare, with the reason as its output.
 scan_report="$(python3 -B scripts/home_leak_scan.py --branch 2>&1)"
 scan_status=$?
 if [[ $scan_status -eq 0 ]]; then
   pass "$scan_report"
 elif [[ $scan_status -eq 3 ]]; then
-  skip "home leak scan: ${scan_report#SKIP: }"
+  skip "$scan_report"
 else
-  fail "home leak scan:"
+  fail "scripts/home_leak_scan.py --branch failed:"
   printf '%s\n' "$scan_report" | indent
 fi
 

@@ -5,11 +5,12 @@
     python3 scripts/home_leak_scan.py --branch
 
 Scans only the lines that <head> adds since its merge base with <base> (git diff base...head),
-never removed or unchanged ones. With --branch, <base> is origin's default branch (what
-origin/HEAD names, else origin/main) and <head> is HEAD; it skips, exiting 3 with a SKIP line,
-when HEAD adds nothing since that branch, or when there is no such branch or merge base. A home path is a tilde path with more after it, a user name after the
-tilde included, or an absolute path under a macOS, Linux or Windows home directory that names a
-user.
+never removed or unchanged ones.
+With --branch, <base> is origin's default branch (what origin/HEAD names, else origin/main) and
+<head> is HEAD. It skips, printing why and exiting 3, when HEAD adds nothing since that branch,
+or when there is no such branch or merge base.
+A home path is a tilde path with more after it, a user name after the tilde included, or an
+absolute path under a macOS, Linux or Windows home directory that names a user.
 Placeholders such as a ``<name>`` or ``$USER`` segment name no user and pass, and so does the
 macOS ``Shared`` folder, which is no user's home.
 
@@ -32,9 +33,13 @@ _HOME_PATH = re.compile(
     rf"|(?<![\w.-])/(?:Users/(?!Shared\b)|home/)\w[^{_PATH_END}]*"
     r"|(?i:\b[a-z]:(?:\\{1,2}|/)users(?:\\{1,2}|/)\w+)"
 )
-SKIPPED = 3
+CLEAN, FOUND, ERROR, SKIPPED = 0, 1, 2, 3
 _FALLBACK_DEFAULT = "origin/main"
 _HUNK = re.compile(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
+
+
+class Skip(Exception):
+    """--branch has nothing to compare; the message says why."""
 
 
 class Finding(NamedTuple):
@@ -73,47 +78,45 @@ def _git(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=False)
 
 
-def _branch_base() -> tuple[str | None, str]:
-    """The base for --branch, or None and why the scan skips."""
+def _branch_base() -> str:
+    """The base for --branch, origin's default branch; raises Skip when there's nothing to compare."""
     origin_head = _git("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
-    base = origin_head.stdout.strip() if origin_head.returncode == 0 else _FALLBACK_DEFAULT
+    named = origin_head.returncode == 0
+    base = origin_head.stdout.strip() if named else _FALLBACK_DEFAULT
     if _git("rev-parse", "--verify", "--quiet", f"refs/remotes/{base}").returncode != 0:
-        return None, f"no {base} to compare against (no remote, or not fetched)"
+        unset = "" if named else ", and origin/HEAD names no default branch"
+        raise Skip(f"no {base} to compare against (no remote, or not fetched){unset}")
     if _git("merge-base", base, "HEAD").returncode != 0:
-        return None, f"no merge base between {base} and HEAD (a shallow clone?)"
+        raise Skip(f"no merge base between {base} and HEAD (a shallow clone?)")
     if _git("merge-base", "--is-ancestor", "HEAD", base).returncode == 0:
-        return None, f"HEAD adds nothing since {base}"
-    return base, ""
+        raise Skip(f"HEAD adds nothing since {base}")
+    return base
 
 
 def main(argv: list[str]) -> int:
     if argv == ["--branch"]:
-        branch_base, why = _branch_base()
-        if branch_base is None:
-            print(f"SKIP: {why}")
+        try:
+            argv = [_branch_base(), "HEAD"]
+        except Skip as skip:
+            print(skip)
             return SKIPPED
-        argv = [branch_base, "HEAD"]
     if len(argv) != 2:
         print("usage: home_leak_scan.py <base> <head> | --branch", file=sys.stderr)
-        return 2
+        return ERROR
     base, head = argv
-    result = subprocess.run(
-        ["git", "diff", "--no-color", "--no-ext-diff", "--unified=0",
-         "--src-prefix=a/", "--dst-prefix=b/", f"{base}...{head}"],
-        capture_output=True,
-        text=True,
-    )
+    result = _git("diff", "--no-color", "--no-ext-diff", "--unified=0",
+                  "--src-prefix=a/", "--dst-prefix=b/", f"{base}...{head}")
     if result.returncode != 0:
         print(f"git diff {base}...{head} failed:\n{result.stderr.strip()}", file=sys.stderr)
-        return 2
+        return ERROR
     found = scan(result.stdout)
     if not found:
         print(f"no path under a home directory in the lines {head} adds since {base}")
-        return 0
+        return CLEAN
     print("path under a home directory in added lines; remove it or write a placeholder:")
     for finding in found:
         print(f"  {finding.file}:{finding.line}: {finding.path}")
-    return 1
+    return FOUND
 
 
 if __name__ == "__main__":
