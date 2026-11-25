@@ -77,7 +77,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
 - `shared/pr.py`: the GitHub PR steps the ship and finish commands share, ending each PR body with the home's PR footer unless that setting is empty.
   A ship leak-checks the exact title and body it sends, `Closes` lines and footer included, so the leak rules see every line GitHub gets.
 - `shared/worktree.py`: worktree listing, adding a **ticket worktree**, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
-  It also links a project's `worktree_links` from the main checkout into a new ticket worktree or a comparison's scratch worktree.
+  `ticket start` and `ticket compare` both link a project's `worktree_links` through it.
 - `shared/command.py`: runs a project's shell command and maps the ticket's and base's outcomes to one of `kaizen ticket compare`'s verdicts.
 - `shared/comment_only.py`: the check that a change only deletes or shrinks Python comments and docstrings, which lets `ticket ship` auto-merge a comment-only ticket when the home and the project both turn that on.
 
