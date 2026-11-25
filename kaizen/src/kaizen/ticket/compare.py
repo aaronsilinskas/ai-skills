@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from kaizen.shared.command import VERDICT_MEANING, Verdict, run_from, verdict
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.registry import base_ref, fetch_base, resolve_ticket_worktree, uncommitted
@@ -107,13 +108,16 @@ def add_parser(subparsers: Subparsers) -> None:
         help="print the base and the commands; fetch nothing and add no worktree",
     )
     parser.add_argument(
-        "command", nargs="+", help="the command to run from each worktree's root, after `--`"
+        "command_line",
+        metavar="command",
+        nargs="+",
+        help="the command to run from each worktree's root, after `--`",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    compare(args.worktree, args.command, run, runs=args.runs, home=home, dry_run=args.dry_run)
+    compare(args.worktree, args.command_line, run, runs=args.runs, home=home, dry_run=args.dry_run)
 
 
 def _positive(text: str) -> int:

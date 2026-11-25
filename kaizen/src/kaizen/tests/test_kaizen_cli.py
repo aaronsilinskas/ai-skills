@@ -13,6 +13,7 @@ import pytest
 
 import kaizen
 from kaizen.shared.cli import main
+from kaizen.shared.command_records import HomeCommand, HomelessCommand, InstallCommand
 from kaizen.shared.version import Version
 from kaizen.tests.commands import command_parsers
 from kaizen.tests.ticket_shell import (
@@ -381,6 +382,7 @@ def test_kaizen_pr_wait_exits_with_the_code_of_the_checks_outcome(
 _PIPED_FAILURE = """
 import sys
 from kaizen.shared.cli import main
+from kaizen.shared.command_records import HomeCommand, HomelessCommand, InstallCommand
 from kaizen.tests.ticket_shell import SPEC_START, Shell, failed
 shell = Shell({**SPEC_START, ("push",): failed("git push", "remote: rejected")})
 sys.exit(main(["spec", "start", "25"], run=shell))
@@ -492,14 +494,56 @@ def test_a_malformed_marker_is_refused_before_any_command_runs(tmp_path, capsys)
     assert shell.calls == []
 
 
+def test_every_command_sets_a_command_record_and_no_bare_handler():
+    for name, command in command_parsers().items():
+        assert isinstance(
+            command.get_default("command"), HomeCommand | InstallCommand | HomelessCommand
+        ), name
+        assert command.get_default("handler") is None, name
+
+
 def test_home_init_is_the_only_command_that_runs_without_a_home():
-    exempt = [
+    homeless = [
         name
         for name, command in command_parsers().items()
-        if command.get_default("needs_home") is False
+        if isinstance(command.get_default("command"), HomelessCommand)
     ]
 
-    assert exempt == ["home init"]
+    assert homeless == ["home init"]
+
+
+def test_home_sync_is_the_only_command_passed_the_install():
+    given_install = [
+        name
+        for name, command in command_parsers().items()
+        if isinstance(command.get_default("command"), InstallCommand)
+    ]
+
+    assert given_install == ["home sync"]
+
+
+@pytest.mark.parametrize(
+    ("argv", "records"), [([], True), (["--check"], False)], ids=["sync", "check"]
+)
+def test_home_sync_records_the_version_except_with_check(argv, records):
+    parser = command_parsers()["home sync"]
+    command = parser.get_default("command")
+    assert isinstance(command, InstallCommand)
+
+    assert command.records_version(parser.parse_args(argv)) is records
+
+
+def test_kaizen_help_introduces_the_home_and_the_exit_line_without_listing_commands(
+    tmp_path, capsys
+):
+    with pytest.raises(SystemExit):
+        main(["--help"], run=Shell({}), cwd=tmp_path, env={})
+
+    out = capsys.readouterr().out
+    assert "KAIZEN_HOME" in out
+    assert "--dry-run" in out
+    assert "kaizen: exit <code>" in out
+    assert "ticket abandon" not in out
 
 
 def test_kaizen_help_lists_the_home_group(tmp_path, capsys):
@@ -540,6 +584,7 @@ def test_the_last_stderr_line_of_a_failed_step_says_the_steps_above_are_done(kai
 _SPEC_START = """
 import sys
 from kaizen.shared.cli import main
+from kaizen.shared.command_records import HomeCommand, HomelessCommand, InstallCommand
 from kaizen.tests.ticket_shell import SPEC_START, Shell
 shell = Shell(SPEC_START)
 code = main(["spec", "start", "25"], run=shell)

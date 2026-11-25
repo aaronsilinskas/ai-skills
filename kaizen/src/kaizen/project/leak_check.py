@@ -5,6 +5,7 @@ import argparse
 import textwrap
 from pathlib import Path
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
@@ -57,7 +58,7 @@ def add_parser(subparsers: Subparsers) -> None:
         help="a project's main checkout, or a ticket worktree path `kaizen ticket start` printed "
         "(default: the checkout the command runs in)",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

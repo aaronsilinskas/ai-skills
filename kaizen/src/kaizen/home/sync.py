@@ -5,6 +5,7 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
+from kaizen.shared.command_records import InstallCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, unified_diff
 from kaizen.shared.home import (
     MARKER,
@@ -284,7 +285,9 @@ def add_parser(subparsers: Subparsers) -> None:
         help="with --dry-run, preview a local build's synced files and diffs against the home, "
         "to check a template change before release; a release build ignores it",
     )
-    parser.set_defaults(handler=_command, needs_install=True, records_version=True)
+    parser.set_defaults(
+        command=InstallCommand(_command, records_version=lambda args: not args.check)
+    )
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home, install: Install) -> None:

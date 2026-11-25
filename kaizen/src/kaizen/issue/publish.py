@@ -4,6 +4,7 @@ check."""
 import argparse
 from pathlib import Path
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.labels import repo_labels
@@ -83,7 +84,7 @@ def add_parser(subparsers: Subparsers) -> None:
         action="store_true",
         help="run every check and print the issue it would create, creating nothing",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

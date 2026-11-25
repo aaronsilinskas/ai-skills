@@ -14,6 +14,7 @@ from kaizen.shared.branch import (
     remote_default_branch,
     spec_ticket_branch,
 )
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import Issue, IssueRef, body_and_comments_lines
@@ -239,7 +240,7 @@ def add_parser(subparsers: Subparsers) -> None:
             "as `kaizen spec status` does); print the plan"
         ),
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

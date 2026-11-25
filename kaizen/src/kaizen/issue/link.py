@@ -3,6 +3,7 @@ repos."""
 
 import argparse
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
@@ -115,7 +116,7 @@ def add_parser(subparsers: Subparsers) -> None:
         action="store_true",
         help="print the edges and the ids it would send, and write nothing",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

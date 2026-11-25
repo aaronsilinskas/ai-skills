@@ -4,6 +4,7 @@ import argparse
 import json
 from typing import Any
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
@@ -123,7 +124,7 @@ def add_parser(subparsers: Subparsers) -> None:
             "home has only its state and outside_home: true"
         ),
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

@@ -10,6 +10,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import (
     RefusalError,
     Runner,
@@ -465,7 +466,7 @@ def add_parser(subparsers: Subparsers) -> None:
         action="store_true",
         help="print the page, the README change and the settings change; write nothing",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _given(args: argparse.Namespace) -> dict[str, str]:

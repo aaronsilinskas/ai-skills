@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.comment_only import comment_only_problems
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, push_rejected
 from kaizen.shared.home import Home
@@ -169,7 +170,7 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.add_argument("--title", required=True, help="the PR title (names the change)")
     parser.add_argument("--body-file", type=Path, required=True, help="a file holding the PR body")
     parser.add_argument("--dry-run", action="store_true", help="run only queries; print the plan")
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

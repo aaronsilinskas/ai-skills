@@ -33,16 +33,18 @@ Paths below are relative to `kaizen/src/kaizen/`.
 ## Shared code
 
 - `shared/cli.py`: the CLI and its one entry point, `main(argv, run, cwd, env, version, latest)`.
-  Commands are grouped noun then verb, and each command module registers its own subparser and handler, listed under its group in `GROUPS`.
+  Commands are grouped noun then verb, and each command module registers its own subparser and its command record, listed under its group in `GROUPS`.
   `main` resolves the home once, after argument parsing (so `--help` works anywhere) and before the handler, and passes the `Home` to it.
-  `home init` is the one command that needs no home: its parser sets `needs_home=False`, and its handler gets the start directory, the environment and the `Install` instead.
+  `home init` is the one command that needs no home: its record is a `HomelessCommand`, whose handler gets the start directory, the environment and the `Install` instead.
   Before the handler, and after the home is found, it runs the **synced version** check, so `home init` and `--help` skip it.
-  `home sync` sets `records_version`, and `main` tells the check a run records the version unless it is `--check`'s, so a sync only refuses an older install and never warns to run the command already running.
+  `home sync`'s record is an `InstallCommand`, whose `records_version` says a run records the version unless it is `--check`'s, so a sync only refuses an older install and never warns to run the command already running.
   `run`, `cwd` and `env` are the seams tests use to point kaizen at a fixture home with a recording runner.
   `version` (the running version, by default `__version__`) and `latest` (the latest-release lookup, by default a request to PyPI) are the seam for the synced version: tests pass both, so they need no install or network.
-  No command reads either for itself: `main` passes them as an `Install` to `home init` and to the one command whose parser sets `needs_install=True`, `home sync`, which alone calls `latest`.
+  No command reads either for itself: `main` passes them as an `Install` to `home init` and to the one `InstallCommand`, `home sync`, which alone calls `latest`.
   A `RefusalError` exits 1 with `refused:` (nothing changed); a failed git or gh command or a `StepFailedError` exits 1 with `error:` (the steps printed above are done); anything else is a crash with its traceback.
   Every run past argument parsing (all but `--help` and a usage error) ends its stderr with `kaizen: exit <code>` (plus the outcome after a refusal, failure or crash), whichever name invoked it, so `kaizen ... 2>&1 | tail` keeps the outcome.
+- `shared/command_records.py`: the three command records, one per handler signature, which each command module sets as its parser's `command` default: `HomeCommand` for every ordinary command, `InstallCommand` for `home sync` and `HomelessCommand` for `home init`.
+  The dispatcher matches on the record's type, so mypy checks each handler against its record's signature and no command's own flags reach the dispatcher.
 - `shared/common.py`: what every command shares.
   `Runner` (argv in, stdout out, `CalledProcessError` on failure) is the seam tests replace.
   `RefusalError(check, fix)` is raised before anything mutating runs; `StepFailedError(step, detail)` is a failed step after earlier steps changed things.
