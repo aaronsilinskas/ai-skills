@@ -1,6 +1,6 @@
 # kaizen
 
-The command-line tool that runs the deterministic parts of agent workflows for every project a home registers: the ticket and spec workflows, the leak check, issue links and setting up a home.
+The command-line tool that runs the deterministic parts of agent workflows for every project a home registers: the ticket and spec workflows, the leak check, issue links, the pre-commit hooks, and setting up and syncing a home.
 Its layout and constraints are in `docs/domain.md`, and its decisions in `docs/adr/`.
 
 ## Language

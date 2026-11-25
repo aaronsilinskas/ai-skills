@@ -13,7 +13,7 @@ Each command's `--help` says what it checks and does; this map holds only what `
   The build works it out from the latest `kaizen-v*` git tag through `hatch-vcs`, a build requirement only: `X.Y.Z` at a tag, a dev version past one, so a local build is never taken for a release.
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
   git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo and never touch GitHub.
-  Fixtures use generic homes, owners and paths, and assume no notes folder.
+  Fixtures use generic homes, owners and paths.
 - `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pytest and `line_length_check.py`, all through `uv`.
 - `kaizen/src/kaizen/tests/scripts.py`: loads each Python script in `kaizen/scripts/` by path for its tests, since the scripts sit outside the package.
 - `kaizen/scripts/release_check.py`: the release workflow's version and wheel checks, also runnable by hand.
@@ -38,7 +38,7 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `version` (the running version, by default `__version__`) and `latest` (the latest-release lookup, by default a request to PyPI) are the seam for the synced version: tests pass both, so they need no install or network.
   No command reads either for itself: `main` passes them as an `Install` to `home init` and to the one command whose parser sets `needs_install=True`, `home sync`, which alone calls `latest`.
   A `RefusalError` exits 1 with `refused:` (nothing changed); a failed git or gh command or a `StepFailedError` exits 1 with `error:` (the steps printed above are done); anything else is a crash with its traceback.
-  Every run that reaches its handler ends its stderr with `kaizen: exit <code>` (plus the outcome after a refusal, failure or crash), whichever name invoked it, so `kaizen ... 2>&1 | tail` keeps the outcome.
+  Every run past argument parsing (all but `--help` and a usage error) ends its stderr with `kaizen: exit <code>` (plus the outcome after a refusal, failure or crash), whichever name invoked it, so `kaizen ... 2>&1 | tail` keeps the outcome.
 - `shared/common.py`: what every command shares.
   `Runner` (argv in, stdout out, `CalledProcessError` on failure) is the seam tests replace.
   `RefusalError(check, fix)` is raised before anything mutating runs; `StepFailedError(step, detail)` is a failed step after earlier steps changed things.
@@ -76,7 +76,8 @@ Paths below are relative to `kaizen/src/kaizen/`.
   It refuses an issue reference to a repo outside the home.
 - `shared/pr.py`: the GitHub PR steps the ship and finish commands share, ending each PR body with the home's PR footer unless that setting is empty.
   A ship leak-checks the exact title and body it sends, `Closes` lines and footer included, so the leak rules see every line GitHub gets.
-- `shared/worktree.py`: worktree listing, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
+- `shared/worktree.py`: worktree listing, adding a **ticket worktree**, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
+  It also links a project's `worktree_links` from the main checkout into a new ticket worktree or a comparison's scratch worktree.
 - `shared/command.py`: runs a project's shell command and maps the ticket's and base's outcomes to one of `kaizen ticket compare`'s verdicts.
 - `shared/comment_only.py`: the check that a change only deletes or shrinks Python comments and docstrings, which lets `ticket ship` auto-merge a comment-only ticket when the home and the project both turn that on.
 
@@ -99,7 +100,6 @@ One module per command; each group's `--help` lists them.
   `--check` also lists every registry page the registry's own parser refuses, through `invalid_pages`, so it and the commands that read a page never disagree; the marker is validated by `find_home` before any handler runs.
   Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
   A plain `sync` refuses a local build, whose version is not `X.Y.Z`, since it would record that version; `sync --dry-run --allow-dev` lets one preview instead, rendering for the home's recorded synced version and only printing.
-  `sync` must refuse a home holding both markers, since writing one leaves them different, which every later command refuses; read-only commands, `--check` among them, pass such a home with a warning.
   It never touches the home overlay, the hook config or any other file the home owns.
   `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.
 - `hook/`: the pre-commit **hooks**, each run on the file names pre-commit passes and needing a home like any command.
