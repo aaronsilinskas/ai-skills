@@ -35,7 +35,7 @@ def _shell(branch: str = SPEC_BRANCH, **overrides: Reply) -> Shell:
             ("for-each-ref",): overrides.get("local", ""),
             ("fetch",): overrides.get("fetch", ""),
             ("merge-base", "--is-ancestor"): overrides.get("ancestor", ""),
-            ("merge-base",): f"{MERGE_BASE}\n",
+            ("merge-base",): overrides.get("merge_base", f"{MERGE_BASE}\n"),
             ("log",): LOG,
             ("diff", "--stat"): STAT,
             ("diff",): DIFF,
@@ -182,3 +182,13 @@ def test_base_is_the_merge_base_of_the_fetched_base_and_head(kaizen, capsys):
     assert shell.ran("merge-base") == [
         ["git", "-C", _worktree(SPEC_BRANCH), "merge-base", "origin/spec-117", "HEAD"]
     ]
+
+
+def test_a_base_with_no_common_history_still_prints_the_rest(kaizen, capsys):
+    shell = _shell(merge_base=_not_ancestor, ancestor=_not_ancestor)
+
+    assert kaizen(["ticket", "diff", _worktree(SPEC_BRANCH)], run=shell) == 0
+
+    out = capsys.readouterr().out
+    assert out.startswith("base: origin/spec-117 (no merge base: HEAD shares no history with it)\n")
+    assert f"diff (origin/spec-117...HEAD):\n{DIFF}" in out

@@ -1,6 +1,7 @@
 """``kaizen ticket diff``: a ticket's commits, stat and diff against its resolved base."""
 
 import argparse
+import subprocess
 from pathlib import Path
 from typing import Literal, get_args
 
@@ -37,11 +38,8 @@ def diff(
     ticket = resolve_ticket_worktree(worktree, run, home.registry)
     base = fetch_base(ticket, run)
     git = ["git", "-C", str(ticket.path)]
-    # The merge base stays put as the base branch moves on, unlike the ref, so a review from it
-    # never takes in another ticket's work.
-    merge_base = run([*git, "merge-base", base, "HEAD"]).strip()
     if only == "base":
-        say(merge_base)
+        say(_merge_base(git, base, run))
         return
     queries: dict[Section, list[str]] = {
         "log": [*git, "log", "--oneline", f"{base}..HEAD"],
@@ -52,7 +50,13 @@ def diff(
         return
 
     changes = [*git, "diff", f"{base}...HEAD"]
-    say(f"base: {base} (merge base {merge_base})")
+    try:
+        merge_base = f"merge base {_merge_base(git, base, run)}"
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode != 1:  # 1 means no common history; anything else is a real failure
+            raise
+        merge_base = "no merge base: HEAD shares no history with it"
+    say(f"base: {base} ({merge_base})")
     say(_ancestry(str(ticket.path), base, run))
     say(f"commits ahead ({base}..HEAD):\n{_body(run(queries['log']))}")
     say(f"stat ({base}...HEAD):\n{_body(run(queries['stat']))}")
@@ -72,11 +76,12 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "Fetch only the ticket's base from origin: origin/spec-<N> for a spec's ticket"
             " (or the local spec-<N>, fetching nothing, while a spec started with"
             " `kaizen spec start --local` has it only locally), else origin/<default branch>."
-            " Then print the base ref with its merge base with HEAD (the review base, a SHA"
-            " that --base prints alone), whether it is an ancestor of HEAD (and the merge that"
-            " fixes it when not), the commits ahead (base..HEAD), the stat and the diff"
-            " (base...HEAD), and a note listing any uncommitted changes. Works for spec, lone"
-            " and docs tickets. Only queries: never resets or changes the worktree."
+            " Then print the base ref with its merge base with HEAD (a SHA that stays put"
+            " while the base branch moves on, which --base prints alone), whether it is an"
+            " ancestor of HEAD (and the merge that fixes it when not), the commits ahead"
+            " (base..HEAD), the stat and the diff (base...HEAD), and a note listing any"
+            " uncommitted changes. Works for spec, lone and docs tickets. Only queries: never"
+            " resets or changes the worktree."
         ),
     )
     parser.add_argument(
@@ -97,7 +102,7 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
 _SECTION_HELP: dict[Section, str] = {
     "base": (
         "the merge base of the base and HEAD, a commit SHA that stays put while the base"
-        " branch moves on: the review base for code-review"
+        " branch moves on, to run code-review from"
     ),
     "log": "the commits ahead",
     "stat": "the stat",
@@ -106,6 +111,10 @@ _SECTION_HELP: dict[Section, str] = {
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
     diff(args.worktree, run, home=home, only=args.only)
+
+
+def _merge_base(git: list[str], base: str, run: Runner) -> str:
+    return run([*git, "merge-base", base, "HEAD"]).strip()
 
 
 def _body(text: str) -> str:
