@@ -17,7 +17,7 @@ uv tool install kaizen-kit
 ```
 
 Leave the version unpinned.
-`uv tool upgrade` never moves an install made with `kaizen-kit==X.Y.Z`, so a pin turns every later upgrade into a reinstall.
+`uv tool upgrade` leaves an install made with `kaizen-kit==X.Y.Z` at that version, printing "Nothing to upgrade".
 To move to the latest release, pinned or not, run `uv tool install kaizen-kit@latest`.
 
 To run an unreleased change, install a local build from a checkout of this repo, at its root:
@@ -60,7 +60,7 @@ A home records the release that last synced it as its synced version, in `kaizen
 Every command compares the two: a newer install warns to run `kaizen home sync`, and an older one refuses until you run `uv tool install kaizen-kit@latest`.
 A home's CI runs `uvx --refresh-package kaizen-kit --from kaizen-kit==<synced version> kaizen home sync --check`, which fails on a hand edit to a synced file, and the synced docs show that step with the home's version.
 `--refresh-package` makes uv ask PyPI again, since a CI cache's package list may predate a release made minutes earlier.
-PyPI can also take a few minutes to serve a new release, so after one, wait until `uvx --refresh --from kaizen-kit==X.Y.Z kaizen --help` resolves before opening a home's sync PR.
+PyPI can take a few minutes to serve a new release, so the Release section's last step waits for it before any home commits a sync to it.
 It also validates the home marker and every registry page, so a malformed page fails CI rather than the next command that reads it.
 The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
 
@@ -114,7 +114,7 @@ To release:
 1. Tag a commit on `main` `kaizen-vX.Y.Z` and push the tag.
 2. Approve the `pypi` environment's deployment when the run asks.
 3. Check the release by hand: `uvx --refresh --from kaizen-kit==X.Y.Z kaizen --help`.
-   Wait until it resolves before opening any home's sync PR, or that PR's CI fails to find the release.
+   Wait until it resolves before opening a PR that commits a home's `kaizen home sync` to the release, or that PR's CI fails to find it.
 
 ### Maintainer setup for the first release
 
@@ -124,4 +124,4 @@ Before pushing its tag, the maintainer sets up two things outside the repo:
 1. On PyPI, add a Trusted Publisher to the existing `kaizen-kit` project: this repo, the workflow `release.yml`, and the environment `pypi`.
 2. In the repo's GitHub settings, create the environment `pypi` and protect it, with required reviewers and deployments limited to `kaizen-v*` tags.
 
-Then push `kaizen-v0.1.0`, check it with `uvx --from kaizen-kit==0.1.0 kaizen --help`, and yank the 0.0.0 placeholder on PyPI so no resolver picks it.
+Then push `kaizen-v0.1.0`, check it with `uvx --refresh --from kaizen-kit==0.1.0 kaizen --help`, and yank the 0.0.0 placeholder on PyPI so no resolver picks it.
