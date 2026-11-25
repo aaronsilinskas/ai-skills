@@ -43,6 +43,9 @@ kaizen home init --dry-run
 It prints its checks and every file it would write in full, such as the list of repositories, the workflow instructions and `kaizen.toml`, and writes nothing.
 Run it again without `--dry-run` to make the home; it ends with a checklist of the steps only you can do, such as registering your projects.
 
+Register each project the home works on from its main checkout with `kaizen project add <name>`.
+It detects what it can, such as the GitHub repo from `origin`, asks for the rest when run in a terminal, and has a flag for every field, so an agent can run it without prompts.
+
 ## Upgrade
 
 Install without a version pin.

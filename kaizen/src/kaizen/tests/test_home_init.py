@@ -749,7 +749,7 @@ def test_the_closing_checklist_lists_what_only_the_user_can_do(tmp_path, capsys)
     for item in [
         "restart the session",
         "KAIZEN_HOME",
-        "add a page to projects/ for each project",
+        "kaizen project add <name> <path>` for each project",
         "permissions.additionalDirectories",
         "projects/newhome.md: public, check, code_paths",
         "kaizen project leak-check` again after the first commit",
@@ -777,7 +777,7 @@ def test_init_help_describes_the_leak_to_dos_and_the_checklist(tmp_path, capsys)
         "prints each finding as a to-do",
         "searches committed files only, and findings never fail the command",
         "restart the session in the home's root, so KAIZEN_HOME",
-        "add a page to projects/ for each project",
+        "kaizen project add <name> <path>` for each project",
         "permissions.additionalDirectories",
         "settle the to-do fields on projects/<repo>.md",
         "kaizen project leak-check` again after the first commit",

@@ -39,6 +39,7 @@ ticket worktree, which would otherwise lack it. Each is linked by name, so a glo
 """
 
 import re
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -223,7 +224,16 @@ def _pages(projects_dir: Path) -> list[Path]:
 
 
 def _parse(name: str, page: Path) -> Project:
-    fields = _frontmatter(page)
+    return _project(name, page, _frontmatter(page))
+
+
+def parse_page_text(name: str, page: Path, text: str) -> Project:
+    """The project a page at *page* holding *text* would register, read as every command reads a
+    page; refuses as they do. Reads no file, so a page can be checked before it is written."""
+    return _project(name, page, _fields(page, text))
+
+
+def _project(name: str, page: Path, fields: dict[str, str | bool]) -> Project:
     path = _path_field(page, fields, "path")
     github = _field(page, fields, "github", str)
     if not GITHUB_REPO.fullmatch(github):
@@ -316,7 +326,11 @@ def _is_glob(entry: str) -> bool:
 
 
 def _frontmatter(page: Path) -> dict[str, str | bool]:
-    lines = page.read_text().splitlines()
+    return _fields(page, page.read_text())
+
+
+def _fields(page: Path, text: str) -> dict[str, str | bool]:
+    lines = text.splitlines()
     if not lines or lines[0] != "---" or "---" not in lines[1:]:
         raise RefusalError(
             f"{page}: no registry frontmatter",
@@ -371,6 +385,101 @@ def _path_field(page: Path, fields: dict[str, str | bool], key: str) -> Path:
     return path
 
 
+@dataclass(frozen=True)
+class Key:
+    """One frontmatter key a page may set, as the registry README's **Keys** section and
+    ``kaizen project add``'s prompts explain it."""
+
+    name: str
+    status: str
+    """``required``, or ``optional`` and what leaving it out means."""
+    summary: str
+    """What the key holds, in one sentence: the explanation ``kaizen project add`` prompts with."""
+    detail: str
+    """Which commands read it and how, after the summary in the README."""
+
+
+KEYS = (
+    Key(
+        "path",
+        "required",
+        "the project's main checkout, absolute or from `~`.",
+        "Every command that takes a project name or runs from a project's root finds the project"
+        " by it, and the leak check lets the home's projects mention it.",
+    ),
+    Key(
+        "github",
+        "required",
+        "the project's GitHub repo, `owner/repo`.",
+        "The `kaizen ticket`, `kaizen spec`, `kaizen issue` and `kaizen pr` commands run `gh`"
+        " against it, and the leak check lets the home's projects mention it and treats its owner"
+        " as one of the home's owners.",
+    ),
+    Key(
+        "public",
+        "required",
+        "`true` or `false`, whether the repo is public.",
+        "The leak check, which `kaizen ticket ship`, the `kaizen spec` commands, the publish"
+        " commands and `kaizen project leak-check` run, keeps the home's own repo and path"
+        " (`leak.own` in `kaizen.toml`) out of a public project.",
+    ),
+    Key(
+        "check",
+        "optional, but `kaizen spec integrate` refuses a project without it",
+        "the project's check command, a shell command, or the literal `none` for a project with"
+        " nothing to run.",
+        "It runs from the root of a fresh worktree, so it installs what it needs itself."
+        " `kaizen spec integrate` runs it before pushing a spec's integration branch.",
+    ),
+    Key(
+        "code_paths",
+        "optional, but a docs change is refused without it",
+        "comma-separated paths a docs change may not touch.",
+        "An entry ending in `/` covers everything under that directory, and any other names one"
+        " file. An entry holding `*` or `?` is a glob, matched against the whole path from the"
+        " project root: `*` and `?` never cross `/` but do match a leading `.`, `**` as a whole"
+        " segment matches any number of directories, and a glob ending in `/` covers everything"
+        " under each directory it matches. Brackets are literal. `kaizen ticket start` and"
+        " `kaizen ticket ship` check a docs change against it.",
+    ),
+    Key(
+        "worktree_root",
+        "optional",
+        "where the project's ticket worktrees go, absolute or from `~`; default"
+        " `<path>/.claude/worktrees`.",
+        "`kaizen ticket start` puts them there, the commands that take a ticket worktree find its"
+        " project by it, and the leak check lets the home's projects mention it.",
+    ),
+    Key(
+        "auto_merge_paths",
+        "optional",
+        "comma-separated paths, as in `code_paths`, that a docs change's PR may auto-merge for.",
+        "`kaizen ticket ship` enables auto-merge on a docs change's PR when every path it changes"
+        " is under one of them.",
+    ),
+    Key(
+        "auto_merge_comment_only",
+        "optional, default `false`",
+        "whether a ticket's PR auto-merges when its change only deletes or shrinks Python"
+        " comments and docstrings.",
+        "When `true`, `kaizen ticket ship` enables auto-merge on such a PR, even one closing an"
+        " issue, unless the home's marker sets `auto_merge_comment_only = false`.",
+    ),
+    Key(
+        "worktree_links",
+        "optional",
+        "comma-separated git-ignored paths relative to the project root, such as a downloaded"
+        " tool, with no globs.",
+        "`kaizen ticket start` and `kaizen ticket compare` symlink each one from the main"
+        " checkout into the worktrees they make.",
+    ),
+)
+"""Every key a page may set, in the order a page lists them."""
+
+_README_WIDTH = 100
+_NBSP = "\u00a0"
+"""Holds a code span's spaces while the README wraps, so no span breaks across lines."""
+
 _STARTER_README = """\
 # Projects
 
@@ -379,53 +488,70 @@ Each project the home's sessions work on, the home itself included, has one page
 `<name>.md`, and `<name>` is the name `kaizen` commands take for it.
 A page starts with a frontmatter block of `key: value` lines between two `---` lines, which `kaizen`
 reads; the rest of the page is free notes. The project's own repo holds its facts and docs, and
-its page only points at them.
+its page only points at them. `kaizen project add` writes a project's page and lists it below.
 
 ## Keys
 
-- `path` (required): the project's main checkout, absolute or from `~`. Every command that
-  takes a project name or runs from a project's root finds the project by it, and the leak check
-  lets the home's projects mention it.
-- `github` (required): the project's GitHub repo, `owner/repo`. The `kaizen ticket`, `kaizen spec`,
-  `kaizen issue` and `kaizen pr` commands run `gh` against it, and the leak check lets the home's
-  projects mention it and treats its owner as one of the home's owners.
-- `public` (required): `true` or `false`, whether the repo is public. The leak check, which
-  `kaizen ticket ship`, the `kaizen spec` commands, the publish commands and
-  `kaizen project leak-check` run, keeps the home's own repo and path (`leak.own` in
-  `kaizen.toml`) out of a public project.
-- `worktree_root` (optional): where `kaizen ticket start` puts the project's ticket worktrees,
-  absolute or from `~`; default `<path>/.claude/worktrees`. The commands that take a ticket
-  worktree find its project by it, and the leak check lets the home's projects mention it.
-- `check` (optional, but `kaizen spec integrate` refuses a project without it): the project's check
-  command, a shell command run from the root of a fresh worktree, so it installs what it needs
-  itself, or the literal `none` for a project with nothing to run. `kaizen spec integrate` runs it
-  before pushing a spec's integration branch.
-- `code_paths` (optional, but a docs change is refused without it): comma-separated paths a
-  docs change may not touch. An entry ending in `/` covers everything under that directory, and
-  any other names one file. An entry holding `*` or `?` is a glob, matched against the whole
-  path from the project root: `*` and `?` never cross `/` but do match a leading `.`, `**` as a
-  whole segment matches any number of directories, and a glob ending in `/` covers everything
-  under each directory it matches. Brackets are literal. `kaizen ticket start` and
-  `kaizen ticket ship` check a docs change against it.
-- `auto_merge_paths` (optional): comma-separated paths, as in `code_paths`. `kaizen ticket ship`
-  enables auto-merge on a docs change's PR when every path it changes is under one of them.
-- `auto_merge_comment_only` (optional, default `false`): when `true`, `kaizen ticket ship` enables
-  auto-merge on a ticket's PR, even one closing an issue, when its change only deletes or
-  shrinks Python comments and docstrings, unless the home's marker sets
-  `auto_merge_comment_only = false`.
-- `worktree_links` (optional): comma-separated git-ignored paths relative to the project root,
-  such as a downloaded tool, with no globs. `kaizen ticket start` and `kaizen ticket compare`
-  symlink each one from the main checkout into the worktrees they make.
-## Pages
+{keys}
 
-{pages}
-"""
+{pages}"""
+
+_PAGES_HEADING = "## Pages"
+_PAGE_LINK = re.compile(r"- \[(?P<name>[^\]]+)\]\((?P=name)\.md\).*")
 
 
 def starter_readme(pages: list[str]) -> str:
     """The text of a new registry's README: what each frontmatter key means and which commands
     read it, then a link to each page in *pages* (page names, in order)."""
-    return _STARTER_README.format(pages="\n".join(f"- [{name}]({name}.md)" for name in pages))
+    keys = "\n".join(
+        _wrap(f"- `{key.name}` ({key.status}): {key.summary} {key.detail}") for key in KEYS
+    )
+    return _STARTER_README.format(keys=keys, pages=_pages_section(pages))
+
+
+def _wrap(item: str) -> str:
+    """The list *item* wrapped to the README's width, never inside a code span."""
+    unbroken = re.sub(r"`[^`]*`", lambda span: span[0].replace(" ", _NBSP), item)
+    wrapped = textwrap.fill(
+        unbroken,
+        _README_WIDTH,
+        subsequent_indent="  ",
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
+    return wrapped.replace(_NBSP, " ")
+
+
+def _pages_section(pages: list[str]) -> str:
+    return f"{_PAGES_HEADING}\n\n" + "".join(f"{_page_link(name)}\n" for name in pages)
+
+
+def _page_link(name: str) -> str:
+    return f"- [{name}]({name}.md)"
+
+
+def with_page_listed(readme: str, name: str) -> str:
+    """The registry README *readme* with a link to page *name* in its list of page links, in
+    name order among them; with no such list, under its **Pages** heading, or in a **Pages**
+    section added at its end."""
+    lines = readme.splitlines()
+    linked = {i: m["name"] for i, line in enumerate(lines) if (m := _PAGE_LINK.fullmatch(line))}
+    if not linked and _PAGES_HEADING in lines:
+        at = lines.index(_PAGES_HEADING) + 1
+        lines[at:at] = ["", _page_link(name)]
+        return "\n".join(lines) + "\n"
+    if not linked:
+        above = readme.rstrip("\n") + "\n\n" if readme.strip() else ""
+        return above + _pages_section([name])
+    before = [i for i, listed in linked.items() if listed < name]
+    lines.insert(before[-1] + 1 if before else min(linked), _page_link(name))
+    return "\n".join(lines) + "\n"
+
+
+def page_text(name: str, values: dict[str, str]) -> str:
+    """The text of the page for project *name* setting each key in *values*, in ``KEYS`` order."""
+    frontmatter = "".join(f"{key.name}: {values[key.name]}\n" for key in KEYS if key.name in values)
+    return f"---\n{frontmatter}---\n# {name}\n"
 
 
 def starter_page(name: str, path: str, github: str) -> str:

@@ -30,6 +30,7 @@ _GIT_QUERIES = {
     ("for-each-ref",),
     ("grep",),
     ("log",),
+    ("ls-files",),
     ("ls-remote",),
     ("rev-list",),
     ("rev-parse",),
@@ -38,7 +39,7 @@ _GIT_QUERIES = {
     ("remote", "get-url"),
     ("worktree", "list"),
 }
-_GH_QUERIES = {("issue", "view"), ("label", "list"), ("pr", "list")}
+_GH_QUERIES = {("issue", "view"), ("label", "list"), ("pr", "list"), ("repo", "view")}
 _GH_API_WRITE_FLAGS = ("--method", "-X", "--field", "-F", "--raw-field", "-f", "--input")
 
 
@@ -133,6 +134,16 @@ DRY_RUNS = {
     ),
     "issue publish": DryRun(
         lambda t: ["--title", "T", "--body-file", _body(t)], "would create in acme/relay: T"
+    ),
+    "project add": DryRun(
+        lambda t: ["tool", "/fixture/tool", "--check", "none"],
+        "dry run: nothing written",
+        {
+            ("--show-toplevel",): lambda cmd: f"{cmd[2]}\n",
+            ("remote", "get-url"): "https://github.com/acme/tool.git\n",
+            ("repo", "view"): '{"visibility": "PRIVATE"}',
+            ("ls-files",): "src/a.py\n",
+        },
     ),
     "project labels": DryRun(
         lambda t: ["relay"], "11 to create, 0 already present", {("label", "list"): "[]"}

@@ -13,7 +13,12 @@ from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 
-from kaizen.shared.home import Home, SettingsError, read_settings, settings_text
+from kaizen.shared.home import (
+    Home,
+    add_permission_entries,
+    read_settings,
+    settings_text,
+)
 from kaizen.shared.labels import Label
 from kaizen.shared.pre_commit import LOCAL_REPO
 from kaizen.shared.version import UPGRADE, Version
@@ -122,15 +127,7 @@ def merge_stash_deny(settings: dict[str, object]) -> bool:
     from its ``permissions.deny``, after the entries already there, and returns whether any was
     missing. Every other key and entry keeps its order. Raises ``SettingsError`` when
     ``permissions`` is not an object or its ``deny`` not a list."""
-    permissions = settings.setdefault("permissions", {})
-    if not isinstance(permissions, dict):
-        raise SettingsError("has permissions that are not a JSON object")
-    deny = permissions.setdefault("deny", [])
-    if not isinstance(deny, list):
-        raise SettingsError("has a permissions.deny that is not a JSON list")
-    missing = [entry for entry in DENY_STASH if entry not in deny]
-    deny.extend(missing)
-    return bool(missing)
+    return add_permission_entries(settings, "deny", list(DENY_STASH))
 
 
 SETTINGS_SHAPE = (
