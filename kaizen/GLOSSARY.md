@@ -107,6 +107,7 @@ _Avoid_: vendored file, template, generated file
 **Home overlay**:
 The home's own notes that sit beside its synced files and hold the rules only that home follows.
 It adds to the synced files and never edits them, and syncing never touches it.
+Syncing overwrites local edits to synced files, so a home's own rules belong here (ADR 0004).
 _Avoid_: override, customisation, local patch
 
 **Managed settings**:
