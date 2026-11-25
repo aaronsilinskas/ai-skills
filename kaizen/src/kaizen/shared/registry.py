@@ -58,12 +58,15 @@ from kaizen.shared.branch import (
 )
 from kaizen.shared.comment_only import FileChange
 from kaizen.shared.common import RefusalError, Runner, run_or_refuse
+from kaizen.shared.home import Home
 
 NO_CHECK = "none"
 WORKTREES = ".claude/worktrees"
 """A project's worktree root when its page sets no ``worktree_root``, relative to its path."""
 
 _GITHUB_REPO = re.compile(r"[\w.-]+/[\w.-]+")
+# A GitHub remote URL in SSH (``git@github.com:o/r``, ``ssh://git@github.com/o/r``) or HTTPS
+# form, with or without ``.git``.
 _GITHUB_REMOTE = re.compile(
     r"(?:git@github\.com:|ssh://git@github\.com(?::\d+)?/|https://(?:[^@/]+@)?github\.com/)"
     r"(?P<owner>[\w.-]+)/(?P<repo>[\w.-]+?)(?:\.git)?/?"
@@ -176,36 +179,43 @@ def github_remote(url: str) -> tuple[str, str] | None:
     return None
 
 
-def resolve_home_checkout(
-    run: Runner, path: Path, home_root: Path, projects_dir: Path
-) -> tuple[Project, Path]:
+def resolve_home_checkout(run: Runner, path: Path, home: Home) -> tuple[Project, Path]:
     """The home's own project, and the checkout's root, for the git checkout at *path*, which
-    must be the root of the home kaizen serves, *home_root*, wherever that is, such as a CI
-    clone. The project is the page whose ``github`` is the checkout's ``origin`` repo, so its
-    registered path is not needed. Refuses any other checkout, and an origin no page registers."""
+    must be the root of *home*, the home kaizen serves, wherever that is, such as a CI clone.
+    The project is the page whose ``github`` is the checkout's ``origin`` repo, which the home's
+    ``leak.own`` must also list as its own, so its registered path is not needed. Refuses any
+    other checkout, and an origin no page registers or ``leak.own`` doesn't list."""
     root = _toplevel(run, path.expanduser())
-    if root.resolve() != home_root.resolve():
+    if root.resolve() != home.root.resolve():
         raise RefusalError(
-            f"project leak-check --root: {root.resolve()} is not the root of the home kaizen"
-            f" serves, {home_root}",
+            f"{root.resolve()} is not the root of the home kaizen serves, {home.root}",
             "pass the home's root, from inside it, with KAIZEN_HOME unset or set to it",
         )
     url = run_or_refuse(
         ["git", "-C", str(root), "remote", "get-url", "origin"],
         run,
-        f"project leak-check --root: {root} has no origin remote",
+        f"{root} has no origin remote",
         "check out the home from its GitHub repo",
     ).strip()
     # The URL itself is not printed: an HTTPS remote can carry a token.
     remote = github_remote(url)
-    repo = "/".join(remote).lower() if remote else None
-    project = next((p for p in all_projects(projects_dir) if p.github.lower() == repo), None)
+    repo = "/".join(remote) if remote else None
+    project = next(
+        (p for p in all_projects(home.registry) if repo and p.github.lower() == repo.lower()),
+        None,
+    )
     if project is None:
-        named = f"repo {'/'.join(remote)}" if remote else "URL, which names no GitHub repo"
+        named = f"repo {repo}" if repo else "URL, which names no GitHub repo"
         raise RefusalError(
-            f"project leak-check --root: no registry page's github is origin's {named}",
+            f"no registry page's github is origin's {named}",
             "register the home's own page with its GitHub repo as github, or run in a clone"
             " of that repo",
+        )
+    if project.github.lower() not in {own.lower() for own in home.leak_own}:
+        raise RefusalError(
+            f"origin's repo {project.github} is {project.name}'s, which leak.own in the home's"
+            " marker doesn't list as the home's own repo",
+            "run in a clone of the home's own repo, or add that repo to leak.own",
         )
     return project, root
 

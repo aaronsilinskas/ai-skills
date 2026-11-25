@@ -9,11 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from kaizen.project.leak_check import leak_check_project
+from kaizen.project.leak_check import leak_check_home_clone, leak_check_project
 from kaizen.shared.common import RefusalError
+from kaizen.shared.home import Home
 from kaizen.tests.ticket_shell import (
     ADDED_DENIED,
     DENIED,
+    TILDE,
     Reply,
     Shell,
     failed,
@@ -285,9 +287,14 @@ def test_a_denied_word_on_no_added_line_passes(tmp_path, staged):
     assert shell.ran("diff")
 
 
+def _site_home(tmp_path: Path) -> Home:
+    """The home of ``_denying_projects``, whose own repo is ``owner/site``."""
+    return replace(home_for(_denying_projects(tmp_path)), leak_own=("owner/site",))
+
+
 def _root_shell(tmp_path: Path, merge_base: Reply = "abc\n") -> Shell:
-    """A shell for ``--root`` on the home at ``tmp_path``, on a ticket branch, whose origin is
-    ``owner/site``; the diff adds ``ADDED_DENIED``."""
+    """A shell for ``--root`` on the home at ``tmp_path``, whose origin is ``owner/site``; the
+    diff adds ``ADDED_DENIED``."""
     return Shell(
         {
             ("rev-parse", "--show-toplevel"): f"{tmp_path}\n",
@@ -304,9 +311,7 @@ def test_root_searches_denied_patterns_against_the_default_branch_on_any_branch(
     shell = _root_shell(tmp_path)
 
     with pytest.raises(RefusalError, match=r"docs/a\.md:4: denied pattern zephyr"):
-        leak_check_project(
-            shell, home=home_for(_denying_projects(tmp_path)), root=tmp_path, say=lambda _: None
-        )
+        leak_check_home_clone(shell, tmp_path, home=_site_home(tmp_path), say=lambda _: None)
 
     (diff,) = shell.ran("diff")
     assert diff[diff.index("--merge-base") + 1] == "origin/main"
@@ -319,8 +324,23 @@ def test_root_in_a_clone_lacking_the_default_branchs_history_is_refused_before_a
     shell = _root_shell(tmp_path, merge_base=failed("git merge-base"))
 
     with pytest.raises(RefusalError, match=r"fetch-depth: 0"):
-        leak_check_project(
-            shell, home=home_for(_denying_projects(tmp_path)), root=tmp_path, say=lambda _: None
-        )
+        leak_check_home_clone(shell, tmp_path, home=_site_home(tmp_path), say=lambda _: None)
 
     assert not shell.ran("grep")
+
+
+def test_root_judges_paths_as_at_the_registered_root_not_the_clones(tmp_path):
+    """A CI clone at ``~/work/r/r`` would otherwise allow ``~/work`` as its own ancestor."""
+    clone = Path.home() / "work" / "r" / "r"
+    shell = Shell(
+        {
+            ("rev-parse", "--show-toplevel"): f"{clone}\n",
+            ("remote", "get-url"): "https://github.com/owner/site\n",
+            ("ls-remote", "--symref"): "ref: refs/heads/main\tHEAD\n",
+            ("grep",): f"notes.md:1:see {TILDE}/work/other\n",
+        }
+    )
+    home = replace(_site_home(tmp_path), root=clone)
+
+    with pytest.raises(RefusalError, match=rf"notes\.md:1: outside path {TILDE}/work/other"):
+        leak_check_home_clone(shell, clone, home=home, say=lambda _: None)

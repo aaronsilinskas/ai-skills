@@ -104,7 +104,7 @@ def test_root_naming_a_checkout_other_than_the_homes_root_is_refused(tmp_path, c
     assert _leak_check(root, "--root", str(other)) == 1
 
     err = capsys.readouterr().err
-    assert f"--root: {other.resolve()} is not the root of the home kaizen serves" in err
+    assert f"refused: {other.resolve()} is not the root of the home kaizen serves" in err
 
 
 @pytest.mark.parametrize(
@@ -117,9 +117,15 @@ def test_a_clone_whose_origin_no_page_registers_is_refused(tmp_path, capsys, ori
 
     assert _leak_check(root, "--root", ".") == 1
 
-    assert "refused: project leak-check --root: no registry page's github is origin's" in (
-        capsys.readouterr().err
-    )
+    assert "refused: no registry page's github is origin's" in (capsys.readouterr().err)
+
+
+def test_a_clone_of_a_project_the_marker_does_not_own_is_refused(tmp_path, capsys):
+    root = _clone(tmp_path, "https://github.com/acme/relay.git")
+
+    assert _leak_check(root, "--root", ".") == 1
+
+    assert "refused: origin's repo acme/relay is relay's, which leak.own" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("extra", [["--staged"], [str(Path("."))]], ids=["staged", "checkout"])

@@ -62,7 +62,9 @@ A home's CI clone sits at no registered path, so `kaizen project leak-check` ref
 uvx --from kaizen-kit==<synced version> kaizen project leak-check --root .
 ```
 
-It checks only the home's own clone, as the registry page whose `github` is origin's repo, with the same rules and home facts.
+It checks only the home's own clone, as the registry page whose `github` is origin's repo, which `leak.own` must also list.
+It runs the same rules from the same home facts, judged as at that page's path, so the clone's own path allows nothing.
+A local path is found when it is written from `~/` or under the running user's home directory, so CI misses one spelled out under a developer's own directory; the pre-commit hook and the ship commands still catch it on that developer's machine.
 When that page sets `leak_deny`, the clone needs the default branch's history, such as `actions/checkout` with `fetch-depth: 0`, or the check is refused.
 The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
 

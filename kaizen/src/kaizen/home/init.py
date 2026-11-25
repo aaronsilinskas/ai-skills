@@ -48,8 +48,6 @@ from kaizen.shared.version import Install, Version, recordable_version
 GITIGNORE = ".gitignore"
 
 
-# A GitHub remote URL in SSH (``git@github.com:o/r``, ``ssh://git@github.com/o/r``) or HTTPS
-# form, with or without ``.git``.
 @dataclass(frozen=True)
 class NewHome:
     """The facts of the home being made, all read before anything is written."""
