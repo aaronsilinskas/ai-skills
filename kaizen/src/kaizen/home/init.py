@@ -2,7 +2,6 @@
 where no home exists yet."""
 
 import argparse
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +27,13 @@ from kaizen.shared.home import (
 )
 from kaizen.shared.leak import LeakFoundError, leak_check
 from kaizen.shared.pre_commit import CONFIG, FRESH_CONFIG, runs_every_hook
-from kaizen.shared.registry import WORKTREES, resolve, starter_page, starter_readme
+from kaizen.shared.registry import (
+    WORKTREES,
+    github_remote,
+    resolve,
+    starter_page,
+    starter_readme,
+)
 from kaizen.shared.synced import (
     HOOKS_DOC,
     OVERLAY,
@@ -41,13 +46,6 @@ from kaizen.shared.synced import (
 from kaizen.shared.version import Install, Version, recordable_version
 
 GITIGNORE = ".gitignore"
-
-# A GitHub remote URL in SSH (``git@github.com:o/r``, ``ssh://git@github.com/o/r``) or HTTPS
-# form, with or without ``.git``.
-_GITHUB_REMOTE = re.compile(
-    r"(?:git@github\.com:|ssh://git@github\.com(?::\d+)?/|https://(?:[^@/]+@)?github\.com/)"
-    r"(?P<owner>[\w.-]+)/(?P<repo>[\w.-]+?)(?:\.git)?/?"
-)
 
 
 @dataclass(frozen=True)
@@ -373,8 +371,8 @@ def _origin_repo(root: Path, run: Runner) -> tuple[str, str]:
         "add the home's GitHub repo as origin (`git remote add origin <url>`), then run init again",
     ).strip()
     # The URL itself is not printed: an HTTPS remote can carry a token.
-    if match := _GITHUB_REMOTE.fullmatch(url):
-        return match["owner"], match["repo"]
+    if repo := github_remote(url):
+        return repo
     raise RefusalError(
         "home init: origin's URL does not name a GitHub owner/repo",
         "point origin at the home's GitHub repo, in SSH or HTTPS form, then run init again",

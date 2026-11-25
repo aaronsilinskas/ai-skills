@@ -56,6 +56,16 @@ A home records the release that last synced it as its synced version, in `kaizen
 Every command compares the two: a newer install warns to run `kaizen home sync`, and an older one refuses until you run `uv tool upgrade kaizen-kit`.
 A home's CI runs `uvx --from kaizen-kit==<synced version> kaizen home sync --check`, which fails on a hand edit to a synced file, and the synced docs show that step with the home's version.
 It also validates the home marker and every registry page, so a malformed page fails CI rather than the next command that reads it.
+A home's CI clone sits at no registered path, so `kaizen project leak-check` refuses it; the CI form runs the same whole-tree leak check there instead, from the clone's root:
+
+```sh
+uvx --from kaizen-kit==<synced version> kaizen project leak-check --root .
+```
+
+It checks only the home's own clone, as the registry page whose `github` is origin's repo, which `leak.own` must also list.
+It runs the same rules from the same home facts, judged as at that page's path, so the clone's own path allows nothing.
+A local path is found when it is written from `~/` or under the running user's home directory, so CI misses one spelled out under a developer's own directory; the pre-commit hook and the ship commands still catch it on that developer's machine.
+When that page sets `leak_deny`, the clone needs the default branch's history, such as `actions/checkout` with `fetch-depth: 0`, or the check is refused.
 The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
 
 ## Move an existing home to the new names
