@@ -53,7 +53,7 @@ All of its tickets merge into the default branch together, through one PR from i
 _Avoid_: epic, feature, PRD
 
 **Domain-docs PR**:
-The PR `kaizen spec publish` opens from the branch `spec-<N>-domain-docs`, holding the glossary and ADR edits made while grilling that spec.
+The PR `kaizen spec publish` opens from the branch `spec-<N>-domain-docs`, holding the spec's glossary and ADR edits.
 `kaizen ticket publish` waits for it to merge before creating the spec's tickets, since they cite those edits.
 _Avoid_: docs PR, glossary PR, spec docs PR
 
@@ -69,7 +69,7 @@ _Avoid_: agent worktree, scratch worktree (that is a command's temporary worktre
 
 **Base**:
 The branch a ticket is built on and compared against: its spec's integration branch, or else the project's remote default branch.
-`kaizen ticket compare` runs against its tip, and `kaizen ticket diff --base` reviews from its merge base with the ticket, a commit that stays put while the base moves on.
+`kaizen ticket compare` runs against its tip, and `kaizen ticket diff --base` prints its merge base with the ticket, the commit to review from, which stays put while the base moves on.
 _Avoid_: upstream, parent branch, target branch
 
 **Docs change**:
