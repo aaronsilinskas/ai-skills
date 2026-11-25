@@ -12,7 +12,7 @@ from kaizen.shared.branch import (
     origin_has_branch,
     prune_tracking_ref,
 )
-from kaizen.shared.common import RefusalError, Runner, Say, run_or_refuse
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, merged_pr
 from kaizen.shared.registry import (
@@ -71,7 +71,7 @@ def finish(
     say(MAIN_CHECKOUT_NOTE)
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "finish",
         help="remove a merged ticket's worktree and local branch",

@@ -5,7 +5,7 @@ import argparse
 import textwrap
 from pathlib import Path
 
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.registry import resolve_checkout
@@ -28,7 +28,7 @@ def leak_check_project(
     say(f"leak check found nothing {where}{project.name} at {checkout}")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "leak-check",
         help="run the leak check on the current project or a ticket worktree",

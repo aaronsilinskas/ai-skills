@@ -483,18 +483,35 @@ def test_a_malformed_marker_is_refused_before_any_command_runs(tmp_path, capsys)
     assert shell.calls == []
 
 
-def test_home_init_is_the_only_command_that_runs_without_a_home():
-    exempt = []
+def _commands() -> dict[str, argparse.ArgumentParser]:
+    """Every command's parser, keyed by its group and name, such as ``"ticket start"``."""
+    parsers: dict[str, argparse.ArgumentParser] = {}
     for group, (_, commands) in GROUPS.items():
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers()
+        subparsers = argparse.ArgumentParser().add_subparsers()
         for module in commands:
             module.add_parser(subparsers)
-        for name, command in subparsers.choices.items():
-            if command.get_default("needs_home") is False:
-                exempt.append(f"{group} {name}")
+        parsers |= {f"{group} {name}": command for name, command in subparsers.choices.items()}
+    return parsers
+
+
+def test_home_init_is_the_only_command_that_runs_without_a_home():
+    exempt = [
+        name for name, command in _commands().items() if command.get_default("needs_home") is False
+    ]
 
     assert exempt == ["home init"]
+
+
+def test_only_the_query_only_commands_lack_a_dry_run():
+    without_dry_run = {
+        name
+        for name, command in _commands().items()
+        if not any("--dry-run" in action.option_strings for action in command._actions)
+    }
+
+    hooks = {name for name in _commands() if name.startswith("hook ")}
+    query_only = {"project leak-check", "pr wait", "issue show", "spec status", "ticket diff"}
+    assert without_dry_run == hooks | query_only
 
 
 def test_kaizen_help_lists_the_home_group(tmp_path, capsys):

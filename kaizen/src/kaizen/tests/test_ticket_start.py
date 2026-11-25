@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.common import RefusalError
-from kaizen.tests.ticket_shell import Reply, Shell, failed, home_for, issue_json, register
+from kaizen.tests.ticket_shell import Reply, Shell, failed, home_for, issue_json, quiet, register
 from kaizen.ticket.start import start
 
 ISSUE_OPEN = issue_json(
@@ -85,14 +85,10 @@ def _shell(**overrides: str | BaseException) -> Shell:
     return Shell(answers)
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def test_start_creates_the_ticket_worktree_from_the_remote_default_branch(tmp_path):
     shell = _shell()
 
-    start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+    start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     repo = str(tmp_path / "proto")
     worktree = f"{repo}/.claude/worktrees/fix-1358-each-reboot-writes-app-state"
@@ -116,7 +112,7 @@ def test_with_spec_the_worktree_is_on_a_spec_ticket_branch_from_the_integration_
     shell = _shell()
 
     started = start(
-        "proto", 1358, "double-write", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet
+        "proto", 1358, "double-write", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet
     )
 
     repo = str(tmp_path / "proto")
@@ -144,7 +140,7 @@ def test_with_spec_start_refuses_a_ticket_with_an_open_blocker_not_yet_integrate
     register(tmp_path, "other", "owner/other")
 
     with pytest.raises(RefusalError) as refused:
-        start("proto", 1358, "x", shell, home=home_for(projects), spec=25, say=_quiet)
+        start("proto", 1358, "x", shell, home=home_for(projects), spec=25, say=quiet)
 
     message = str(refused.value)
     assert "#1358 has open blocker(s) not integrated into spec-25: #1356, owner/other#9" in message
@@ -158,7 +154,7 @@ def test_with_spec_a_blocker_outside_the_home_refuses_without_naming_its_repo(tm
     shell = _shell(blockers=_blockers((9, state, "stranger/repo")))
 
     with pytest.raises(RefusalError) as refused:
-        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     message = str(refused.value)
     assert "not integrated into spec-25: an issue outside this home" in message
@@ -169,7 +165,7 @@ def test_with_spec_a_blocker_outside_the_home_refuses_without_naming_its_repo(tm
 def test_with_spec_a_closed_blocker_does_not_refuse(tmp_path):
     shell = _shell(blockers=_blockers((1356, "closed")))
 
-    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     assert shell.ran("worktree", "add")
 
@@ -177,7 +173,7 @@ def test_with_spec_a_closed_blocker_does_not_refuse(tmp_path):
 def test_with_spec_a_blocker_already_integrated_into_the_spec_does_not_refuse(tmp_path):
     shell = _shell(blockers=_blockers((1357, "open")))
 
-    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     assert shell.ran("worktree", "add")
 
@@ -185,7 +181,7 @@ def test_with_spec_a_blocker_already_integrated_into_the_spec_does_not_refuse(tm
 def test_with_spec_the_integration_is_read_from_the_integration_branch_just_fetched(tmp_path):
     shell = _shell(blockers=_blockers((1357, "open")))
 
-    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     fetch = shell.ran("fetch", "-q", "origin")
     log = shell.ran("log", "--merges")
@@ -226,7 +222,7 @@ def test_with_spec_start_refuses_when_origin_has_no_integration_branch(tmp_path)
     shell = _shell(integration="")
 
     with pytest.raises(RefusalError, match=r"origin has no spec-25(.|\n)*kaizen spec start 25"):
-        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     assert not shell.ran("fetch")
     assert not shell.ran("worktree", "add")
@@ -239,7 +235,7 @@ def test_with_spec_start_refuses_an_issue_that_is_not_a_sub_issue_of_the_spec(tm
     )
 
     with pytest.raises(RefusalError, match="#1358 is not a sub-issue of spec #25"):
-        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     assert not shell.ran("fetch")
     assert not shell.ran("worktree", "add")
@@ -249,7 +245,7 @@ def test_with_spec_start_refuses_a_closed_issue(tmp_path):
     shell = _shell(issue=issue_json(state="CLOSED", title="Old work"))
 
     with pytest.raises(RefusalError, match="#1358 is closed"):
-        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=_quiet)
+        start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=quiet)
 
     assert not shell.ran("fetch")
     assert not shell.ran("worktree", "add")
@@ -282,7 +278,7 @@ def test_start_refuses_a_closed_issue_and_issues_nothing_after(tmp_path):
     shell = _shell(issue=issue_json(state="CLOSED", title="Old work"))
 
     with pytest.raises(RefusalError, match="#1358 is closed"):
-        start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+        start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert shell.calls == [shell.ran("issue", "view")[0]]
 
@@ -291,7 +287,7 @@ def test_start_refuses_an_issue_gh_cannot_read(tmp_path):
     shell = _shell(issue=failed("gh issue view", "GraphQL: Could not resolve to an issue"))
 
     with pytest.raises(RefusalError, match="could not read issue #1358 in owner/proto"):
-        start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+        start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert not shell.ran("fetch")
 
@@ -307,7 +303,7 @@ def test_start_refuses_an_existing_branch_and_names_the_worktree_it_is_checked_o
     )
 
     with pytest.raises(RefusalError, match=r"already exists.*/elsewhere/attempt"):
-        start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+        start("proto", 1358, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert not shell.ran("fetch")
     assert not shell.ran("worktree", "add")
@@ -320,14 +316,14 @@ def test_start_refuses_when_the_worktree_path_already_exists(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match=f"{existing} already exists"):
-        start("proto", 1358, None, shell, home=home_for(projects), say=_quiet)
+        start("proto", 1358, None, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("fetch")
 
 
 def test_a_given_slug_replaces_the_one_derived_from_the_title(tmp_path):
     started = start(
-        "proto", 7, "double-write", _shell(), home=home_for(_proto(tmp_path)), say=_quiet
+        "proto", 7, "double-write", _shell(), home=home_for(_proto(tmp_path)), say=quiet
     )
 
     assert started.branch == "fix-7-double-write"
@@ -337,7 +333,7 @@ def test_the_worktree_goes_under_worktree_root_when_the_page_sets_it(tmp_path):
     shell = _shell()
     projects = _proto(tmp_path, extra=f"worktree_root: {tmp_path}/outside\n")
 
-    start("proto", 7, "x", shell, home=home_for(projects), say=_quiet)
+    start("proto", 7, "x", shell, home=home_for(projects), say=quiet)
 
     (add,) = shell.ran("worktree", "add")
     assert add[5] == f"{tmp_path}/outside/fix-7-x"
@@ -412,7 +408,7 @@ def test_start_names_a_deleted_comment_author_ghost(tmp_path, author):
 def test_start_asks_gh_for_the_body_and_comments_as_json_never_with_the_comments_flag(tmp_path):
     shell = _shell()
 
-    start("proto", 7, "x", shell, home=home_for(_proto(tmp_path)), say=_quiet)
+    start("proto", 7, "x", shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     (view,) = shell.ran("issue", "view")
     assert view[-2] == "--json"
@@ -433,7 +429,7 @@ def test_a_dry_run_does_not_print_the_issue_body(tmp_path):
 def test_a_dry_run_issues_only_queries(tmp_path):
     shell = _shell()
 
-    start("proto", 7, "x", shell, home=home_for(_proto(tmp_path)), dry_run=True, say=_quiet)
+    start("proto", 7, "x", shell, home=home_for(_proto(tmp_path)), dry_run=True, say=quiet)
 
     assert shell.calls
     assert not shell.ran("fetch")
@@ -444,7 +440,7 @@ def test_start_refuses_an_unknown_project_and_lists_the_registered_ones(tmp_path
     shell = _shell()
 
     with pytest.raises(RefusalError, match=r"nope\.md(.|\n)*registered project: proto$"):
-        start("nope", 7, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+        start("nope", 7, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert not shell.calls
 
@@ -469,7 +465,7 @@ def test_start_refuses_a_malformed_page_naming_the_page_and_the_field(tmp_path, 
     projects = _projects(tmp_path, proto=frontmatter)
 
     with pytest.raises(RefusalError, match=rf"proto\.md: {field}"):
-        start("proto", 7, None, shell, home=home_for(projects), say=_quiet)
+        start("proto", 7, None, shell, home=home_for(projects), say=quiet)
 
     assert not shell.calls
 
@@ -480,7 +476,7 @@ def test_start_refuses_a_page_without_frontmatter(tmp_path):
     (projects / "proto.md").write_text("# proto\n\n- **Path:** `/fixture/proto`\n")
 
     with pytest.raises(RefusalError, match=r"proto\.md: no registry frontmatter"):
-        start("proto", 7, None, _shell(), home=home_for(projects), say=_quiet)
+        start("proto", 7, None, _shell(), home=home_for(projects), say=quiet)
 
 
 @pytest.mark.parametrize(
@@ -493,7 +489,7 @@ def test_start_refuses_a_page_without_frontmatter(tmp_path):
 def test_the_derived_slug_drops_apostrophes_instead_of_splitting_on_them(tmp_path, title, branch):
     shell = _shell(issue=_open_issue(title))
 
-    started = start("proto", 7, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+    started = start("proto", 7, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert started.branch == branch
 
@@ -508,7 +504,7 @@ def test_the_derived_slug_drops_apostrophes_instead_of_splitting_on_them(tmp_pat
 def test_the_derived_slug_drops_trailing_stopwords(tmp_path, title, branch):
     shell = _shell(issue=_open_issue(title))
 
-    started = start("proto", 7, None, shell, home=home_for(_proto(tmp_path)), say=_quiet)
+    started = start("proto", 7, None, shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert started.branch == branch
 
@@ -541,7 +537,7 @@ def test_without_an_issue_start_refuses_a_missing_slug(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="no issue and no --slug"):
-        start("proto", None, None, shell, home=home_for(_docs_proto(tmp_path)), say=_quiet)
+        start("proto", None, None, shell, home=home_for(_docs_proto(tmp_path)), say=quiet)
 
     assert not shell.calls
 
@@ -550,7 +546,7 @@ def test_without_an_issue_start_refuses_a_spec(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="--spec 25 needs an issue"):
-        start("proto", None, "x", shell, home=home_for(_docs_proto(tmp_path)), spec=25, say=_quiet)
+        start("proto", None, "x", shell, home=home_for(_docs_proto(tmp_path)), spec=25, say=quiet)
 
     assert not shell.calls
 
@@ -559,7 +555,7 @@ def test_without_an_issue_start_refuses_a_project_that_declares_no_code_paths(tm
     shell = _shell()
 
     with pytest.raises(RefusalError, match=r"declares no code_paths(.|\n)*projects/proto\.md"):
-        start("proto", None, "x", shell, home=home_for(_proto(tmp_path)), say=_quiet)
+        start("proto", None, "x", shell, home=home_for(_proto(tmp_path)), say=quiet)
 
     assert not shell.calls
 
@@ -570,7 +566,7 @@ def test_start_refuses_a_slug_that_is_no_branch_slug(tmp_path, issue, slug):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="is not a branch slug"):
-        start("proto", issue, slug, shell, home=home_for(_docs_proto(tmp_path)), say=_quiet)
+        start("proto", issue, slug, shell, home=home_for(_docs_proto(tmp_path)), say=quiet)
 
     assert not shell.ran("worktree", "add")
 
@@ -582,7 +578,7 @@ def test_start_links_each_worktree_link_from_the_main_checkout_into_the_worktree
     (repo / "tools/mpy-cross").write_text("binary")
     (repo / ".env").write_text("KEY=1")
 
-    started = start("proto", 7, "x", _shell(), home=home_for(projects), say=_quiet)
+    started = start("proto", 7, "x", _shell(), home=home_for(projects), say=quiet)
 
     linked = started.worktree / "tools/mpy-cross"
     assert linked.is_symlink()
@@ -619,7 +615,7 @@ def test_start_refuses_a_worktree_link_the_base_commit_tracks_before_adding_the_
     with pytest.raises(
         RefusalError, match=r"scripts/check\.sh is tracked in origin/main(.|\n)*projects/proto\.md"
     ):
-        start("proto", 7, "x", shell, home=home_for(projects), say=_quiet)
+        start("proto", 7, "x", shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("worktree", "add")
 
@@ -644,7 +640,7 @@ def test_with_spec_the_tracked_check_reads_the_integration_branch_after_fetching
     (tmp_path / "proto/tools/mpy-cross").write_text("binary")
     shell = _shell()
 
-    started = start("proto", 1358, "x", shell, home=home_for(projects), spec=25, say=_quiet)
+    started = start("proto", 1358, "x", shell, home=home_for(projects), spec=25, say=quiet)
 
     (ls_tree,) = shell.ran("ls-tree")
     assert "origin/spec-25" in ls_tree
@@ -663,7 +659,7 @@ def test_start_refuses_when_git_cannot_list_the_base_for_the_tracked_check(tmp_p
     )
 
     with pytest.raises(RefusalError, match="could not list origin/main"):
-        start("proto", 7, "x", shell, home=home_for(projects), say=_quiet)
+        start("proto", 7, "x", shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("worktree", "add")
 

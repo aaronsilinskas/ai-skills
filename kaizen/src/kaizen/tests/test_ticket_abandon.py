@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.common import RefusalError
-from kaizen.tests.ticket_shell import Reply, Shell, failed, home_for, install_hook
+from kaizen.tests.ticket_shell import Reply, Shell, failed, home_for, install_hook, quiet
 from kaizen.ticket.abandon import abandon
 
 BRANCH = "fix-53-retry-the-flaky-upload"
@@ -49,10 +49,6 @@ def _shell(**overrides: Reply) -> Shell:
     return Shell(answers)
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def _abandon(
     tmp_path: Path,
     shell: Shell,
@@ -60,7 +56,7 @@ def _abandon(
     force: bool = False,
     reason: str | None = None,
     dry_run: bool = False,
-    say: Callable[[str], None] = _quiet,
+    say: Callable[[str], None] = quiet,
 ) -> Path:
     """Runs ``abandon`` on the ticket worktree from *tmp_path*, outside it; returns the path."""
     projects, worktree = _setup(tmp_path)
@@ -160,7 +156,7 @@ def test_abandon_refuses_to_run_from_inside_the_worktree_it_removes(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="runs inside the worktree"):
-        abandon(worktree, shell, home=home_for(projects), cwd=worktree / "src", say=_quiet)
+        abandon(worktree, shell, home=home_for(projects), cwd=worktree / "src", say=quiet)
 
     assert not _mutations(shell)
 
@@ -192,7 +188,7 @@ def test_abandon_refuses_a_locked_worktree(tmp_path):
     shell = _shell(worktrees=f"worktree {worktree}\nHEAD a1b2c3d4\nbranch x\nlocked\n\n")
 
     with pytest.raises(RefusalError, match=r"is locked(.|\n)*worktree unlock"):
-        abandon(worktree, shell, home=home_for(projects), cwd=tmp_path, say=_quiet)
+        abandon(worktree, shell, home=home_for(projects), cwd=tmp_path, say=quiet)
 
     assert not _mutations(shell)
 

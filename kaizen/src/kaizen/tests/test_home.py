@@ -12,10 +12,10 @@ from kaizen.shared.home import find_home, fresh_home, fresh_marker
 from kaizen.shared.labels import Label
 from kaizen.shared.version import Version
 
-MARKER = 'registry = "projects"\n[leak]\nown = ["acme/home", "/fixture/acme"]\n'
+MARKER_TEXT = 'registry = "projects"\n[leak]\nown = ["acme/home", "/fixture/acme"]\n'
 
 
-def _home(root: Path, marker: str = MARKER, name: str = "kaizen.toml") -> Path:
+def _home(root: Path, marker: str = MARKER_TEXT, name: str = "kaizen.toml") -> Path:
     (root / "projects").mkdir(parents=True, exist_ok=True)
     (root / name).write_text(marker)
     return root
@@ -34,7 +34,7 @@ def test_a_marker_at_the_start_directory_is_the_home(tmp_path):
 
 def test_the_leak_allowlist_holds_the_paths_and_repos_the_marker_allows(tmp_path):
     tilde_path = "~" + "/tool-settings"
-    marker = MARKER + f'allow = ["{tilde_path}", "/opt/tool", "acme/archived"]\n'
+    marker = MARKER_TEXT + f'allow = ["{tilde_path}", "/opt/tool", "acme/archived"]\n'
 
     home = find_home(_home(tmp_path / "home", marker), {})
 
@@ -47,7 +47,7 @@ def test_an_unset_comment_only_switch_leaves_the_comment_only_check_on(tmp_path)
 
 
 def test_the_marker_turns_the_comment_only_check_off(tmp_path):
-    root = _home(tmp_path, "auto_merge_comment_only = false\n" + MARKER)
+    root = _home(tmp_path, "auto_merge_comment_only = false\n" + MARKER_TEXT)
 
     assert find_home(root, {}).auto_merge_comment_only is False
 
@@ -182,15 +182,15 @@ _LABEL = '\n[[workflow_labels]]\nname = "triage"\ncolor = "fbca04"\ndescription 
 @pytest.mark.parametrize(
     ("marker", "reason"),
     [
-        ("workflow_labels = 1\n" + MARKER, "'workflow_labels' must be one or more"),
-        ("workflow_labels = []\n" + MARKER, "'workflow_labels' must be one or more"),
-        (MARKER + _LABEL.replace('color = "fbca04"\n', ""), "entry 1 needs a string 'color'"),
-        (MARKER + _LABEL.replace('"Look"', "3"), "entry 1 needs a string 'description'"),
-        (MARKER + _LABEL.replace('"triage"', '""'), "entry 1 has an empty 'name'"),
-        (MARKER + _LABEL.replace("fbca04", "#fbca04"), "entry 1's 'color' '#fbca04' must be"),
-        (MARKER + _LABEL.replace("fbca04", "fbca0"), "entry 1's 'color' 'fbca0' must be"),
-        (MARKER + _LABEL + 'colour = "x"\n', "entry 1 has an unknown key 'colour'"),
-        (MARKER + _LABEL + _LABEL.replace("fbca04", "000000"), "names 'triage' twice"),
+        ("workflow_labels = 1\n" + MARKER_TEXT, "'workflow_labels' must be one or more"),
+        ("workflow_labels = []\n" + MARKER_TEXT, "'workflow_labels' must be one or more"),
+        (MARKER_TEXT + _LABEL.replace('color = "fbca04"\n', ""), "entry 1 needs a string 'color'"),
+        (MARKER_TEXT + _LABEL.replace('"Look"', "3"), "entry 1 needs a string 'description'"),
+        (MARKER_TEXT + _LABEL.replace('"triage"', '""'), "entry 1 has an empty 'name'"),
+        (MARKER_TEXT + _LABEL.replace("fbca04", "#fbca04"), "entry 1's 'color' '#fbca04' must be"),
+        (MARKER_TEXT + _LABEL.replace("fbca04", "fbca0"), "entry 1's 'color' 'fbca0' must be"),
+        (MARKER_TEXT + _LABEL + 'colour = "x"\n', "entry 1 has an unknown key 'colour'"),
+        (MARKER_TEXT + _LABEL + _LABEL.replace("fbca04", "000000"), "names 'triage' twice"),
     ],
     ids=[
         "not tables",
@@ -217,7 +217,7 @@ def test_a_malformed_workflow_label_is_refused_naming_the_marker_and_the_fix(
 
 
 def test_a_configured_colour_is_read_lowercased(tmp_path):
-    root = _home(tmp_path / "home", MARKER + _LABEL.replace("fbca04", "FBCA04"))
+    root = _home(tmp_path / "home", MARKER_TEXT + _LABEL.replace("fbca04", "FBCA04"))
 
     assert find_home(root, {}).workflow_labels == (Label("triage", "fbca04", "Look"),)
 
