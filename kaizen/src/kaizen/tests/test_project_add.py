@@ -461,12 +461,22 @@ def test_the_help_explains_every_key_in_full(capsys):
         assert f"{key.summary} {key.detail}" in out
 
 
-def test_the_help_gives_each_keys_flag_and_the_answers_it_takes(capsys):
-    out = _help(capsys)
+def test_the_help_gives_how_each_key_is_given_and_its_default(capsys):
+    with pytest.raises(SystemExit):
+        main(["project", "add", "--help"], cwd=Path.cwd(), env={})
+    lines = {line.strip() for line in capsys.readouterr().out.splitlines()}
 
-    assert "--code-paths: comma-separated paths" in out
-    assert "--public or --private: true/false" in out
-    assert "PATH: absolute or ~/ path, default: the current directory" in out
+    assert {
+        "PATH (default: the current directory)",
+        "--github owner/repo",
+        "--public or --private",
+        "--check a shell command, or none",
+        "--code-paths comma-separated paths",
+        "--worktree-root absolute or ~/ path; left out: <path>/.claude/worktrees",
+        "--auto-merge-paths comma-separated paths; left out: none",
+        "--auto-merge-comment-only or --no-auto-merge-comment-only; left out: false",
+        "--worktree-links comma-separated paths; left out: none",
+    } <= lines
 
 
 def test_the_help_states_the_path_and_glob_syntax(capsys):
