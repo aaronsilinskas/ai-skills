@@ -79,7 +79,7 @@ def _git(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def _branch_base() -> str:
-    """The base for --branch, origin's default branch; raises Skip when there's nothing to compare."""
+    """The base for --branch, origin's default branch; raises Skip with nothing to compare."""
     origin_head = _git("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
     named = origin_head.returncode == 0
     base = origin_head.stdout.strip() if named else _FALLBACK_DEFAULT
