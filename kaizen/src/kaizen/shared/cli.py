@@ -91,12 +91,13 @@ def main(
     run: Runner = run_subprocess,
     cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
-    version: str = __version__,
+    version: str | None = None,
     latest: LatestRelease = latest_on_pypi,
 ) -> int:
     """Runs one command in the home found from *cwd* and *env* (default: the current directory
     and the process environment), as the install whose *version* is running and whose *latest*
-    looks up the latest release (default: the package metadata and PyPI). ``--help`` exits
+    looks up the latest release (default: the package metadata, read at each call so the tests'
+    fixture can replace it, and PyPI). ``--help`` exits
     before the home is looked for, and a command that needs no home skips the search and the
     synced version check."""
     parser = argparse.ArgumentParser(
@@ -121,7 +122,8 @@ def main(
         # attribute to the stream it wraps through __getattr__.
         sys.stderr = cast(TextIO, _SurvivesClosedPipe(sys.stderr))
     try:
-        return _run(args, run, cwd, env, Install(version, latest))
+        running = __version__ if version is None else version
+        return _run(args, run, cwd, env, Install(running, latest))
     finally:
         sys.stdout, sys.stderr = real_stdout, real_stderr
 

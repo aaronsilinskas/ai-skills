@@ -22,6 +22,11 @@ To run an unreleased change, install a local build from a checkout of this repo,
 uv tool install ./kaizen
 ```
 
+kaizen's version comes from git: a build at a `kaizen-vX.Y.Z` tag is that release, and a build from any later commit is a dev version past it, such as `0.1.1.dev3+g<sha>`.
+A local build's dev version is not `X.Y.Z`, so `kaizen home sync` refuses to record it.
+To check a template change against a real home before release, run `kaizen home sync --dry-run --allow-dev` from a local build in that home.
+It prints each synced file it would write and its diff against the home's copy, rendered for the home's recorded synced version, and writes nothing.
+
 Either way puts two commands on your path, `kaizen` and its short alias `kz`.
 They are the same program; docs and hooks spell out `kaizen`.
 
@@ -84,24 +89,24 @@ The tests sit inside the package, beside the code they cover, and the built whee
 
 A tag `kaizen-vX.Y.Z` releases kaizen to PyPI as `kaizen-kit`, and nothing else does.
 The release workflow, `.github/workflows/release.yml`, runs only on those tags.
-It refuses a tag whose version differs from the version in `kaizen/pyproject.toml`, runs `scripts/check.sh`, and builds a wheel and sdist with `uv build`.
-It then lists the wheel and refuses it if it holds any test file or lacks any template.
+It checks out the full history, so the build can read the tags, runs `scripts/check.sh`, and builds a wheel and sdist with `uv build`.
+The build works out the version from the tag, through `hatch-vcs`, so `kaizen/pyproject.toml` holds none.
+The workflow refuses a wheel whose version is not the tag's without its `kaizen-v` prefix, then lists the wheel and refuses it if it holds any test file or lacks any template.
 Its publish job takes the build from the first job and uploads it through PyPI's Trusted Publisher, from the protected `pypi` environment, so no PyPI token is stored anywhere.
 
-To check a build by hand before tagging, from `kaizen/`:
+To check a build by hand, from `kaizen/` with the tag checked out:
 
 ```sh
 uv build --no-sources --out-dir dist
-uv run python scripts/release_check.py version kaizen-vX.Y.Z
+uv run python scripts/release_check.py version kaizen-vX.Y.Z dist/kaizen_kit-X.Y.Z-py3-none-any.whl
 uv run python scripts/release_check.py wheel dist/kaizen_kit-X.Y.Z-py3-none-any.whl
 ```
 
 To release:
 
-1. Set the new version in `kaizen/pyproject.toml` and land it on `main` through a PR.
-2. Tag that commit `kaizen-vX.Y.Z` and push the tag.
-3. Approve the `pypi` environment's deployment when the run asks.
-4. Check the release by hand: `uvx --from kaizen-kit==X.Y.Z kaizen --help`.
+1. Tag a commit on `main` `kaizen-vX.Y.Z` and push the tag.
+2. Approve the `pypi` environment's deployment when the run asks.
+3. Check the release by hand: `uvx --from kaizen-kit==X.Y.Z kaizen --help`.
 
 ### Maintainer setup for the first release
 

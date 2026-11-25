@@ -1,15 +1,14 @@
 """release_check.py: the release workflow's checks, runnable by hand from kaizen/.
 
-    uv run python scripts/release_check.py version kaizen-v0.1.0
+    uv run python scripts/release_check.py version kaizen-v0.1.0 dist/kaizen_kit-0.1.0-*.whl
     uv run python scripts/release_check.py wheel dist/kaizen_kit-0.1.0-py3-none-any.whl
 
-`version` refuses a tag whose version differs from the one in pyproject.toml.
+`version` refuses a tag whose version, without its prefix, differs from the built wheel's.
 `wheel` lists the wheel, then refuses it if it holds any test file or lacks any template.
 Each prints what it found and exits 1 on a refusal, or 2 on a usage error.
 """
 
 import sys
-import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -18,18 +17,20 @@ TAG_PREFIX = "kaizen-v"
 TEMPLATES = KAIZEN_DIR / "src" / "kaizen" / "shared" / "templates"
 
 
-def package_version() -> str:
-    with open(KAIZEN_DIR / "pyproject.toml", "rb") as f:
-        version: str = tomllib.load(f)["project"]["version"]
-    return version
+def wheel_version(wheel_path: str) -> str:
+    """The version in the wheel's metadata, which the build worked out from the git tags."""
+    with zipfile.ZipFile(wheel_path) as wheel:
+        metadata = next(n for n in wheel.namelist() if n.endswith(".dist-info/METADATA"))
+        lines = wheel.read(metadata).decode().splitlines()
+    return next(line.removeprefix("Version: ") for line in lines if line.startswith("Version: "))
 
 
-def version_problems(tag: str) -> list[str]:
+def version_problems(tag: str, wheel_path: str) -> list[str]:
     if not tag.startswith(TAG_PREFIX):
         return [f"tag {tag!r} does not start with {TAG_PREFIX!r}"]
-    tagged, packaged = tag.removeprefix(TAG_PREFIX), package_version()
-    if tagged != packaged:
-        return [f"tag {tag!r} is version {tagged}, but kaizen/pyproject.toml says {packaged}"]
+    tagged, built = tag.removeprefix(TAG_PREFIX), wheel_version(wheel_path)
+    if tagged != built:
+        return [f"tag {tag!r} is version {tagged}, but the built wheel is {built}"]
     return []
 
 
@@ -65,20 +66,26 @@ def check_wheel(wheel_path: str) -> list[str]:
     return wheel_problems(names)
 
 
-CHECKS = {"version": version_problems, "wheel": check_wheel}
+def run_check(argv: list[str]) -> list[str] | None:
+    """The problems the check *argv* names finds, or ``None`` when *argv* names no check."""
+    match argv:
+        case ["version", tag, wheel]:
+            return version_problems(tag, wheel)
+        case ["wheel", wheel]:
+            return check_wheel(wheel)
+    return None
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2 or argv[0] not in CHECKS:
+    problems = run_check(argv)
+    if problems is None:
         print(__doc__, file=sys.stderr)
         return 2
-    check, target = argv
-    problems = CHECKS[check](target)
     for problem in problems:
         print(f"refused: {problem}", file=sys.stderr)
     if problems:
         return 1
-    print(f"{check} check passed: {target}")
+    print(f"{argv[0]} check passed: {' '.join(argv[1:])}")
     return 0
 
 

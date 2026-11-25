@@ -1,13 +1,10 @@
-"""Tests for the running version: read from the package metadata, set only in pyproject.toml."""
+"""Tests for the running version: read from the package metadata, which the build works out from
+the ``kaizen-v*`` git tags (``test_version_scheme_git.py`` covers that)."""
 
-import tomllib
-from pathlib import Path
+from importlib.metadata import version
 
 import kaizen
 
 
-def test_the_running_version_is_the_one_pyproject_declares():
-    pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
-    declared = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
-
-    assert kaizen.__version__ == declared
+def test_the_running_version_is_the_installed_packages():
+    assert kaizen.__version__ == version("kaizen-kit")

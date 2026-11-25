@@ -52,17 +52,20 @@ class Version(NamedTuple):
         return f"{self.major}.{self.minor}.{self.patch}"
 
 
-def recordable_version(running: str, command: str) -> Version:
+def recordable_version(running: str, command: str, *, alternative: str | None = None) -> Version:
     """The *running* version, which *command* (``home init`` or ``home sync``) records as a home's
     synced version; refuses one that is not ``X.Y.Z``, such as a local build's, which no home's CI
-    could install."""
+    could install, naming the *alternative* fix when there is one."""
     version = Version.parse(running)
     if version is None:
+        fix = (
+            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run"
+            f" `kaizen {command}` again"
+        )
         raise RefusalError(
             f"{command}: kaizen's version {running} is not X.Y.Z, so it can't be recorded"
             " as the home's synced version",
-            "install a release of kaizen (`uv tool install --force kaizen-kit`), then run"
-            f" `kaizen {command}` again",
+            fix if alternative is None else f"{fix}; or, {alternative}",
         )
     return version
 
@@ -98,10 +101,14 @@ def check_synced_version(
 
 def newer_release(running: str, latest: LatestRelease) -> str | None:
     """The line naming the latest release and the upgrade command when it is newer than
-    *running*; ``None`` otherwise, or when the lookup fails."""
+    *running*; ``None`` otherwise, or when the lookup fails. Makes no lookup for a *running*
+    version that is not ``X.Y.Z``, since none can be compared with it."""
+    ours = Version.parse(running)
+    if ours is None:
+        return None
     found = latest()
-    ours, theirs = Version.parse(running), None if found is None else Version.parse(found)
-    if ours is None or theirs is None or theirs <= ours:
+    theirs = None if found is None else Version.parse(found)
+    if theirs is None or theirs <= ours:
         return None
     return f"kaizen {found} is out (this is {running}): run `{UPGRADE}`"
 

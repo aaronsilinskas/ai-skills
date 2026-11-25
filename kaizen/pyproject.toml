@@ -1,6 +1,6 @@
 [project]
 name = "kaizen-kit"
-version = "0.1.0"
+dynamic = ["version"]
 description = "The deterministic parts of agent workflows: tickets, specs, the leak check and synced files for every project a home registers"
 readme = "README.md"
 license = "MIT"
@@ -12,13 +12,36 @@ kaizen = "kaizen.shared.cli:main"
 kz = "kaizen.shared.cli:main"
 
 [build-system]
-requires = ["uv_build>=0.9,<0.14"]
-build-backend = "uv_build"
+requires = ["hatchling>=1.27,<2", "hatch-vcs>=0.4,<1"]
+build-backend = "hatchling.build"
 
-[tool.uv.build-backend]
-module-name = "kaizen"
+# The version comes from the latest kaizen-v* tag: a tagged commit builds as X.Y.Z, and any other
+# as a dev version past it, such as 0.1.1.dev3+g<sha>. The repo root is the VCS root, since the
+# package sits in kaizen/.
+[tool.hatch.version]
+source = "vcs"
+raw-options = { root = "..", tag_regex = '^kaizen-v(?P<version>\d+\.\d+\.\d+)$', git_describe_command = [
+    "git",
+    "describe",
+    "--dirty",
+    "--tags",
+    "--long",
+    "--match",
+    "kaizen-v*",
+] }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kaizen"]
 # The tests sit inside the package for the import contracts; the wheel ships without them.
-wheel-exclude = ["kaizen/tests"]
+exclude = ["src/kaizen/tests"]
+
+# The sdist holds only what a build needs, not the caches the check leaves in kaizen/.
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "README.md", "pyproject.toml"]
+
+# Reinstall the editable package when the commit or tags change, so its version stays current.
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 
 [dependency-groups]
 dev = [

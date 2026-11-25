@@ -9,13 +9,16 @@ Each command's `--help` says what it checks and does; this map holds only what `
 - `kaizen/`: the package's own folder, with a `src` layout, its own `pyproject.toml` and lock file.
   The distribution is `kaizen-kit`, the module `kaizen`, and both console scripts, `kaizen` and `kz`, run the same entry point.
 - `kaizen/src/kaizen/`: the module: its shared code (`shared/`), its command groups (`ticket/`, `spec/`, `project/`, `pr/`, `issue/`, `home/`, `hook/`) and their tests (`tests/`).
-- `kaizen/src/kaizen/__init__.py`: `__version__`, the running version, read from the package metadata, so the version is set only in `pyproject.toml`.
+- `kaizen/src/kaizen/__init__.py`: `__version__`, the running version, read from the package metadata.
+  The build works it out from the latest `kaizen-v*` git tag through `hatch-vcs`, a build requirement only: `X.Y.Z` at a tag, a dev version past one, so a local build is never taken for a release.
 - `kaizen/src/kaizen/tests/`: the pytest tests, inside the package so the import contracts cover them, and left out of the built wheel.
   git and gh are always replaced by the recording runner in `ticket_shell.py`, except in the `*_git.py` tests, which run real git in a temporary repo and never touch GitHub.
   Fixtures use generic homes, owners and paths, and assume no notes folder.
 - `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter and pytest, all through `uv`.
 - `kaizen/scripts/release_check.py`: the release workflow's version and wheel checks, also runnable by hand.
-  Its tests sit with the package's, in `kaizen/src/kaizen/tests/test_release_check.py`, which loads it by path.
+  Its tests sit with the package's, in `kaizen/src/kaizen/tests/test_release_check.py`.
+  `test_version_scheme_git.py` builds real wheels in a temporary repo to check the version the tags give, so it also needs `uv`, which fetches the build requirements unless its cache holds them.
+  `tests/release_script.py` loads the script for both.
   The workflow itself is `.github/workflows/release.yml` at the repo root, run only by `kaizen-v*` tags.
 
 Paths below are relative to `kaizen/src/kaizen/`.
@@ -92,6 +95,7 @@ One module per command; each group's `--help` lists them.
   Its output and files name no home but the new one (ADR 0002), and the marker is written last, so a failure partway leaves none and a rerun finishes the rest.
   `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
   Its changes are worked out in full, every refusal included, before its first write, from the same `render` that `home init` writes, so `init`, `sync` and `--check` never render differently.
+  A plain `sync` refuses a local build, whose version is not `X.Y.Z`, since it would record that version; `sync --dry-run --allow-dev` lets one preview instead, rendering for the home's recorded synced version and only printing.
   `sync` must refuse a home holding both markers, since writing one leaves them different, which every later command refuses; read-only commands, `--check` among them, pass such a home with a warning.
   It never touches the home overlay, the hook config or any other file the home owns.
   `home init` writes the hook config only when the home has none, and keeps an existing one with a to-do when it lacks a hook entry.

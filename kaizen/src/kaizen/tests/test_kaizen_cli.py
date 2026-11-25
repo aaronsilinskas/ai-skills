@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 
+import kaizen
 from kaizen.shared.cli import GROUPS, main
+from kaizen.shared.version import Version
 from kaizen.tests.ticket_shell import (
     RELAY,
     SITE,
@@ -376,6 +378,14 @@ sys.exit(main(["spec", "start", "25"], run=shell))
 """
 
 
+def _subprocess_home(tmp_path: Path) -> Path:
+    """The fixture home for a test that runs kaizen in a subprocess, which the tests' fixture
+    can't reach, so it runs as the checkout's own version: the home records that version when
+    it is a release, and none otherwise, so no comparison refuses it."""
+    running = kaizen.__version__ if Version.parse(kaizen.__version__) else None
+    return cli_home(tmp_path, synced_version=running)
+
+
 def test_piped_kaizen_output_ends_with_the_error_after_every_progress_line(tmp_path):
     # Run from a fixture home, with the repo on the import path and neither KAIZEN_HOME nor
     # MW_HOME, so the CLI's defaults (the cwd and the process environment) find that home.
@@ -383,7 +393,7 @@ def test_piped_kaizen_output_ends_with_the_error_after_every_progress_line(tmp_p
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
     result = subprocess.run(
         [sys.executable, "-c", _PIPED_FAILURE],
-        cwd=cli_home(tmp_path),
+        cwd=_subprocess_home(tmp_path),
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -583,7 +593,7 @@ def _run_with_closed_pipe(tmp_path, *, stderr_too: bool) -> subprocess.Completed
     try:
         return subprocess.run(
             [sys.executable, "-c", _SPEC_START],
-            cwd=cli_home(tmp_path),
+            cwd=_subprocess_home(tmp_path),
             env=env,
             stdout=writer,
             stderr=writer if stderr_too else subprocess.PIPE,

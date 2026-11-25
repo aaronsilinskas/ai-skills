@@ -5,7 +5,6 @@ import subprocess
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
-import kaizen
 from kaizen.shared.home import Home
 
 Reply = str | BaseException | Callable[[list[str]], str]
@@ -48,6 +47,11 @@ def deny(projects: Path, name: str = "proto", denied: str = DENIED) -> None:
     page.write_text(page.read_text().replace("---\n", f"---\nleak_deny: {denied}\n", 1))
 
 
+RELEASE = "1.0.0"
+"""The release every test runs kaizen as unless it passes its own version, set by an autouse
+fixture in ``conftest.py``, since a checkout's own version is a dev one past its last tag."""
+
+
 def home_for(projects: Path) -> Home:
     """The home whose registry is *projects* and whose root is its parent, for tests that call a
     command directly."""
@@ -55,20 +59,16 @@ def home_for(projects: Path) -> Home:
     return Home(root=root, registry=projects, leak_own=LEAK_OWN)
 
 
-def write_marker(
-    root: Path, settings: str = "", synced_version: str | None = kaizen.__version__
-) -> None:
+def write_marker(root: Path, settings: str = "", synced_version: str | None = RELEASE) -> None:
     """Writes the marker of a fixture home at *root*: its registry folder ``projects``, its
-    *synced_version* (none when ``None``; by default the running version, so no command warns),
-    the *settings* (marker lines such as home settings, tables among them), then its leak
-    table."""
+    *synced_version* (none when ``None``; by default ``RELEASE``, the version the tests run as,
+    so no command warns), the *settings* (marker lines such as home settings, tables among
+    them), then its leak table."""
     version = "" if synced_version is None else f'synced_version = "{synced_version}"\n'
     (root / "kaizen.toml").write_text(f'registry = "projects"\n{version}{settings}{_LEAK}')
 
 
-def cli_home(
-    tmp_path: Path, settings: str = "", synced_version: str | None = kaizen.__version__
-) -> Path:
+def cli_home(tmp_path: Path, settings: str = "", synced_version: str | None = RELEASE) -> Path:
     """The root of a fixture home under *tmp_path*, for tests that run the CLI from it: its registry
     holds ``relay``, a private project at ``RELAY`` whose GitHub repo is ``acme/relay``, and
     ``site``, a public one at ``SITE``. Its marker holds *settings* and *synced_version*, as
