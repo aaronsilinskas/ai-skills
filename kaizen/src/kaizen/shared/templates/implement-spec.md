@@ -7,6 +7,9 @@ Run each as `docs/agents/implement.md` says to run `kaizen`; the integration bra
 
 Implementers build, test and commit inside their ticket worktree, and nothing more: they never push, open a PR or merge. The orchestrator runs every `kaizen spec` command.
 
+An orchestrator running as a subagent keeps its turn open while any implementer runs, and waits on their handbacks with Monitor.
+Ending its turn forces its own handback, so it would hand back before any ticket is integrated.
+
 ## The main checkout is not the integration base
 
 The main checkout may hold unrelated uncommitted work, and its default branch may lag `origin` until a `finish` command fast-forwards it after a merge; no other `kaizen` command changes it.
@@ -19,6 +22,9 @@ Ticket worktrees share refs, and each `kaizen spec integrate` fetches, so `origi
 ```sh
 kaizen spec start <N>
 ```
+
+It pushes `spec-<N>` to `origin` at the default branch's current tip, adding no commit, so a push gate can approve that push in advance.
+`kaizen ticket start --spec` refuses until `spec-<N>` exists on `origin`, so no implementer can start before this push lands.
 
 There is no draft PR: `kaizen spec ship` opens the PR, ready for review, once the review is done.
 
@@ -42,6 +48,9 @@ Each implementer brief also:
 - says to read repo files in its ticket worktree, as **The main checkout is not the integration base** above explains;
 - allows the `--dry-run` form of any `kaizen` command, which runs only queries, and any dry-run recipe the home overlay gives.
 
+A ticket that adds a check or gate must pass it across the whole spec branch (`origin/<default>...spec-<N>`), since `integrate` runs it there, not just on the ticket's diff.
+Run that ticket first, or put its rule in the brief of every ticket integrated before it.
+
 ## Work the frontier (skill steps 4 and 6)
 
 Work the frontier with `kaizen spec status <N>`, run from the project's root.
@@ -62,7 +71,7 @@ kaizen spec integrate <worktree>
 A refusal names its fix; route the work by who can do it, then rerun `integrate`:
 
 - **Conflict**: send the named files back to the ticket's own implementer, still reachable with `SendMessage`, since it knows the ticket's intent.
-  It follows the fix inside its ticket worktree, commits and reports done.
+  It follows the fix inside its ticket worktree, commits and reports done in its handback: a reply sent with `SendMessage` leaves your wait on that handback running.
   Only when that implementer is gone, hand the files and the worktree path to a fresh merger subagent instead.
 - **Failing check**, **uncommitted changes** or **no commits ahead**: send the ticket back to its own implementer (a fresh one when it is gone) to fix and commit in the same worktree.
 - **Push race**: another ticket was integrated first; just rerun.
