@@ -9,10 +9,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.branch import IntegrationBranch, integrated_issues
+from kaizen.shared.branch import IntegrationBranch, fetch_branch, integrated_issues
 from kaizen.shared.common import RefusalError, Runner, run_or_refuse
 from kaizen.shared.issue_graph import IssueRef, LinkedIssue, blockers_of
-from kaizen.shared.registry import fetch_branch, home_repos
+from kaizen.shared.registry import home_repos
 from kaizen.shared.worktree import list_worktrees
 
 

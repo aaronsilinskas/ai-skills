@@ -8,7 +8,7 @@ from kaizen.shared.branch import is_ancestor, origin_has_branch
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, branch_prs
-from kaizen.shared.registry import (
+from kaizen.shared.ticket_worktree import (
     TicketWorktree,
     commits_ahead,
     refuse_spec_ticket,

@@ -15,8 +15,8 @@ from kaizen.shared.branch import integration_branch, integration_merge_message
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, push_rejected
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
-from kaizen.shared.registry import (
-    NO_CHECK,
+from kaizen.shared.registry import NO_CHECK
+from kaizen.shared.ticket_worktree import (
     TicketWorktree,
     local_base,
     refuse_nothing_ahead,

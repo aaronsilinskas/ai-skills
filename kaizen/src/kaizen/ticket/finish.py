@@ -15,7 +15,7 @@ from kaizen.shared.branch import (
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, merged_pr
-from kaizen.shared.registry import (
+from kaizen.shared.ticket_worktree import (
     TicketWorktree,
     refuse_spec_ticket,
     refuse_uncommitted,
