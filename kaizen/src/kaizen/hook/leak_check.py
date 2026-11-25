@@ -5,6 +5,7 @@ import argparse
 
 from kaizen.hook.common import add_files_argument
 from kaizen.project.leak_check import leak_check_project
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Subparsers
 from kaizen.shared.home import Home
 
@@ -21,7 +22,7 @@ def add_parser(subparsers: Subparsers) -> None:
         ),
     )
     add_files_argument(parser)
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

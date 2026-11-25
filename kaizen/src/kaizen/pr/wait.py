@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.ticket_worktree import resolve_ticket_worktree
@@ -201,7 +202,7 @@ def add_parser(subparsers: Subparsers) -> None:
         default=DEFAULT_INTERVAL,
         help=f"seconds between polls (default: {DEFAULT_INTERVAL})",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:

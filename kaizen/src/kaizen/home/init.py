@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from kaizen.shared.command_records import HomelessCommand
 from kaizen.shared.common import (
     RefusalError,
     Runner,
@@ -507,7 +508,7 @@ def add_parser(subparsers: Subparsers) -> None:
         action="store_true",
         help="run the checks, print them and every file in full, and write nothing",
     )
-    parser.set_defaults(handler=_command, needs_home=False)
+    parser.set_defaults(command=HomelessCommand(_command))
 
 
 def _command(

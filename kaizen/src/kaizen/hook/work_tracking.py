@@ -7,6 +7,7 @@ from collections.abc import Iterator
 
 from kaizen.hook.comments import LANGUAGES, Comment, comment_findings
 from kaizen.hook.common import add_files_argument, refuse
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Subparsers
 from kaizen.shared.home import Home
 
@@ -40,7 +41,7 @@ def add_parser(subparsers: Subparsers) -> None:
         ),
     )
     add_files_argument(parser)
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

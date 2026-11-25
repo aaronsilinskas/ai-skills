@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.labels import Label, repo_labels
@@ -107,7 +108,7 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="list the labels only and print the plan"
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:

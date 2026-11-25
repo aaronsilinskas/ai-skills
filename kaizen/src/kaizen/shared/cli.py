@@ -1,25 +1,11 @@
-"""``kaizen``: every command a home offers, grouped noun then verb (``kaizen ticket start``).
+"""kaizen runs the fixed steps of agent workflows the same way every time: tickets, specs,
+issues, pull requests, the leak check and the pre-commit hooks.
 
-``project add`` registers a project with the home: its registry page, its README link and its
-settings entry.
-``project leak-check`` runs the leak check before a push no other command makes, and
-``project labels`` creates the workflow labels the projects' GitHub repos lack;
-``spec publish`` and ``ticket publish`` are the publish steps of the Spec workflow;
-``spec start``, ``spec integrate``, ``spec ship`` and ``spec finish`` run a spec's integration
-branch, ``ticket start``, ``ship`` and ``finish`` a ticket's git lifecycle, and
-``ticket abandon`` drops an unmerged ticket, with fixed, checked git and gh steps.
-``ticket diff`` prints a ticket's changes against its base, and ``ticket compare`` runs a
-command on a ticket and its base with a verdict.
-``spec status`` prints a spec's tickets and its frontier.
-``issue show`` prints one issue whole, ``issue link`` adds its parent and blocked-by edges,
-and ``issue publish`` creates one issue after the leak check.
-The ``hook`` commands are the pre-commit hooks a home's or project's config runs.
-``pr wait`` blocks until a PR's checks finish and exits by their outcome.
-``home init`` makes the git repo it runs in a new home, and is the one command that needs none;
-``home sync`` brings a home's synced files back in step with kaizen's templates.
-Each command that changes anything checks its preconditions first and has a ``--dry-run``.
-Run it inside a **home** (the tree under a directory holding ``kaizen.toml``), or from one of its
-projects' roots with ``KAIZEN_HOME`` set to the home's root; the home's docs say how to install it.
+Run it inside a home (the folder holding kaizen.toml, or any folder below it), or from one of
+the home's projects with KAIZEN_HOME set to the home's root. kaizen home init makes a new home.
+Every command that changes anything checks first, and has a --dry-run that only shows the steps.
+Every command ends its output with the line "kaizen: exit <code>", so
+kaizen ... 2>&1 | tail -n 1 shows how it went.
 """
 
 import argparse
@@ -30,7 +16,7 @@ import sys
 import traceback
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TextIO, cast
+from typing import TextIO, assert_never, cast
 
 from kaizen import __version__
 from kaizen.home import init as home_init
@@ -44,8 +30,14 @@ from kaizen.pr import wait
 from kaizen.project import add as project_add
 from kaizen.project import labels as project_labels
 from kaizen.project import leak_check as project_leak_check
+from kaizen.shared.command_records import (
+    CommandRecord,
+    HomeCommand,
+    HomelessCommand,
+    InstallCommand,
+)
 from kaizen.shared.common import RefusalError, Runner, StepFailedError, run_subprocess
-from kaizen.shared.home import MARKER, find_home
+from kaizen.shared.home import MARKER, Home, find_home
 from kaizen.shared.version import Install, LatestRelease, check_synced_version, latest_on_pypi
 from kaizen.spec import finish as spec_finish
 from kaizen.spec import integrate
@@ -56,16 +48,6 @@ from kaizen.spec import status as spec_status
 from kaizen.ticket import abandon, compare, diff, finish, ship, start
 from kaizen.ticket import publish as ticket_publish
 
-# Each command module adds its own subparser and sets ``handler`` (see ``start.add_parser``),
-# which is called with the parsed arguments, the runner and the ``Home``. A command that sets
-# ``needs_home=False`` as well (only ``home init``, which makes the home) is called with the
-# start directory, the environment and the ``Install`` instead, and no home is looked for; one
-# that sets ``needs_install=True`` (only ``home sync``) is also passed the ``Install``.
-# Every command given a ``Home`` runs after the synced version check. ``home sync`` sets
-# ``records_version``, since it records the running version as the home's synced version, except
-# with ``--check``, which records nothing.
-# A handler that returns ``None`` has succeeded, and one that returns an int exits with it;
-# it fails by raising, which ``main`` reports.
 GROUPS = {
     "home": ("set up a new home, or sync its synced files", (home_init, home_sync)),
     "hook": (
@@ -143,21 +125,19 @@ def _run(
     start = cwd or Path.cwd()
     environ = os.environ if env is None else env
     try:
-        if not getattr(args, "needs_home", True):
-            code = args.handler(args, run, start, environ, install) or 0
-        else:
-            home = find_home(start, environ)
-            check_synced_version(
-                install.version,
-                home.synced_version,
-                MARKER,
-                warn_on_stderr,
-                syncing=getattr(args, "records_version", False) and not args.check,
-            )
-            if getattr(args, "needs_install", False):
-                code = args.handler(args, run, home, install) or 0
-            else:
-                code = args.handler(args, run, home) or 0
+        command: CommandRecord = args.command
+        match command:
+            case HomelessCommand(handler):
+                returned = handler(args, run, start, environ, install)
+            case InstallCommand(handler, records_version):
+                home = _checked_home(start, environ, install, syncing=records_version(args))
+                returned = handler(args, run, home, install)
+            case HomeCommand(handler):
+                home = _checked_home(start, environ, install, syncing=False)
+                returned = handler(args, run, home)
+            case _:
+                assert_never(command)
+        code = returned or 0
         outcome = ""
     except RefusalError as exc:
         print(f"refused: {exc}", file=sys.stderr)
@@ -173,6 +153,18 @@ def _run(
     # though the shell reports tail's exit status.
     print(f"kaizen: exit {code}{outcome}", file=sys.stderr)
     return code
+
+
+def _checked_home(
+    start: Path, environ: Mapping[str, str], install: Install, *, syncing: bool
+) -> Home:
+    """The home found from *start*, once the synced version check passes; *syncing* says the run
+    records the running version, so the check only refuses an older install."""
+    home = find_home(start, environ)
+    check_synced_version(
+        install.version, home.synced_version, MARKER, warn_on_stderr, syncing=syncing
+    )
+    return home
 
 
 def warn_on_stderr(line: str) -> None:

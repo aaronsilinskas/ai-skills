@@ -10,6 +10,7 @@ from kaizen.shared.branch import (
     integration_branch,
     remote_default_branch,
 )
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
@@ -111,7 +112,7 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.add_argument("--title", required=True, help="the PR title (names the change)")
     parser.add_argument("--body-file", type=Path, required=True, help="a file holding the PR body")
     parser.add_argument("--dry-run", action="store_true", help="run only queries; print the plan")
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

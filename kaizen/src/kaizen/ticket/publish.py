@@ -49,6 +49,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from kaizen.shared.branch import domain_docs_branch
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
@@ -293,7 +294,7 @@ def add_parser(subparsers: Subparsers) -> None:
         default=900,
         help="seconds to wait for the spec's domain-docs PR to merge (default 900)",
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def check_text(tickets: list[Ticket], project: Project, home: Home) -> None:

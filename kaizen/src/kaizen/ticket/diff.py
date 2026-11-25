@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal, get_args
 
 from kaizen.shared.branch import is_ancestor
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.ticket_worktree import fetch_base, resolve_ticket_worktree, uncommitted
@@ -97,7 +98,7 @@ def add_parser(subparsers: Subparsers) -> None:
             const=section,
             help=f"print only {_SECTION_HELP[section]}",
         )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 _SECTION_HELP: dict[Section, str] = {

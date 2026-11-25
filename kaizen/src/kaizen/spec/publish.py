@@ -36,6 +36,7 @@ import tempfile
 from pathlib import Path
 
 from kaizen.shared.branch import domain_docs_branch
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check, leak_check_text
@@ -256,7 +257,7 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="check preconditions and print the plan"
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

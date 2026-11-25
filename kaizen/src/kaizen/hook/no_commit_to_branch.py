@@ -6,6 +6,7 @@ import subprocess
 
 from kaizen.hook.common import add_files_argument
 from kaizen.shared.branch import default_branch
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Subparsers
 from kaizen.shared.home import Home
 
@@ -42,7 +43,7 @@ def add_parser(subparsers: Subparsers) -> None:
         "(default: the project's default branch)",
     )
     add_files_argument(parser)
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

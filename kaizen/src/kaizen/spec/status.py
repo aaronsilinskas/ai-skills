@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from kaizen.shared.branch import find_integration_branch, integration_branch, parse_ticket_branch
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import IssueRef, LinkedIssue
@@ -274,7 +275,7 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.add_argument(
         "--json", action="store_true", help="print the same fields as JSON, with stable names"
     )
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:

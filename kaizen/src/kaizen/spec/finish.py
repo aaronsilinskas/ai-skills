@@ -11,6 +11,7 @@ from kaizen.shared.branch import (
     origin_has_branch,
     prune_tracking_ref,
 )
+from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.pr import PullRequest, merged_pr
@@ -78,7 +79,7 @@ def add_parser(subparsers: Subparsers) -> None:
     )
     parser.add_argument("spec", type=int, help="the spec's issue number")
     parser.add_argument("--dry-run", action="store_true", help="run only queries; print the plan")
-    parser.set_defaults(handler=_command)
+    parser.set_defaults(command=HomeCommand(_command))
 
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
