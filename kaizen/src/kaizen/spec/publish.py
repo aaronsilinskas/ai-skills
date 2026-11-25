@@ -7,9 +7,11 @@ home's docs), in order:
    body is everything after it.
 2. Delete the local spec file.
 3. Close the source ``idea`` issue (``--idea``) as superseded by the spec.
-4. If ``GLOSSARY.md`` or ``docs/adr/`` has changes, commit only those on a new
-   ``spec-<N>-domain-docs`` branch, push, open a PR referencing the spec, turn on
-   auto-merge, switch back to ``main``, and delete the local branch.
+4. If the domain docs have changes, commit only those on a new ``spec-<N>-domain-docs``
+   branch, push, open a PR referencing the spec, turn on auto-merge, switch back to
+   ``main``, and delete the local branch. The domain docs are the root ``GLOSSARY.md`` and
+   ``docs/adr/``, plus, when a root ``GLOSSARY-MAP.md`` lists contexts, each context's
+   ``GLOSSARY.md`` that the map links to and the ``docs/adr/`` beside it.
 
 Every precondition is checked before anything leaves the machine: on ``main``,
 nothing staged, the spec has a title, the checkout is a registered project's main
@@ -28,6 +30,8 @@ Run from the project's root::
 """
 
 import argparse
+import posixpath
+import re
 import tempfile
 from pathlib import Path
 
@@ -37,7 +41,12 @@ from kaizen.shared.leak import leak_check, leak_check_text
 from kaizen.shared.pr import enable_auto_merge, with_footer
 from kaizen.shared.registry import Project, resolve_current
 
-DOMAIN_DOC_PATHS = ("GLOSSARY.md", "docs/adr")
+GLOSSARY = "GLOSSARY.md"
+ADR_DIR = "docs/adr"
+DOMAIN_DOC_PATHS = (GLOSSARY, ADR_DIR)
+GLOSSARY_MAP = "GLOSSARY-MAP.md"
+_MAP_LINK = re.compile(r"\]\(\s*(?:<([^>]*)>|([^)\s]*))")
+"""A Markdown link's target, bare or in angle brackets, before any title."""
 OUTSIDE_CHECKOUT_FIX = "run from the project's root, inside its git checkout"
 
 
@@ -55,10 +64,51 @@ def split_spec(text: str) -> tuple[str, str]:
     raise RefusalError("the spec has no title", "start the spec with a non-blank '# ' title line")
 
 
-def changed_domain_docs(run: Runner) -> list[str]:
-    """Modified or untracked paths under the domain docs (glossary, ADRs)."""
+def domain_doc_paths(root: Path) -> list[str]:
+    """The root glossary and ADRs, plus each context's when *root* has a ``GLOSSARY-MAP.md``:
+    the ``GLOSSARY.md`` an entry of its ``## Contexts`` section links to, and the ``docs/adr``
+    beside it. A map that can't be read, or names no context glossary, adds nothing."""
+    paths = list(DOMAIN_DOC_PATHS)
+    try:
+        glossary_map = (root / GLOSSARY_MAP).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return paths
+    for glossary in filter(
+        None, map(_context_glossary, _MAP_LINK.finditer(_contexts(glossary_map)))
+    ):
+        context = posixpath.dirname(glossary)
+        paths += [p for p in (glossary, posixpath.join(context, ADR_DIR)) if p not in paths]
+    return paths
+
+
+def _contexts(glossary_map: str) -> str:
+    """The text of the map's ``## Contexts`` section; empty when it has none."""
+    section: list[str] = []
+    inside = False
+    for line in glossary_map.splitlines():
+        if line.startswith("## "):
+            inside = line[3:].strip() == "Contexts"
+        elif inside:
+            section.append(line)
+    return "\n".join(section)
+
+
+def _context_glossary(link: re.Match[str]) -> str | None:
+    """The checkout-relative ``GLOSSARY.md`` path a map link targets; ``None`` for any other
+    target, such as another file, a URL or a path outside the checkout."""
+    target = (link.group(1) or link.group(2)).split("#", 1)[0]
+    glossary = posixpath.normpath(target)
+    outside = glossary.startswith("/") or glossary.split("/", 1)[0] == ".."
+    if ":" in target or outside or posixpath.basename(glossary) != GLOSSARY:
+        return None
+    return glossary
+
+
+def changed_domain_docs(root: Path, run: Runner) -> list[str]:
+    """Modified or untracked paths under the domain docs (glossaries, ADRs) of the checkout at
+    *root*."""
     out = run_or_refuse(
-        ["git", "status", "--porcelain", "--untracked-files=all", "--", *DOMAIN_DOC_PATHS],
+        ["git", "status", "--porcelain", "--untracked-files=all", "--", *domain_doc_paths(root)],
         run,
         "could not read the domain docs' git status",
         OUTSIDE_CHECKOUT_FIX,
@@ -111,7 +161,7 @@ def prepare(spec: Path, run: Runner, home: Home) -> tuple[str, str, list[str], P
     check_preconditions(run)
     project = resolve_current(run, home.registry)
     check_text(title, body, project, home)
-    docs = changed_domain_docs(run)
+    docs = changed_domain_docs(Path(project.path), run)
     check_domain_docs(docs, project, home)
     return title, body, docs, project
 
@@ -168,7 +218,7 @@ def publish(
         say(f"closed idea #{idea} as superseded")
 
     if not docs:
-        say("no GLOSSARY.md or docs/adr/ changes: no PR opened")
+        say("no glossary or ADR changes: no PR opened")
         return number
 
     branch = f"spec-{number}-domain-docs"

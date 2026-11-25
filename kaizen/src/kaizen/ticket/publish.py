@@ -13,11 +13,10 @@ blocked-by edges. Don't rerun after such a failure: a rerun creates every ticket
 Afterwards every created issue is read back and printed as a table, so a wrong title or
 edge shows up immediately.
 
-Tickets cite the spec's ``GLOSSARY.md`` / ``docs/adr/`` entries, so before creating
-anything the command waits for the spec's domain-docs PR (branch
-``spec-<parent>-domain-docs``, opened by ``kaizen spec publish``) to merge. A spec with no
-such PR is not waited for; one closed unmerged, or still open at ``--wait-timeout``,
-stops the publish.
+Tickets cite the spec's glossary and ADR entries, so before creating anything the command
+waits for the spec's domain-docs PR (branch ``spec-<parent>-domain-docs``, opened by
+``kaizen spec publish``) to merge. A spec with no such PR is not waited for; one closed
+unmerged, or still open at ``--wait-timeout``, stops the publish.
 
 Manifest shape (``body_file`` paths are relative to the manifest)::
 
