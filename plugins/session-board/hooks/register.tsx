@@ -147,7 +147,6 @@ function isLive(r: SessionRecord, at: number): boolean {
   return r.status !== 'ended' && at - r.beat < STALE_MS
 }
 
-// ---------------------------------------------------------------------------
 // This session's own record. Module variables start over on a reload, and
 // session.start fills them again.
 
@@ -323,9 +322,6 @@ const fallThrough = <E, R>(_$: unknown, e: E, next: (e: E) => R): R => next(e)
 export const register: Register = (on, options) => {
   notifyMode = options.notify === 'attention' || options.notify === 'none' ? options.notify : 'all'
 
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     const home = await $.env.get('HOME')
@@ -400,9 +396,6 @@ export const register: Register = (on, options) => {
     }
     return result
   }).catch(fallThrough)
-
-  // ---------------------------------------------------------------------------
-  // Status transitions
 
   on('prompt.submit', async ($, e, next) => {
     // A task notification, trigger or peer message is not what the session is for.
@@ -480,7 +473,6 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // ---------------------------------------------------------------------------
   // The band above the prompt: other sessions only
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -529,7 +521,6 @@ export const register: Register = (on, options) => {
     )
   })
 
-  // ---------------------------------------------------------------------------
   // The /sessions pane: every live session, this one included
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
