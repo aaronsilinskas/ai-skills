@@ -1,6 +1,6 @@
 ---
 name: air-quality-data
-description: "Fetch live air quality (AQI, PM2.5, PM10, pollutants) for any place, including non-US cities, by running scripts against EPA AirNow, PurpleAir, IQAir and OpenAQ. Use when the user asks about or compares air quality somewhere, combines sources, or wants sensor readings corrected."
+description: "Fetch current, forecast or historical air quality (AQI, PM2.5, PM10) for any place, including non-US cities, from EPA AirNow, PurpleAir, IQAir or OpenAQ. Use when the user asks about air quality somewhere or whether it's safe outside, compares places, combines sources, or wants sensor readings corrected."
 argument-hint: "location or query (e.g. 'AQI in Tokyo' or a zip code)"
 ---
 
