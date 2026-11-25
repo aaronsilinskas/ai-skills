@@ -127,6 +127,6 @@ One module per command; each group's `--help` lists them.
   Commands that only query (`project leak-check`, the `hook` commands, `pr wait`, `issue show`, `spec status`, `ticket diff`) have no `--dry-run`.
 - Every command prints one line per completed step, so a failure partway through shows what is already done.
 - No command uses stored state: branches, worktrees and GitHub are read each time.
-- The import contracts in `pyproject.toml`: `shared/` imports no command group (the CLI excepted), and `spec/` imports nothing of `ticket/`.
+- The import contracts in `pyproject.toml`: `shared/` imports no command group (the CLI excepted), `spec/` imports nothing of `ticket/`, and `shared/registry.py` imports nothing of `shared/ticket_worktree.py`.
 - Registry frontmatter is flat `key: value` lines (strings, `true`/`false`), parsed without a YAML dependency.
 - Homes never reference each other (ADR 0002).
