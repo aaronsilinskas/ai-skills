@@ -1,5 +1,7 @@
 """``kaizen``: every command a home offers, grouped noun then verb (``kaizen ticket start``).
 
+``project add`` registers a project with the home: its registry page, its README link and its
+settings entry.
 ``project leak-check`` runs the leak check before a push no other command makes, and
 ``project labels`` creates the workflow labels the projects' GitHub repos lack;
 ``spec publish`` and ``ticket publish`` are the publish steps of the Spec workflow;
@@ -39,6 +41,7 @@ from kaizen.issue import link as issue_link
 from kaizen.issue import publish as issue_publish
 from kaizen.issue import show as issue_show
 from kaizen.pr import wait
+from kaizen.project import add as project_add
 from kaizen.project import labels as project_labels
 from kaizen.project import leak_check as project_leak_check
 from kaizen.shared.common import RefusalError, Runner, StepFailedError, run_subprocess
@@ -71,8 +74,9 @@ GROUPS = {
     ),
     "issue": ("read, link and publish issues", (issue_show, issue_link, issue_publish)),
     "project": (
-        "check the current project, or create the workflow labels the projects' repos lack",
-        (project_leak_check, project_labels),
+        "register a project, check the current one, or create the workflow labels the"
+        " projects' repos lack",
+        (project_add, project_leak_check, project_labels),
     ),
     "pr": ("wait on a pull request's checks", (wait,)),
     "spec": (

@@ -410,9 +410,9 @@ def _checklist(root: str, name: str) -> list[str]:
     *name*."""
     return [
         f"restart the session in {root}, so {ENV_VAR} in {SETTINGS} loads",
-        f"add a page to {REGISTRY}/ for each project the home's sessions work on, and list it"
-        f" in {REGISTRY}/README.md",
-        f"add each project's directory to permissions.additionalDirectories in {SETTINGS}",
+        "run `kaizen project add <name> <path>` for each project the home's sessions work on:"
+        f" it writes the project's page in {REGISTRY}/, lists it in {REGISTRY}/README.md and"
+        f" adds its directory to permissions.additionalDirectories in {SETTINGS}",
         f"settle the to-do fields on {REGISTRY}/{name}.md: public, check, code_paths",
         "run `kaizen project leak-check` again after the first commit, since it searches committed"
         " files only",

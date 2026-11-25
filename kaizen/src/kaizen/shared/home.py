@@ -274,6 +274,22 @@ def settings_text(data: dict[str, object]) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
+def add_permission_entries(data: dict[str, object], key: str, entries: list[str]) -> bool:
+    """Adds each of *entries* missing from the list ``permissions.<key>`` of the settings *data*,
+    after the entries already there, and returns whether any was missing. Every other key and
+    entry keeps its order. Raises ``SettingsError`` when ``permissions`` is not an object or
+    that list is not a list."""
+    permissions = data.setdefault("permissions", {})
+    if not isinstance(permissions, dict):
+        raise SettingsError("has permissions that are not a JSON object")
+    listed = permissions.setdefault(key, [])
+    if not isinstance(listed, list):
+        raise SettingsError(f"has a permissions.{key} that is not a JSON list")
+    missing = [entry for entry in entries if entry not in listed]
+    listed.extend(missing)
+    return bool(missing)
+
+
 def name_home(data: dict[str, object], path: str) -> bool:
     """Sets ``env.KAIZEN_HOME`` in the settings *data* to *path*, every other key kept in its
     order, and returns whether that changed *data*: not when it already sets exactly *path*, so a

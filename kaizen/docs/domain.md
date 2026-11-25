@@ -51,11 +51,12 @@ Paths below are relative to `kaizen/src/kaizen/`.
   `find_home(start, env)` returns a `Home` (root, registry folder, leak facts and the **home settings**) or refuses with a fix.
   It reads the marker with `tomllib`, the one place kaizen reads TOML.
   A linked worktree of the home counts as that home, so commands work the same from a ticket worktree.
-  It also renders a new home's marker, reads and writes the home's Claude Code settings, and sets the home's root in their env, keeping every other key.
+  It also renders a new home's marker, reads and writes the home's Claude Code settings, sets the home's root in their env, and adds entries to a `permissions` list, keeping every other key and entry: the one merge `home sync`'s managed settings and `project add`'s directory entry share.
   The marker's one line kaizen writes after `home init`, the synced version, is written by text, keeping every other byte, since the standard library writes no TOML.
 - `shared/registry.py`: the **project registry**: `Project`, read from the flat frontmatter of one page per project in the home's registry folder, and `TicketWorktree`, worked out from a ticket worktree's path and branch with no stored state.
   The registry folder always comes from the `Home`, never from a default path.
-  It also holds the starter README and page a new home gets, beside the parser so the two change together.
+  It also holds the starter README and page a new home gets, and the page and README link `project add` writes, beside the parser so they change together.
+  `KEYS` is the one table of the keys a page may set: the README's **Keys** section and `project add`'s prompts both read it, so their explanations can't drift.
 - `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>`, a **docs change**'s `docs-<slug>`, and the `spec-<N>-domain-docs` branch `spec publish` ships a spec's domain-doc edits on and `ticket publish` waits for) and the merge subject that **integrates** a ticket.
   Names are worked out from numbers, so the integration branch's history alone records which tickets are integrated.
   `find_integration_branch` says where a started spec's integration branch is: on `origin`, or only local, as `spec start --local` leaves it until the spec's first integration pushes it.
@@ -96,7 +97,9 @@ One module per command; each group's `--help` lists them.
 - `spec/`: publish a spec, and start, integrate, ship, finish or report the status of its integration branch.
   `spec integrate` merges in a scratch worktree and pushes only after the check command passes; the ticket branch is never pushed (ADR 0001).
   `spec/common.py` reads a spec's sub-issues and each ticket's blockers, for `spec status` and `ticket start --spec`.
-- `project/`: `project leak-check`, the leak check on its own for a push no other command makes, and `project labels`, which creates the workflow labels a project's repo lacks and never edits or deletes one.
+- `project/`: `project add`, which registers a project with the home (its page, its README link and its settings entry), `project leak-check`, the leak check on its own for a push no other command makes, and `project labels`, which creates the workflow labels a project's repo lacks and never edits or deletes one.
+  `project add` takes every key from a flag, and prompts for the rest only through its `ask` seam, which the CLI sets only when stdin is a terminal; without one it refuses a missing required key rather than prompt.
+  Its detections only query, and each detected value is printed with its source, never applied silently; the page it writes is parsed back with the registry's parser before anything is written.
 - `issue/`: `issue show`, `issue link` and `issue publish`, built on the issue graph.
 - `pr/`: `pr wait`, which waits for a PR's checks and exits by their outcome.
 - `home/`: `home init`, which makes the git repo it runs in a new home, and needs no home itself.

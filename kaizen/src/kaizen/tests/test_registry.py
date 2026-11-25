@@ -10,7 +10,7 @@ import pytest
 
 from kaizen.shared import registry
 from kaizen.shared.common import RefusalError
-from kaizen.shared.registry import resolve, starter_readme
+from kaizen.shared.registry import KEYS, resolve, starter_readme
 
 BASE = "path: /p\ngithub: owner/proto\npublic: true\n"
 
@@ -242,3 +242,18 @@ def test_invalid_pages_lists_each_bad_page_and_skips_good_ones_and_the_readme(tm
         ("a.md", f"{projects / 'a.md'}: no registry frontmatter"),
         ("b.md", f"{projects / 'b.md'}: missing field 'github'"),
     ]
+
+
+def test_the_starter_readme_explains_each_key_with_the_summary_project_add_prompts_with():
+    readme = " ".join(starter_readme([]).split())
+
+    missing = [
+        key.name for key in KEYS if f"- `{key.name}` ({key.status}): {key.summary}" not in readme
+    ]
+    assert missing == []
+
+
+def test_the_starter_readme_never_wraps_inside_a_code_span():
+    lines = starter_readme([]).splitlines()
+
+    assert [line for line in lines if line.count("`") % 2] == []
