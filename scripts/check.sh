@@ -3,7 +3,7 @@
 # check.sh: this repo's one check command, for the skills collection and the
 # kaizen package alike.
 #
-# Runs five checks and exits non-zero if ANY of them fails. All of them run
+# Runs six checks and exits non-zero if ANY of them fails. All of them run
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
 #   1. Conventions, adopted from Matt Pocock's skills (decided in #44):
@@ -25,8 +25,13 @@
 #      not FAIL, when the template is absent.
 #   4. kaizen: kaizen/scripts/check.sh (lint, format, types, import contracts
 #      and tests of the kaizen package) exits 0.
-#   5. Home leak scan tests: scripts/test_home_leak_scan.py passes. CI runs
-#      scripts/home_leak_scan.py on the lines each PR adds.
+#   5. Home leak scan tests: scripts/test_home_leak_scan.py passes.
+#   6. Home leak scan: scripts/home_leak_scan.py --branch finds no path under a
+#      home directory in the lines HEAD adds since its merge base with
+#      origin's default branch, listing each file and line it finds. On an
+#      integration branch that covers every ticket already integrated. Prints
+#      SKIP, not FAIL, when HEAD adds nothing since that branch (as on the
+#      default branch itself), or when there is no such branch or merge base.
 #
 # Run it before a PR, and after editing skills:
 #
@@ -299,6 +304,21 @@ echo
 echo "== Check 5: home leak scan tests =="
 run_quiet "scripts/test_home_leak_scan.py" \
   python3 -B -m unittest discover -s scripts -p test_home_leak_scan.py
+
+# ── Check 6: Home leak scan ────────────────────────────────────────────────
+echo
+echo "== Check 6: home leak scan (scripts/home_leak_scan.py --branch) =="
+# Exit 3 is the scan's skip: nothing to compare, with the reason as its output.
+scan_report="$(python3 -B scripts/home_leak_scan.py --branch 2>&1)"
+scan_status=$?
+if [[ $scan_status -eq 0 ]]; then
+  pass "$scan_report"
+elif [[ $scan_status -eq 3 ]]; then
+  skip "$scan_report"
+else
+  fail "scripts/home_leak_scan.py --branch failed:"
+  printf '%s\n' "$scan_report" | indent
+fi
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo
