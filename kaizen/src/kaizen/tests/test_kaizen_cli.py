@@ -499,6 +499,16 @@ def test_every_command_sets_a_command_record_and_no_bare_handler():
         assert command.get_default("handler") is None, name
 
 
+def test_no_command_argument_takes_the_dest_the_command_record_lives_at():
+    for name, command in command_parsers().items():
+        # argparse has no public way to list a parser's arguments.
+        clashing = [action for action in command._actions if action.dest == "command"]
+        assert not clashing, (
+            f"{name}: an argument stored at args.command would overwrite the command record the"
+            " dispatcher reads there; give it another dest (and a metavar to keep its --help)"
+        )
+
+
 def test_home_init_is_the_only_command_that_runs_without_a_home():
     homeless = [
         name
