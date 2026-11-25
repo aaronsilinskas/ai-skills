@@ -1,4 +1,5 @@
-# .claude/skills/ holds upstream's copies, which this repo doesn't edit.
+# .claude/skills/ holds upstream's copies, which this repo doesn't edit. The leak check reads the
+# staged files itself, so it still covers them.
 exclude: ^\.claude/skills/
 repos:
   - repo: local
@@ -26,7 +27,8 @@ repos:
         name: kaizen work-tracking references
         entry: kaizen hook work-tracking
         language: system
-      # kaizen's own ruff, from kaizen/uv.lock, so the hook and kaizen/scripts/check.sh agree.
+      # kaizen's own ruff, from kaizen/uv.lock, so the hook and kaizen/scripts/check.sh use one version
+      # and config.
       - id: ruff-check
         name: ruff check (kaizen)
         entry: uv run --project kaizen ruff check --fix
