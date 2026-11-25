@@ -35,6 +35,7 @@ import re
 import tempfile
 from pathlib import Path
 
+from kaizen.shared.branch import domain_docs_branch
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check, leak_check_text
@@ -221,7 +222,7 @@ def publish(
         say("no glossary or ADR changes: no PR opened")
         return number
 
-    branch = f"spec-{number}-domain-docs"
+    branch = domain_docs_branch(number)
     message = f"Domain docs for spec #{number}: {title}"
     trailer = f"\n\nCo-Authored-By: {co_author}" if co_author else ""
     run(["git", "checkout", "-b", branch])

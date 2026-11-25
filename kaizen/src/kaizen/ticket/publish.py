@@ -48,6 +48,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+from kaizen.shared.branch import domain_docs_branch
 from kaizen.shared.common import RefusalError, Runner, Say, Subparsers, run_or_refuse
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
@@ -135,7 +136,7 @@ def wait_for_domain_docs(
     log: Say = print,
 ) -> None:
     """Return once spec *spec*'s domain-docs PR has merged, or when it has none."""
-    branch = f"spec-{spec}-domain-docs"
+    branch = domain_docs_branch(spec)
     deadline = now() + timeout
     while True:
         state = run_or_refuse(

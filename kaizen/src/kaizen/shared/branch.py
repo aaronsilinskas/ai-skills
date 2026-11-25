@@ -2,6 +2,7 @@
 
 A spec's **integration branch** is ``spec-<N>``. A ticket of that spec is built on
 ``spec-<N>-fix-<issue>-<slug>``, and a ticket with no spec on ``fix-<issue>-<slug>``.
+The domain-doc edits from grilling spec ``<N>`` ship on ``spec-<N>-domain-docs``.
 A **docs change**, a change to docs only that needs no issue, is built on ``docs-<slug>``.
 Integrating a ticket records its branch in the merge commit's subject, so the integration
 branch's history alone says which tickets are in it.
@@ -34,6 +35,12 @@ class TicketBranch:
 def integration_branch(spec: int) -> str:
     """The name of spec *spec*'s integration branch."""
     return f"spec-{spec}"
+
+
+def domain_docs_branch(spec: int) -> str:
+    """The branch ``kaizen spec publish`` ships spec *spec*'s domain-doc edits on, and
+    ``kaizen ticket publish`` waits for."""
+    return f"{integration_branch(spec)}-domain-docs"
 
 
 def spec_ticket_branch(spec: int, issue: int, slug: str) -> str:
