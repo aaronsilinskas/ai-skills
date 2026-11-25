@@ -1,6 +1,6 @@
 {
   "name": "session-board",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "See every Claude Code session at once: which are working, which need you (permission, question, needs input) and which finished, with a band, a /sessions pane and desktop notifications.",
   "author": { "name": "aaronsilinskas" },
   "license": "MIT",

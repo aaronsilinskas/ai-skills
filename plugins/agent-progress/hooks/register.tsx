@@ -368,6 +368,14 @@ async function settleAutoRun($: EngineInterface, isMainBusy: boolean): Promise<v
 
 // ---------------------------------------------------------------------------
 
+/**
+ * The `.catch` of every hook that gates a prompt, a tool call or a command: a
+ * fault in this plugin's own code leaves the verdict to the hooks beneath. Where
+ * the hook already called `next`, `next(e)` replays what that settled to, so
+ * nothing beneath runs twice and an error from beneath still propagates.
+ */
+const fallThrough = <E, R>(_$: unknown, e: E, next: (e: E) => R): R => next(e)
+
 export const register: Register = (on, options) => {
   const autoOpenMode =
     options.autoOpen === 'any' || options.autoOpen === 'never' || options.autoOpen === 'session' ? options.autoOpen : 'plan'
@@ -466,7 +474,7 @@ export const register: Register = (on, options) => {
   on('prompt.submit', async ($, e, next) => {
     await update($, run, prev => (prev?.isFinished ? null : prev))
     return next(e)
-  })
+  }).catch(fallThrough)
 
   on('tool.call', { tool: PROGRESS_TOOL }, async ($, e) => {
     // The plan is the main session's: a subagent could otherwise rename,
@@ -488,7 +496,7 @@ export const register: Register = (on, options) => {
       await autoOpen($, `plan:${next.title}:${next.startedAt}`)
     }
     return { result: next ? `ok: ${labelOf(next, countsOf(next, list))}` : 'ok' }
-  })
+  }).catch(fallThrough)
 
   // A subagent's own progress: its tool call carries its agentId.
   on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
@@ -507,7 +515,7 @@ export const register: Register = (on, options) => {
       }),
     )
     return { result: matched ? 'ok' : 'ignored: no panel row for this agent' }
-  })
+  }).catch(fallThrough)
 
   on('agent.spawn', async ($, e, next) => {
     const needsBrief = isBriefing && !e.prompt.includes(STEP_TOOL)
@@ -535,7 +543,7 @@ export const register: Register = (on, options) => {
     await update($, now, () => at)
     if (autoOpenMode === 'any' && current) await autoOpen($, `any:${current.startedAt}`)
     return started
-  })
+  }).catch(fallThrough)
 
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
