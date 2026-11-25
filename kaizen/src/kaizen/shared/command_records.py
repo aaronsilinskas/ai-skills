@@ -24,7 +24,7 @@ class HomeCommand:
 
 @dataclass(frozen=True)
 class InstallCommand:
-    """A command also passed the running ``Install`` (only ``home sync``).
+    """A command also passed the running ``Install``.
     ``records_version`` says whether a run records the running version as the home's synced
     version, which the synced version check needs to know."""
 
@@ -34,8 +34,8 @@ class InstallCommand:
 
 @dataclass(frozen=True)
 class HomelessCommand:
-    """A command that needs no home (only ``home init``, which makes one): no home is looked for
-    and no synced version checked, and it gets the start directory and the environment instead."""
+    """A command that needs no home: no home is looked for and no synced version checked, and it
+    gets the start directory and the environment instead."""
 
     handler: Callable[[Namespace, Runner, Path, Mapping[str, str], Install], int | None]
 

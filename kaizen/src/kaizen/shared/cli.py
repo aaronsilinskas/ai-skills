@@ -4,8 +4,8 @@ issues, pull requests, the leak check and the pre-commit hooks.
 Run it inside a home (the folder holding kaizen.toml, or any folder below it), or from one of
 the home's projects with KAIZEN_HOME set to the home's root. kaizen home init makes a new home.
 Every command that changes anything checks first, and has a --dry-run that only shows the steps.
-Every run ends with the line "kaizen: exit <code>", so piping its output through tail -n 1 shows
-how it went.
+Every command ends its output with the line "kaizen: exit <code>", so
+kaizen ... 2>&1 | tail -n 1 shows how it went.
 """
 
 import argparse
@@ -16,7 +16,7 @@ import sys
 import traceback
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TextIO, cast
+from typing import TextIO, assert_never, cast
 
 from kaizen import __version__
 from kaizen.home import init as home_init
@@ -48,8 +48,6 @@ from kaizen.spec import status as spec_status
 from kaizen.ticket import abandon, compare, diff, finish, ship, start
 from kaizen.ticket import publish as ticket_publish
 
-# Each command module adds its own subparser and sets its command record (see
-# ``shared/command_records.py``) as the parser's ``command`` default.
 GROUPS = {
     "home": ("set up a new home, or sync its synced files", (home_init, home_sync)),
     "hook": (
@@ -130,13 +128,16 @@ def _run(
         command: CommandRecord = args.command
         match command:
             case HomelessCommand(handler):
-                code = handler(args, run, start, environ, install) or 0
+                returned = handler(args, run, start, environ, install)
             case InstallCommand(handler, records_version):
                 home = _checked_home(start, environ, install, syncing=records_version(args))
-                code = handler(args, run, home, install) or 0
+                returned = handler(args, run, home, install)
             case HomeCommand(handler):
                 home = _checked_home(start, environ, install, syncing=False)
-                code = handler(args, run, home) or 0
+                returned = handler(args, run, home)
+            case _:
+                assert_never(command)
+        code = returned or 0
         outcome = ""
     except RefusalError as exc:
         print(f"refused: {exc}", file=sys.stderr)

@@ -13,7 +13,7 @@ import pytest
 
 import kaizen
 from kaizen.shared.cli import main
-from kaizen.shared.command_records import HomeCommand, HomelessCommand, InstallCommand
+from kaizen.shared.command_records import CommandRecord, HomelessCommand, InstallCommand
 from kaizen.shared.version import Version
 from kaizen.tests.commands import command_parsers
 from kaizen.tests.ticket_shell import (
@@ -382,7 +382,6 @@ def test_kaizen_pr_wait_exits_with_the_code_of_the_checks_outcome(
 _PIPED_FAILURE = """
 import sys
 from kaizen.shared.cli import main
-from kaizen.shared.command_records import HomeCommand, HomelessCommand, InstallCommand
 from kaizen.tests.ticket_shell import SPEC_START, Shell, failed
 shell = Shell({**SPEC_START, ("push",): failed("git push", "remote: rejected")})
 sys.exit(main(["spec", "start", "25"], run=shell))
@@ -496,9 +495,7 @@ def test_a_malformed_marker_is_refused_before_any_command_runs(tmp_path, capsys)
 
 def test_every_command_sets_a_command_record_and_no_bare_handler():
     for name, command in command_parsers().items():
-        assert isinstance(
-            command.get_default("command"), HomeCommand | InstallCommand | HomelessCommand
-        ), name
+        assert isinstance(command.get_default("command"), CommandRecord), name
         assert command.get_default("handler") is None, name
 
 
@@ -584,7 +581,6 @@ def test_the_last_stderr_line_of_a_failed_step_says_the_steps_above_are_done(kai
 _SPEC_START = """
 import sys
 from kaizen.shared.cli import main
-from kaizen.shared.command_records import HomeCommand, HomelessCommand, InstallCommand
 from kaizen.tests.ticket_shell import SPEC_START, Shell
 shell = Shell(SPEC_START)
 code = main(["spec", "start", "25"], run=shell)
