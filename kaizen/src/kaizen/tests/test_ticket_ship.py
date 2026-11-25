@@ -20,9 +20,11 @@ from kaizen.tests.ticket_shell import (
     TILDE,
     Reply,
     Shell,
+    ShipShell,
     cli_home,
     failed,
     home_for,
+    quiet,
     write_marker,
 )
 from kaizen.ticket.ship import ship
@@ -53,29 +55,7 @@ def _setup(tmp_path: Path, public: bool = True) -> tuple[Path, Path, Path]:
     return projects, worktree, body
 
 
-class _ShipShell(Shell):
-    """A ``Shell`` that also keeps each body file ``gh pr create`` or ``gh pr edit`` was given."""
-
-    def __init__(self, answers: dict[tuple[str, ...], Reply]) -> None:
-        super().__init__({**answers, ("pr", "create"): self._create, ("pr", "edit"): self._edit})
-        self.body_files: list[Path] = []
-        self.bodies: list[str] = []
-
-    def _create(self, cmd: list[str]) -> str:
-        self._keep_body(cmd)
-        return f"{NEW_PR}\n"
-
-    def _edit(self, cmd: list[str]) -> str:
-        self._keep_body(cmd)
-        return f"{cmd[cmd.index('edit') + 1]}\n"
-
-    def _keep_body(self, cmd: list[str]) -> None:
-        body_file = Path(cmd[cmd.index("--body-file") + 1])
-        self.body_files.append(body_file)
-        self.bodies.append(body_file.read_text())
-
-
-def _shell(show: Reply = "", **overrides: str | BaseException) -> _ShipShell:
+def _shell(show: Reply = "", **overrides: str | BaseException) -> ShipShell:
     answers: dict[tuple[str, ...], Reply] = {
         ("rev-parse", "--abbrev-ref", "HEAD"): overrides.get("branch", f"{BRANCH}\n"),
         ("ls-remote",): REMOTE_HEAD,
@@ -92,18 +72,14 @@ def _shell(show: Reply = "", **overrides: str | BaseException) -> _ShipShell:
         ("show",): show,
         ("push",): overrides.get("push", ""),
     }
-    return _ShipShell(answers)
-
-
-def _quiet(_: str) -> None:
-    pass
+    return ShipShell(NEW_PR, answers)
 
 
 def test_ship_pushes_the_branch_with_upstream_tracking(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("push") == [["git", "-C", str(worktree), "push", "-u", "origin", BRANCH]]
 
@@ -112,7 +88,7 @@ def test_ship_opens_a_pr_from_the_branch_into_the_default_branch(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (create,) = shell.ran("pr", "create")
     assert create[: create.index("--body-file")] == [
@@ -135,7 +111,7 @@ def test_ship_prepends_closes_to_a_body_that_does_not_close_the_issue(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Closes #1358\n\nWrites the state once per Reboot.\n\n{FOOTER}\n"]
 
@@ -145,7 +121,7 @@ def test_ship_ends_the_body_with_the_claude_code_attribution_line(tmp_path):
     body.write_text("Writes the state once.\n\nCloses #1358\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\nCloses #1358\n\n{FOOTER}\n"]
 
@@ -154,7 +130,7 @@ def test_ship_writes_the_amended_body_outside_the_ticket_worktree(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (body_file,) = shell.body_files
     assert not body_file.resolve().is_relative_to(worktree.resolve())
@@ -166,7 +142,7 @@ def test_ship_adds_no_second_attribution_line_to_a_body_already_ending_with_it(t
     body.write_text(f"Writes the state once.\n\n{FOOTER}\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Closes #1358\n\nWrites the state once.\n\n{FOOTER}\n"]
 
@@ -178,7 +154,7 @@ def test_ship_passes_a_body_that_already_closes_the_issue_and_ends_with_attribut
     body.write_text(f"Writes the state once.\n\nCloses #1358\n\n{FOOTER}\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\nCloses #1358\n\n{FOOTER}\n"]
     assert body.read_text() == f"Writes the state once.\n\nCloses #1358\n\n{FOOTER}\n"
@@ -187,7 +163,7 @@ def test_ship_passes_a_body_that_already_closes_the_issue_and_ends_with_attribut
 def _refused(tmp_path, shell, match, worktree=None):
     projects, ticket_worktree, body = _setup(tmp_path)
     with pytest.raises(RefusalError, match=match):
-        ship(worktree or ticket_worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree or ticket_worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
     assert not shell.ran("push")
     assert not shell.ran("pr", "create")
 
@@ -261,7 +237,7 @@ def test_ship_refuses_a_private_project_pointing_outside_the_home(tmp_path):
     shell = _shell(leaks="docs/setup.md:3:see owner/secret\n")
 
     with pytest.raises(RefusalError, match=r"docs/setup\.md:3: unregistered repo owner/secret"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("push")
 
@@ -270,7 +246,7 @@ def test_the_leak_check_searches_the_worktree_for_each_of_the_homes_own_patterns
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (grep,) = shell.ran("grep")
     assert grep[:4] == ["git", "-C", str(worktree), "grep"]
@@ -282,7 +258,7 @@ def test_a_body_closing_a_different_issue_still_gets_closes_for_this_one(tmp_pat
     body.write_text("Closes #13580\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Closes #1358\n\nCloses #13580\n\n{FOOTER}\n"]
 
@@ -291,7 +267,7 @@ def test_reshipping_pushes_the_new_commits_and_reuses_the_open_pr(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell(prs=OPEN_PRS)
 
-    shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("push")
     assert not shell.ran("pr", "create")
@@ -302,7 +278,7 @@ def test_reshipping_updates_the_open_prs_title_and_body_from_the_arguments(tmp_p
     projects, worktree, body = _setup(tmp_path)
     shell = _shell(prs=OPEN_PRS)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (edit,) = shell.ran("pr", "edit")
     assert edit[: edit.index("--body-file")] == [
@@ -323,7 +299,7 @@ def test_reshipping_adds_no_second_attribution_line_to_the_updated_body(tmp_path
     body.write_text(f"Writes the state once.\n\n{FOOTER}\n")
     shell = _shell(prs=OPEN_PRS)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Closes #1358\n\nWrites the state once.\n\n{FOOTER}\n"]
 
@@ -332,7 +308,7 @@ def test_reshipping_writes_the_updated_body_outside_the_ticket_worktree(tmp_path
     projects, worktree, body = _setup(tmp_path)
     shell = _shell(prs=OPEN_PRS)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (body_file,) = shell.body_files
     assert not body_file.resolve().is_relative_to(worktree.resolve())
@@ -364,7 +340,7 @@ def test_ship_never_force_pushes(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (push,) = shell.ran("push")
     assert not {"-f", "--force", "--force-with-lease"} & set(push)
@@ -383,7 +359,7 @@ def test_a_dry_run_issues_only_queries(tmp_path):
     projects, worktree, body = _setup(tmp_path)
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=True, say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=True, say=quiet)
 
     assert shell.ran("grep")
     assert not shell.ran("push")
@@ -395,7 +371,7 @@ def test_ship_refuses_a_missing_body_file_before_running_anything(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="could not read the body file"):
-        ship(worktree, TITLE, tmp_path / "nope.md", shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, tmp_path / "nope.md", shell, home=home_for(projects), say=quiet)
 
     assert not shell.calls
 
@@ -417,7 +393,7 @@ def test_a_body_using_any_github_closing_keyword_gets_no_extra_closes_line(tmp_p
     body.write_text(f"Writes the state once.\n\n{line}\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\n{line}\n\n{FOOTER}\n"]
 
@@ -428,7 +404,7 @@ def test_ship_refuses_a_spec_ticket_worktree_and_points_to_spec_integrate(tmp_pa
     shell = _shell(branch="spec-25-fix-1358-double-write\n")
 
     with pytest.raises(RefusalError, match=r"spec #25(.|\n)*kaizen spec integrate"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=dry_run, say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=dry_run, say=quiet)
 
     assert not shell.ran("push")
     assert not shell.ran("pr", "create")
@@ -459,7 +435,7 @@ def _declare(projects: Path, key: str, value: str) -> None:
     page.write_text(page.read_text().replace("---\n# proto", f"{key}: {value}\n---\n# proto"))
 
 
-def _docs_shell(**overrides: str) -> _ShipShell:
+def _docs_shell(**overrides: str) -> ShipShell:
     return _shell(branch=f"{DOCS_BRANCH}\n", **overrides)
 
 
@@ -467,7 +443,7 @@ def test_shipping_a_docs_ticket_pushes_its_branch(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("push") == [["git", "-C", str(worktree), "push", "-u", "origin", DOCS_BRANCH]]
 
@@ -476,7 +452,7 @@ def test_a_docs_tickets_pr_body_has_no_closes_line_and_ends_with_the_attribution
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Writes the state once per Reboot.\n\n{FOOTER}\n"]
 
@@ -485,7 +461,7 @@ def test_shipping_a_docs_ticket_reads_no_issue(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("issue", "view")
 
@@ -495,7 +471,7 @@ def test_shipping_a_docs_ticket_still_runs_the_leak_check(tmp_path):
     shell = _docs_shell(leaks="docs/setup.md:3:see /fixture/home/relay\n")
 
     with pytest.raises(RefusalError, match="leak check"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("push")
 
@@ -504,7 +480,7 @@ def test_reshipping_a_docs_ticket_reuses_its_open_pr(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(prs=OPEN_PRS)
 
-    shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "create")
     assert shipped.url == OPEN_PR
@@ -514,7 +490,7 @@ def test_reshipping_a_docs_ticket_updates_its_pr_body_with_no_closes_line(tmp_pa
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(prs=OPEN_PRS)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [body.read_text().rstrip() + f"\n\n{FOOTER}\n"]
 
@@ -525,7 +501,7 @@ def test_ship_compares_a_docs_ticket_with_the_default_branch_counting_renames_as
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("diff", "--name-only") == [
         ["git", "-C", str(worktree), "diff", "--name-only", "--no-renames", "origin/main...HEAD"]
@@ -537,7 +513,7 @@ def test_ship_refuses_a_docs_ticket_that_touches_code_naming_only_the_code_files
     shell = _docs_shell(changed="docs/setup.md\nsrc/state.py\npackage.json\nsrcs/notes.md\n")
 
     with pytest.raises(RefusalError) as refused:
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     message = str(refused.value)
     assert "src/state.py" in message and "package.json" in message
@@ -551,7 +527,7 @@ def test_ship_refuses_a_docs_ticket_that_touches_a_file_a_glob_code_path_matches
     shell = _docs_shell(changed="README.md\nnew_module.py\ndocs/example.py\n")
 
     with pytest.raises(RefusalError) as refused:
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     message = str(refused.value)
     assert "new_module.py" in message and "docs/example.py" not in message
@@ -563,7 +539,7 @@ def test_ship_refuses_a_docs_ticket_of_a_project_that_declares_no_code_paths(tmp
     shell = _docs_shell()
 
     with pytest.raises(RefusalError, match="declares no code_paths"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("push")
 
@@ -576,7 +552,7 @@ def test_a_docs_ticket_changing_only_auto_merge_paths_gets_auto_merge_on_its_pr(
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_ONLY)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", NEW_PR]]
 
@@ -585,7 +561,7 @@ def test_a_docs_ticket_changing_only_paths_an_auto_merge_glob_matches_gets_auto_
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="**/*.md")
     shell = _docs_shell(changed=DOCS_AND_README)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", NEW_PR]]
 
@@ -594,7 +570,7 @@ def test_a_docs_ticket_changing_a_path_outside_auto_merge_paths_gets_no_auto_mer
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "merge")
 
@@ -613,7 +589,7 @@ def test_a_docs_ticket_of_a_project_without_auto_merge_paths_gets_no_auto_merge(
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(changed=DOCS_ONLY)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "merge")
 
@@ -647,7 +623,7 @@ def test_a_ticket_closing_an_issue_never_gets_auto_merge(tmp_path):
     projects, worktree, body = _fix_ticket_with_auto_merge_paths(tmp_path)
     shell = _shell(changed="docs/setup.md\n")
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "merge")
 
@@ -674,7 +650,7 @@ def test_reshipping_a_docs_ticket_changing_only_auto_merge_paths_auto_merges_its
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_ONLY, prs=OPEN_PRS)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", OPEN_PR]]
 
@@ -721,7 +697,7 @@ def test_a_docs_ticket_with_no_net_change_gets_no_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed="")
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "merge")
 
@@ -730,7 +706,7 @@ def test_reshipping_a_docs_ticket_that_no_longer_qualifies_turns_its_pr_auto_mer
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README, prs=OPEN_PRS, auto_merge=AUTO_MERGE_ON)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--disable-auto", OPEN_PR]]
 
@@ -739,7 +715,7 @@ def test_reshipping_a_docs_ticket_leaves_a_pr_without_auto_merge_alone(tmp_path)
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README, prs=OPEN_PRS)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "merge")
 
@@ -775,7 +751,7 @@ def _sources(head: str, base: str = SOURCE) -> Reply:
     return show
 
 
-def _comment_only_ship(tmp_path: Path, head: str, **overrides: str) -> tuple[_ShipShell, list[str]]:
+def _comment_only_ship(tmp_path: Path, head: str, **overrides: str) -> tuple[ShipShell, list[str]]:
     """Ships a ticket closing an issue, changing ``engine/maths.py`` from ``SOURCE`` to *head*, for
     a project that auto-merges comment-only changes; returns the shell and the printed lines."""
     projects, worktree, body = _setup(tmp_path)
@@ -816,7 +792,7 @@ def test_ship_refuses_a_comment_only_check_that_cannot_read_a_changed_file(tmp_p
     shell = _shell(show=failed("git show", "fatal: bad object"))
 
     with pytest.raises(RefusalError, match=r"engine/maths\.py"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("push")
 
@@ -827,7 +803,7 @@ def test_reshipping_a_ticket_closing_an_issue_leaves_auto_merge_alone_without_th
     projects, worktree, body = _setup(tmp_path)
     shell = _shell(prs=OPEN_PRS, auto_merge=AUTO_MERGE_ON)
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("pr", "merge")
 
@@ -840,7 +816,7 @@ def test_reshipping_a_ticket_that_is_no_longer_comment_only_turns_its_pr_auto_me
 
 def _ship_from_a_home_whose_marker_sets(
     tmp_path: Path, setting: str, *, page_opts_in: bool, **overrides: str
-) -> _ShipShell:
+) -> ShipShell:
     """Runs ``kaizen ticket ship`` from a fixture home whose marker adds *setting*, on a ticket
     closing an issue whose change only cuts comments, for a project whose page sets
     ``auto_merge_comment_only: true`` when *page_opts_in*; returns the shell."""
@@ -911,7 +887,7 @@ def _rejected(reason: str) -> str:
     )
 
 
-def _ship_hub_ticket(kaizen: Kaizen, tmp_path: Path, shell: _ShipShell) -> int:
+def _ship_hub_ticket(kaizen: Kaizen, tmp_path: Path, shell: ShipShell) -> int:
     """Run ``kaizen ticket ship`` on a ticket worktree of ``relay`` in the fixture home."""
     body = tmp_path / "body.md"
     body.write_text("Writes the state once per Reboot.\n")
@@ -963,7 +939,7 @@ def test_ship_refuses_a_pr_body_pointing_outside_the_home_before_any_gh_call(tmp
     shell = _shell()
 
     with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body as sent line 4: "):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("gh")
 
@@ -974,7 +950,7 @@ def test_ship_refuses_a_pr_body_with_an_own_reference_for_a_public_project(tmp_p
     shell = _shell()
 
     with pytest.raises(RefusalError, match="PR body as sent line 3: own reference /fixture/home"):
-        ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("gh")
 
@@ -984,7 +960,7 @@ def test_ship_sends_a_private_projects_pr_body_with_an_own_reference(tmp_path):
     body.write_text("part of /fixture/home/docs\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies[0].startswith("Closes #1358\n\npart of /fixture/home/docs\n")
 
@@ -994,12 +970,12 @@ def test_ship_refuses_a_pr_title_pointing_outside_the_home_before_any_gh_call(tm
     shell = _shell()
 
     with pytest.raises(RefusalError, match="PR title line 1: unregistered repo owner/secret"):
-        ship(worktree, "Port owner/secret's fix", body, shell, home=home_for(projects), say=_quiet)
+        ship(worktree, "Port owner/secret's fix", body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("gh")
 
 
-def _ship_in_home(tmp_path: Path, settings: str, body_text: str, prs: str = "[]") -> _ShipShell:
+def _ship_in_home(tmp_path: Path, settings: str, body_text: str, prs: str = "[]") -> ShipShell:
     """Run ``kaizen ticket ship`` on a ``relay`` ticket in a fixture home whose marker holds
     *settings*, with a body file holding *body_text*, while the branch has the PRs *prs*."""
     shell = _shell(prs=prs)
@@ -1097,7 +1073,7 @@ def test_a_footer_pointing_outside_the_home_refuses_before_any_gh_call(tmp_path,
     shell = _shell(prs=prs)
 
     with pytest.raises(RefusalError, match="PR body as sent line 5: outside path"):
-        ship(worktree, TITLE, body, shell, home=home, say=_quiet, dry_run=dry_run)
+        ship(worktree, TITLE, body, shell, home=home, say=quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []
 
@@ -1107,6 +1083,6 @@ def test_a_body_closing_the_issue_by_its_full_reference_gets_no_closes_line(tmp_
     body.write_text("Writes the state once.\n\nFixes owner/proto#1358\n")
     shell = _shell()
 
-    ship(worktree, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\nFixes owner/proto#1358\n\n{FOOTER}\n"]

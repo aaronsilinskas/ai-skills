@@ -16,6 +16,7 @@ from kaizen.tests.ticket_shell import (
     Shell,
     failed,
     home_for,
+    quiet,
 )
 
 BRANCH = "spec-25-fix-32-merge-and-check"
@@ -53,10 +54,6 @@ def _shell(**overrides: Reply) -> Shell:
     return Shell(answers)
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def _assert_nothing_changed(shell: Shell) -> None:
     assert not shell.ran("fetch")
     assert not shell.ran("worktree", "add")
@@ -80,7 +77,7 @@ def test_integrate_refuses_before_changing_anything(tmp_path, check, overrides, 
     shell = _shell(**overrides)
 
     with pytest.raises(RefusalError, match=reason):
-        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
+        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_changed(shell)
 
@@ -90,7 +87,7 @@ def test_integrate_refuses_a_path_that_is_no_ticket_worktree(tmp_path):
     shell = _shell()
 
     with pytest.raises(RefusalError, match="not a registered project's ticket worktree"):
-        integrate(tmp_path, shell, home=home_for(projects), say=_quiet)
+        integrate(tmp_path, shell, home=home_for(projects), say=quiet)
 
     _assert_nothing_changed(shell)
 
@@ -100,7 +97,7 @@ def test_a_leak_on_a_public_project_is_refused_with_nothing_pushed_and_no_scratc
     shell = _shell(grep="README.md:3:see /fixture/home\n")
 
     with pytest.raises(RefusalError, match="leak check"):
-        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
+        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("push")
     assert len(shell.ran("worktree", "remove", "--force")) == 1
@@ -111,7 +108,7 @@ def test_a_private_project_pointing_outside_the_home_is_refused_with_nothing_pus
     shell = _shell(grep="README.md:3:see owner/secret\n")
 
     with pytest.raises(RefusalError, match=r"README\.md:3: unregistered repo owner/secret"):
-        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
+        integrate(_worktree(tmp_path), shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("push")
     assert len(shell.ran("worktree", "remove", "--force")) == 1
@@ -133,7 +130,7 @@ def test_integrate_pushes_only_the_integration_branch_never_the_ticket_branch(tm
     projects = _setup(tmp_path)
     shell = _shell()
 
-    integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
+    integrate(_worktree(tmp_path), shell, home=home_for(projects), say=quiet)
 
     assert [cmd[3:] for cmd in shell.ran("push")] == [["push", "origin", "HEAD:refs/heads/spec-25"]]
 
@@ -142,7 +139,7 @@ def test_the_merge_subject_names_the_ticket_branch(tmp_path):
     projects = _setup(tmp_path)
     shell = _shell()
 
-    integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
+    integrate(_worktree(tmp_path), shell, home=home_for(projects), say=quiet)
 
     (merge,) = shell.ran("merge", "--no-ff")
     assert merge[merge.index("-m") + 1] == f"Integrate {BRANCH} into spec-25"

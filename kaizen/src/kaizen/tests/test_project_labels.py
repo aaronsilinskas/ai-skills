@@ -17,6 +17,7 @@ from kaizen.tests.ticket_shell import (
     failed,
     home_for,
     proto_projects,
+    quiet,
     register,
     write_marker,
 )
@@ -32,7 +33,7 @@ def test_the_missing_workflow_labels_are_created_with_the_default_colour_and_des
 ):
     shell = Shell({("label", "list"): _labels()})
 
-    sync_labels(shell, home=home_for(proto_projects(tmp_path)), say=lambda _: None)
+    sync_labels(shell, home=home_for(proto_projects(tmp_path)), say=quiet)
 
     creates = shell.ran("label", "create")
     assert len(creates) == 11
@@ -61,7 +62,7 @@ def test_a_workflow_label_already_present_with_the_default_colour_and_descriptio
         }
     )
 
-    sync_labels(shell, home=home_for(proto_projects(tmp_path)), say=lambda _: None)
+    sync_labels(shell, home=home_for(proto_projects(tmp_path)), say=quiet)
 
     assert not shell.ran("label", "create", "spec")
     assert not shell.ran("label", "edit")
@@ -105,7 +106,7 @@ def _repos_created_in(shell: Shell) -> set[str]:
 def test_with_no_project_named_every_registered_projects_repo_gets_the_labels(tmp_path):
     shell = Shell({("label", "list"): _labels()})
 
-    sync_labels(shell, home=home_for(_two_projects(tmp_path)), say=lambda _: None)
+    sync_labels(shell, home=home_for(_two_projects(tmp_path)), say=quiet)
 
     assert _repos_created_in(shell) == {"owner/proto", "owner/tool"}
 
@@ -113,7 +114,7 @@ def test_with_no_project_named_every_registered_projects_repo_gets_the_labels(tm
 def test_a_named_project_is_the_only_repo_that_gets_the_labels(tmp_path):
     shell = Shell({("label", "list"): _labels()})
 
-    sync_labels(shell, "tool", home=home_for(_two_projects(tmp_path)), say=lambda _: None)
+    sync_labels(shell, "tool", home=home_for(_two_projects(tmp_path)), say=quiet)
 
     assert _repos_created_in(shell) == {"owner/tool"}
     assert all("owner/proto" not in cmd for cmd in shell.calls)
@@ -123,7 +124,7 @@ def test_an_unknown_project_is_refused_before_any_label_is_listed(tmp_path):
     shell = Shell({("label", "list"): _labels()})
 
     with pytest.raises(RefusalError, match="no project page"):
-        sync_labels(shell, "nope", home=home_for(proto_projects(tmp_path)), say=lambda _: None)
+        sync_labels(shell, "nope", home=home_for(proto_projects(tmp_path)), say=quiet)
 
     assert not shell.calls
 
@@ -138,7 +139,7 @@ def _failing_idea_in_proto(cmd: list[str]) -> str:
 def test_a_failed_creation_exits_1_after_every_other_label_and_repo_is_tried(tmp_path):
     shell = Shell({("label", "list"): _labels(), ("label", "create"): _failing_idea_in_proto})
 
-    code = sync_labels(shell, home=home_for(_two_projects(tmp_path)), say=lambda _: None)
+    code = sync_labels(shell, home=home_for(_two_projects(tmp_path)), say=quiet)
 
     assert code == 1
     assert len(shell.ran("label", "create")) == 2 * 11
@@ -175,7 +176,7 @@ def test_a_repo_whose_labels_cannot_be_listed_is_refused_before_any_label_is_cre
     shell = Shell({("label", "list"): listing})
 
     with pytest.raises(RefusalError, match="could not list the labels of owner/tool: HTTP 404"):
-        sync_labels(shell, home=home_for(_two_projects(tmp_path)), say=lambda _: None)
+        sync_labels(shell, home=home_for(_two_projects(tmp_path)), say=quiet)
 
     assert not shell.ran("label", "create")
 

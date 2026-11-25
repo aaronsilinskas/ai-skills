@@ -1,5 +1,6 @@
 """Plumbing every ``kaizen`` command shares: the runner seam and refusals."""
 
+import argparse
 import subprocess
 from collections.abc import Callable
 
@@ -7,6 +8,9 @@ Runner = Callable[[list[str]], str]
 """Runs one argv and returns its stdout; raises ``CalledProcessError`` on a non-zero exit."""
 
 Say = Callable[[str], None]
+
+type Subparsers = argparse._SubParsersAction[argparse.ArgumentParser]
+"""What ``kaizen``'s CLI passes each command module's ``add_parser`` to add its subparser to."""
 
 
 class RefusalError(Exception):

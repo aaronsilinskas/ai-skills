@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.registry import resolve_ticket_worktree
 
@@ -167,7 +167,7 @@ def _say_failure(check: _Check, say: Say) -> None:
         say(f"    logs: gh run view {actions_run.group(1)} --log-failed")
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "wait",
         help="block until a PR's checks finish; exit 0 when they pass, 1 when any fails",

@@ -19,9 +19,11 @@ from kaizen.tests.ticket_shell import (
     TILDE,
     Reply,
     Shell,
+    ShipShell,
     cli_home,
     failed,
     home_for,
+    quiet,
     sub_issue_json,
 )
 
@@ -58,27 +60,9 @@ def _setup(tmp_path: Path, public: bool = True) -> tuple[Path, Path]:
     return projects, body
 
 
-class _ShipShell(Shell):
-    """A ``Shell`` that also keeps each body ``gh pr create`` or ``gh pr edit`` was given."""
-
-    def __init__(self, answers: dict[tuple[str, ...], Reply]) -> None:
-        super().__init__({("pr", "create"): self._create, ("pr", "edit"): self._edit, **answers})
-        self.bodies: list[str] = []
-
-    def _create(self, cmd: list[str]) -> str:
-        self._keep_body(cmd)
-        return f"{NEW_PR}\n"
-
-    def _edit(self, cmd: list[str]) -> str:
-        self._keep_body(cmd)
-        return f"{cmd[cmd.index('edit') + 1]}\n"
-
-    def _keep_body(self, cmd: list[str]) -> None:
-        self.bodies.append(Path(cmd[cmd.index("--body-file") + 1]).read_text())
-
-
-def _shell(tmp_path: Path, **overrides: Reply) -> _ShipShell:
-    return _ShipShell(
+def _shell(tmp_path: Path, **overrides: Reply) -> ShipShell:
+    return ShipShell(
+        NEW_PR,
         {
             ("rev-parse", "--show-toplevel"): overrides.get("toplevel", f"{tmp_path / 'proto'}\n"),
             ("ls-remote", "--heads"): overrides.get("heads", HEADS),
@@ -90,17 +74,13 @@ def _shell(tmp_path: Path, **overrides: Reply) -> _ShipShell:
             ("diff",): overrides.get("added", ""),
             ("pr", "list"): overrides.get("prs", "[]"),
             **({("pr", "create"): overrides["create"]} if "create" in overrides else {}),
-        }
+        },
     )
-
-
-def _quiet(_: str) -> None:
-    pass
 
 
 def _ship(tmp_path: Path, shell: Shell, public: bool = True, **kwargs):
     projects, body = _setup(tmp_path, public)
-    return ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet, **kwargs)
+    return ship(25, TITLE, body, shell, home=home_for(projects), say=quiet, **kwargs)
 
 
 def test_ship_opens_one_ready_pr_from_the_integration_branch_into_the_default_branch(tmp_path):
@@ -139,7 +119,7 @@ def test_the_body_ends_with_the_claude_code_attribution_line_exactly_once(tmp_pa
     projects, body = _setup(tmp_path)
     body.write_text(f"Adds the spec lifecycle.\n\n{FOOTER}\n")
 
-    ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(25, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [CLOSES + f"Adds the spec lifecycle.\n\n{FOOTER}\n"]
 
@@ -157,7 +137,7 @@ def test_integrated_tickets_are_read_from_the_integration_branchs_merge_subjects
 def _refused(tmp_path: Path, shell: Shell, match: str, body: Path | None = None) -> None:
     projects, written = _setup(tmp_path)
     with pytest.raises(RefusalError, match=match):
-        ship(25, TITLE, body or written, shell, home=home_for(projects), say=_quiet)
+        ship(25, TITLE, body or written, shell, home=home_for(projects), say=quiet)
     assert not shell.ran("pr", "create")
     assert not shell.ran("push")
 
@@ -339,7 +319,7 @@ def test_ship_refuses_a_pr_body_pointing_outside_the_home_before_any_gh_call(tmp
     shell = _shell(tmp_path)
 
     with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*PR body as sent line 4: "):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(25, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("gh")
 
@@ -350,7 +330,7 @@ def test_ship_refuses_a_pr_body_with_an_own_reference_for_a_public_project(tmp_p
     shell = _shell(tmp_path)
 
     with pytest.raises(RefusalError, match="PR body as sent line 3: own reference owner/home"):
-        ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
+        ship(25, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert not shell.ran("gh")
 
@@ -360,12 +340,12 @@ def test_ship_sends_a_private_projects_pr_body_with_an_own_reference(tmp_path):
     body.write_text("part of /fixture/home/docs\n")
     shell = _shell(tmp_path)
 
-    ship(25, TITLE, body, shell, home=home_for(projects), say=_quiet)
+    ship(25, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies[0].startswith(f"{CLOSES}part of /fixture/home/docs\n")
 
 
-def _ship_in_home(tmp_path: Path, settings: str, body_text: str, prs: str = "[]") -> _ShipShell:
+def _ship_in_home(tmp_path: Path, settings: str, body_text: str, prs: str = "[]") -> ShipShell:
     """Run ``kaizen spec ship 25`` in ``relay`` in a fixture home whose marker holds *settings*,
     with a body file holding *body_text*, while ``spec-25`` has the PRs *prs*."""
     shell = _shell(tmp_path, toplevel=f"{RELAY}\n", prs=prs)
@@ -434,6 +414,6 @@ def test_a_footer_pointing_outside_the_home_refuses_before_any_gh_call(tmp_path,
     shell = _shell(tmp_path, prs=prs)
 
     with pytest.raises(RefusalError, match="PR body as sent line 5: outside path"):
-        ship(25, TITLE, body, shell, home=home, say=_quiet, dry_run=dry_run)
+        ship(25, TITLE, body, shell, home=home, say=quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []

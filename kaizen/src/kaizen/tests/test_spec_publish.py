@@ -18,6 +18,7 @@ from kaizen.tests.ticket_shell import (
     TILDE,
     cli_home,
     home_for,
+    quiet,
 )
 
 TOPLEVEL = "/fixture/proto"
@@ -78,14 +79,10 @@ def _spec(tmp_path: Path, text: str = "# Retire things\n\n## Problem Statement\n
     return path
 
 
-def _quiet(_: str) -> None:
-    pass
-
-
 def test_the_spec_issue_takes_its_title_from_the_heading_and_its_body_from_the_rest(tmp_path):
     shell = _Shell()
 
-    number = publish(_spec(tmp_path), None, None, shell, _quiet, home=_home(tmp_path))
+    number = publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path))
 
     (create,) = shell.ran("gh", "issue", "create")
     assert create[create.index("--title") + 1] == "Retire things"
@@ -97,7 +94,7 @@ def test_the_spec_issue_takes_its_title_from_the_heading_and_its_body_from_the_r
 def test_the_local_spec_file_is_deleted_after_publishing(tmp_path):
     spec = _spec(tmp_path)
 
-    publish(spec, None, None, _Shell(), _quiet, home=_home(tmp_path))
+    publish(spec, None, None, _Shell(), quiet, home=_home(tmp_path))
 
     assert not spec.exists()
 
@@ -105,7 +102,7 @@ def test_the_local_spec_file_is_deleted_after_publishing(tmp_path):
 def test_the_source_idea_is_closed_as_superseded_by_the_spec(tmp_path):
     shell = _Shell()
 
-    publish(_spec(tmp_path), 1179, None, shell, _quiet, home=_home(tmp_path))
+    publish(_spec(tmp_path), 1179, None, shell, quiet, home=_home(tmp_path))
 
     (close,) = shell.ran("gh", "issue", "close")
     assert close[3] == "1179"
@@ -115,7 +112,7 @@ def test_the_source_idea_is_closed_as_superseded_by_the_spec(tmp_path):
 def test_without_domain_doc_changes_no_branch_or_pr_is_made(tmp_path):
     shell = _Shell(status="")
 
-    publish(_spec(tmp_path), None, None, shell, _quiet, home=_home(tmp_path))
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path))
 
     assert not shell.ran("git", "checkout")
     assert not shell.ran("gh", "pr")
@@ -124,7 +121,7 @@ def test_without_domain_doc_changes_no_branch_or_pr_is_made(tmp_path):
 def test_domain_doc_changes_ship_alone_in_an_auto_merging_pr_that_references_the_spec(tmp_path):
     shell = _Shell(status=" M GLOSSARY.md\n?? docs/adr/0009-thing.md\n")
 
-    publish(_spec(tmp_path), None, "A Bot <bot@example.com>", shell, _quiet, home=_home(tmp_path))
+    publish(_spec(tmp_path), None, "A Bot <bot@example.com>", shell, quiet, home=_home(tmp_path))
 
     assert shell.ran("git", "checkout", "-b") == [["git", "checkout", "-b", "spec-300-domain-docs"]]
     assert shell.ran("git", "add") == [
@@ -142,7 +139,7 @@ def test_domain_doc_changes_ship_alone_in_an_auto_merging_pr_that_references_the
 def test_publishing_ends_on_main_without_the_local_docs_branch(tmp_path):
     shell = _Shell(status=" M GLOSSARY.md\n")
 
-    publish(_spec(tmp_path), None, None, shell, _quiet, home=_home(tmp_path))
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path))
 
     assert shell.calls[-2:] == [
         ["git", "checkout", "main"],
@@ -154,7 +151,7 @@ def test_off_main_nothing_is_published(tmp_path):
     shell = _Shell(branch="feature")
 
     with pytest.raises(RefusalError, match="main"):
-        publish(_spec(tmp_path), None, None, shell, _quiet, home=_home(tmp_path))
+        publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path))
 
     assert not shell.ran("gh")
 
@@ -163,7 +160,7 @@ def test_with_something_already_staged_nothing_is_published(tmp_path):
     shell = _Shell(staged="effects/thing.py\n")
 
     with pytest.raises(RefusalError, match="unstage"):
-        publish(_spec(tmp_path), None, None, shell, _quiet, home=_home(tmp_path))
+        publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path))
 
     assert not shell.ran("gh")
 
@@ -179,7 +176,7 @@ def test_a_spec_body_pointing_outside_the_home_is_refused_before_any_gh_call(tmp
     shell = _Shell()
 
     with pytest.raises(RefusalError, match=r"text for GitHub(.|\n)*issue body line 2: "):
-        publish(spec, None, None, shell, _quiet, home=_home(tmp_path))
+        publish(spec, None, None, shell, quiet, home=_home(tmp_path))
 
     assert not shell.ran("gh")
     assert spec.exists()
@@ -190,7 +187,7 @@ def test_a_spec_body_with_an_own_reference_is_refused_for_a_public_project(tmp_p
     shell = _Shell()
 
     with pytest.raises(RefusalError, match="issue body line 1: own reference owner/home"):
-        publish(spec, None, None, shell, _quiet, home=_home(tmp_path, public=True))
+        publish(spec, None, None, shell, quiet, home=_home(tmp_path, public=True))
 
     assert not shell.ran("gh")
 
@@ -199,7 +196,7 @@ def test_a_private_projects_spec_body_with_an_own_reference_is_published(tmp_pat
     shell = _Shell()
     spec = _spec(tmp_path, "# Retire things\n\npart of /fixture/home/docs\n")
 
-    publish(spec, None, None, shell, _quiet, home=_home(tmp_path))
+    publish(spec, None, None, shell, quiet, home=_home(tmp_path))
 
     assert shell.bodies == ["part of /fixture/home/docs\n"]
 
@@ -212,7 +209,7 @@ def test_a_changed_domain_doc_pointing_outside_the_home_is_refused_before_any_gh
     spec = _spec(tmp_path)
 
     with pytest.raises(RefusalError, match=r"docs/adr/0009-thing\.md line 2: outside path"):
-        publish(spec, None, None, shell, _quiet, home=_home(tmp_path, toplevel=str(checkout)))
+        publish(spec, None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
 
     assert not shell.ran("gh")
     assert spec.exists()
@@ -222,7 +219,7 @@ def test_the_domain_doc_commit_is_leak_checked_before_it_is_pushed(tmp_path):
     shell = _Shell(status=" M GLOSSARY.md\n", grep=f"HEAD:GLOSSARY.md:4:see {TILDE}/elsewhere\n")
 
     with pytest.raises(RefusalError, match=r"committed text(.|\n)*GLOSSARY\.md:4: outside path"):
-        publish(_spec(tmp_path), None, None, shell, _quiet, home=_home(tmp_path))
+        publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path))
 
     (grep,) = shell.ran("git", "-C", TOPLEVEL, "grep")
     assert grep[-1] == "HEAD"

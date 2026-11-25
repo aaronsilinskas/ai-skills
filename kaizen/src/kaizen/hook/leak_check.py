@@ -5,11 +5,11 @@ import argparse
 
 from kaizen.hook.common import add_files_argument
 from kaizen.project.leak_check import leak_check_project
-from kaizen.shared.common import Runner
+from kaizen.shared.common import Runner, Subparsers
 from kaizen.shared.home import Home
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "leak-check",
         help="run the leak check on the staged files",

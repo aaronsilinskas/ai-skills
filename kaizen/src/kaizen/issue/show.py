@@ -4,7 +4,7 @@ import argparse
 import json
 from typing import Any
 
-from kaizen.shared.common import Runner, Say
+from kaizen.shared.common import Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import (
     Issue,
@@ -96,7 +96,7 @@ def _as_json(
     }
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "show",
         help="print one issue whole: header, labels, parent, open blockers, body, comments",

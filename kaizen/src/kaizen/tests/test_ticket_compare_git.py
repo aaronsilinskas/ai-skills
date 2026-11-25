@@ -8,20 +8,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from kaizen.shared.common import run_subprocess
+from kaizen.tests.real_git import git
 from kaizen.tests.ticket_shell import home_for
 from kaizen.ticket.compare import compare
 
 BRANCH = "fix-7-add-greeting"
 
 
-def _git(*args: str | Path) -> str:
-    return run_subprocess(["git", *map(str, args)])
-
-
 def _commit(repo: Path, name: str, text: str) -> None:
     (repo / name).write_text(text)
-    _git("-C", repo, "add", name)
-    _git("-C", repo, "commit", "-q", "-m", f"Write {name}")
+    git("-C", repo, "add", name)
+    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
 
 
 @dataclass(frozen=True)
@@ -32,7 +29,7 @@ class Repos:
     base_commit: str
 
     def worktrees(self) -> list[str]:
-        out = _git("-C", self.checkout, "worktree", "list", "--porcelain")
+        out = git("-C", self.checkout, "worktree", "list", "--porcelain")
         return [
             line.removeprefix("worktree ")
             for line in out.splitlines()
@@ -44,18 +41,18 @@ def _repos(tmp_path: Path) -> Repos:
     """A project ``proto`` whose ticket worktree adds ``FAIL`` on top of ``origin/main``, with a
     git-ignored ``tools/helper`` in the main checkout listed in its ``worktree_links``."""
     origin = tmp_path / "origin.git"
-    _git("init", "-q", "--bare", "-b", "main", origin)
+    git("init", "-q", "--bare", "-b", "main", origin)
     checkout = tmp_path / "proto"
-    _git("clone", "-q", origin, checkout)
-    _git("-C", checkout, "config", "user.name", "Test")
-    _git("-C", checkout, "config", "user.email", "test@example.com")
+    git("clone", "-q", origin, checkout)
+    git("-C", checkout, "config", "user.name", "Test")
+    git("-C", checkout, "config", "user.email", "test@example.com")
     _commit(checkout, ".gitignore", ".claude/\ntools/\n")
-    _git("-C", checkout, "push", "-q", "origin", "main")
+    git("-C", checkout, "push", "-q", "origin", "main")
     (checkout / "tools").mkdir()
     (checkout / "tools" / "helper").write_text("a downloaded tool\n")
-    base_commit = _git("-C", checkout, "rev-parse", "HEAD").strip()
+    base_commit = git("-C", checkout, "rev-parse", "HEAD").strip()
     ticket = checkout / ".claude" / "worktrees" / BRANCH
-    _git("-C", checkout, "worktree", "add", "-q", "-b", BRANCH, ticket, "origin/main")
+    git("-C", checkout, "worktree", "add", "-q", "-b", BRANCH, ticket, "origin/main")
     _commit(ticket, "FAIL", "the command fails while this file exists\n")
     (ticket / "tools").mkdir()
     (ticket / "tools" / "helper").symlink_to(checkout / "tools" / "helper")  # as ticket start does
@@ -125,5 +122,5 @@ def test_no_stash_is_left_after_a_run_with_uncommitted_changes(tmp_path):
 
     assert _compare(repos, "test ! -e FAIL", []) == "passes"
 
-    assert _git("-C", repos.checkout, "stash", "list") == ""
+    assert git("-C", repos.checkout, "stash", "list") == ""
     assert not (repos.ticket / "FAIL").exists()

@@ -4,7 +4,7 @@ check."""
 import argparse
 from pathlib import Path
 
-from kaizen.shared.common import RefusalError, Runner, Say
+from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.labels import repo_labels
 from kaizen.shared.leak import leak_check_text
@@ -56,7 +56,7 @@ def _check_labels(github: str, labels: list[str], run: Runner) -> None:
         )
 
 
-def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "publish",
         help="create one issue in the current project's repo, after the leak check",
