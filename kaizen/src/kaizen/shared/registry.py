@@ -9,7 +9,7 @@ A page starts with::
     public: true
     worktree_root: ~/<dir>/elsewhere    # optional
     check: bash scripts/check.sh       # optional here; `kaizen spec integrate` refuses without it
-    code_paths: src/, *.py, package.json     # optional; a docs ticket refuses without it
+    code_paths: src/, *.py, package.json     # optional; a docs change is refused without it
     auto_merge_paths: docs/                  # optional
     auto_merge_comment_only: true            # optional; default false
     worktree_links: tools/mpy-cross          # optional
@@ -18,7 +18,7 @@ A page starts with::
 ``check`` is a shell command run from the root of a fresh worktree, so it installs what it needs
 itself, or the literal ``none`` for a project with nothing to run.
 
-``code_paths`` lists, comma-separated, the paths a **docs ticket** may not touch: an entry ending
+``code_paths`` lists, comma-separated, the paths a **docs change** may not touch: an entry ending
 in ``/`` covers everything under that directory, any other entry names one file. An entry holding
 ``*`` or ``?`` is a glob, matched against the whole repo-relative path from the project
 root: ``*`` and ``?`` never cross ``/`` but do match a leading ``.``, ``**`` as a whole segment
@@ -26,7 +26,7 @@ matches any number of directories, and a glob ending in ``/`` covers everything 
 directory it matches. So ``*.py`` names the root's Python files and ``**/*.py`` every one.
 Brackets are always literal, so ``src/[id].astro`` names one file.
 
-``auto_merge_paths`` lists, the same way, the paths a docs ticket's PR may auto-merge for: when
+``auto_merge_paths`` lists, the same way, the paths a docs change's PR may auto-merge for: when
 every path it changes is under one of them, ``kaizen ticket ship`` enables auto-merge.
 
 ``auto_merge_comment_only: true`` lets a ticket closing an issue auto-merge when its change only
@@ -80,9 +80,9 @@ class Project:
     """The **check command**, ``NO_CHECK`` when the project declares it has nothing to run, or
     ``None`` when its page has no ``check`` key."""
     code_paths: tuple[str, ...] | None
-    """The paths a docs ticket may not touch; ``None`` when the page has no ``code_paths`` key."""
+    """The paths a docs change may not touch; ``None`` when the page has no ``code_paths`` key."""
     auto_merge_paths: tuple[str, ...] | None
-    """The paths a docs ticket's PR auto-merges for when it changes nothing else; ``None`` when
+    """The paths a docs change's PR auto-merges for when it changes nothing else; ``None`` when
     the page has no ``auto_merge_paths`` key."""
     auto_merge_comment_only: bool
     """Whether a ticket's PR auto-merges when it only deletes or shrinks comments and docstrings."""
@@ -121,11 +121,11 @@ def home_repos(projects_dir: Path) -> frozenset[str]:
 
 
 def refuse_undeclared_code_paths(project: Project) -> None:
-    """Refuses a project whose page declares no code paths, so a docs ticket can't pass its code
+    """Refuses a project whose page declares no code paths, so a docs change can't pass its code
     guard by default."""
     if project.code_paths is None:
         raise RefusalError(
-            f"project {project.name} declares no code_paths, so a docs ticket can't be checked"
+            f"project {project.name} declares no code_paths, so a docs change can't be checked"
             " for code changes",
             f"add 'code_paths: <dir>/, <file>' to {project.page}, or open an issue"
             " and start the ticket with it",
@@ -400,15 +400,15 @@ its page only points at them.
   command, a shell command run from the root of a fresh worktree, so it installs what it needs
   itself, or the literal `none` for a project with nothing to run. `kaizen spec integrate` runs it
   before pushing a spec's integration branch.
-- `code_paths` (optional, but a docs ticket is refused without it): comma-separated paths a
-  docs ticket may not touch. An entry ending in `/` covers everything under that directory, and
+- `code_paths` (optional, but a docs change is refused without it): comma-separated paths a
+  docs change may not touch. An entry ending in `/` covers everything under that directory, and
   any other names one file. An entry holding `*` or `?` is a glob, matched against the whole
   path from the project root: `*` and `?` never cross `/` but do match a leading `.`, `**` as a
   whole segment matches any number of directories, and a glob ending in `/` covers everything
   under each directory it matches. Brackets are literal. `kaizen ticket start` and
-  `kaizen ticket ship` check a docs ticket against it.
+  `kaizen ticket ship` check a docs change against it.
 - `auto_merge_paths` (optional): comma-separated paths, as in `code_paths`. `kaizen ticket ship`
-  enables auto-merge on a docs ticket's PR when every path it changes is under one of them.
+  enables auto-merge on a docs change's PR when every path it changes is under one of them.
 - `auto_merge_comment_only` (optional, default `false`): when `true`, `kaizen ticket ship` enables
   auto-merge on a ticket's PR, even one closing an issue, when its change only deletes or
   shrinks Python comments and docstrings, unless the home's marker sets
@@ -443,7 +443,7 @@ This home's own page. Still to settle:
 
 - `public`: written `false`; set it to `true` if the repo is public.
 - `check`: add the home's check command, or `none` if it has nothing to run.
-- `code_paths`: add the paths a docs ticket may not touch.
+- `code_paths`: add the paths a docs change may not touch.
 """
 
 
@@ -453,16 +453,16 @@ class TicketWorktree:
     path: Path
     branch: str
     issue: int | None
-    """The issue the ticket closes; ``None`` for a docs ticket (a ``docs-<slug>`` branch)."""
+    """The issue the ticket closes; ``None`` when a ``docs-<slug>`` branch holds a docs change."""
     default_branch: str
     spec: int | None
     """The spec the ticket belongs to (a ``spec-<N>-fix-…`` branch); ``None`` for a lone ticket."""
 
     @property
     def label(self) -> str:
-        """What the worktree is, for a command's first line: a docs ticket's, or an issue's."""
+        """What the worktree is, for a command's first line: a docs change's, or an issue's."""
         if self.issue is None:
-            return "docs ticket worktree"
+            return "ticket worktree for a docs change"
         return f"ticket worktree for issue #{self.issue}"
 
     @property
@@ -562,7 +562,7 @@ def resolve_ticket_worktree(path: Path, run: Runner, projects_dir: Path) -> Tick
         raise RefusalError(
             f"{path} is on {branch!r}, not a fix-<issue>-<slug> ticket branch"
             " (or spec-<N>-fix-<issue>-<slug> for a spec's ticket,"
-            " docs-<slug> for a docs ticket)",
+            " docs-<slug> for a docs change)",
             "use the ticket worktree `kaizen ticket start` made, on its own branch",
         )
     return TicketWorktree(project, path, branch, parsed.issue, default, parsed.spec)
@@ -631,14 +631,14 @@ def file_changes(ticket: TicketWorktree, run: Runner) -> list[FileChange]:
 
 
 def refuse_code_changes(ticket: TicketWorktree, changed: list[str]) -> None:
-    """Refuses a docs ticket whose *changed* paths touch code, naming the files."""
+    """Refuses a docs change whose *changed* paths touch code, naming the files."""
     refuse_undeclared_code_paths(ticket.project)
     base = f"origin/{ticket.default_branch}"
     code = [path for path in changed if ticket.project.is_code(path)]
     if code:
         listed = "\n".join(f"  {path}" for path in code)
         raise RefusalError(
-            f"{ticket.branch} is a docs ticket, but its diff against {base} touches"
+            f"{ticket.branch} holds a docs change, but its diff against {base} touches"
             f" code:\n{listed}",
             f"open an issue for the change and start it with"
             f" `kaizen ticket start {ticket.project.name} <issue>`, or drop the code changes",

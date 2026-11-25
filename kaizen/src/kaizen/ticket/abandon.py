@@ -94,7 +94,7 @@ def add_parser(subparsers: Subparsers) -> None:
             "that the branch builds past every merged PR's head, and that the worktree is "
             "clean (unless --force); then close the branch's open PR, delete the branch on "
             "origin if it is there, remove the ticket worktree and force-delete its local "
-            "branch, dropping its commits. The issue stays open. Works for a docs ticket's "
+            "branch, dropping its commits. The issue stays open. Works for a docs change's "
             "docs-<slug> branch too. Refuses a spec's ticket worktree "
             "(spec-<N>-fix-<issue>-<slug>). If it stops after removing the worktree, a rerun "
             "can't find the ticket: delete the local branch with `git branch -D`."

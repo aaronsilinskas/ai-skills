@@ -86,7 +86,7 @@ def test_only_the_base_ref_is_fetched(kaizen, capsys):
     ]
 
 
-def test_a_docs_tickets_diff_is_against_the_default_branch(kaizen, capsys):
+def test_the_diff_of_a_docs_change_is_against_the_default_branch(kaizen, capsys):
     shell = _shell(DOCS_BRANCH)
 
     assert kaizen(["ticket", "diff", _worktree(DOCS_BRANCH)], run=shell) == 0

@@ -58,7 +58,7 @@ def test_a_worktree_on_any_other_branch_is_refused(tmp_path, branch):
         resolve_ticket_worktree(root / branch, _shell(branch), projects)
 
 
-def test_a_docs_ticket_worktree_resolves_to_no_issue_and_no_spec(tmp_path):
+def test_a_docs_change_worktree_resolves_to_no_issue_and_no_spec(tmp_path):
     projects, root = _setup(tmp_path)
     branch = "docs-issueless-mode"
 
