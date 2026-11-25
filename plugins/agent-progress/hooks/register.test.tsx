@@ -153,3 +153,46 @@ test('the default autoOpen leaves the panel closed at session start', async ($, 
   await startSession($, on)
   expect(opened).toEqual([])
 })
+
+// --- gating hooks: the plugin's own faults never change what they gate -------
+
+/** Makes every write the plugin makes to its state fail. */
+const failStateWrites = (on: On) => on('state.set', () => ({ deny: 'disk full' }) as never)
+
+const typedPrompt = { text: 'hi', wait: false, origin: { kind: 'composer' } } as never
+
+test('a prompt goes through when the plugin cannot store its state', async ($, on) => {
+  core(on)
+  failStateWrites(on)
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  expect(await $.prompt.submit(typedPrompt)).toEqual({ text: 'hi' })
+})
+
+test('a subagent starts as the engine started it, once, when the plugin cannot store its state', async ($, on) => {
+  const { prompts } = core(on)
+  failStateWrites(on)
+  expect(await spawn($, 'Read the parser')).toEqual({ model: 'claude-opus-5-5', agentId: 'agent-1' })
+  expect(prompts).toHaveLength(1)
+  expect(prompts[0]).toContain(STEP)
+})
+
+test('a progress report the plugin cannot store gets the engine answer for the call', async ($, on) => {
+  core(on)
+  failStateWrites(on)
+  on('tool.call', () => ({ result: 'from the engine' }) as never)
+  expect(await $.tool.call({ tool: PROGRESS, title: 'Ship it', total: 2 } as never)).toEqual({ result: 'from the engine' })
+})
+
+test('a step report the plugin cannot store gets the engine answer for the call', async ($, on) => {
+  core(on)
+  failStateWrites(on)
+  on('tool.call', () => ({ result: 'from the engine' }) as never)
+  const { agentId } = await spawn($, 'Refactor module')
+  expect(await $.tool.call({ tool: STEP, agentId, done: 1, total: 3 } as never)).toEqual({ result: 'from the engine' })
+})
+
+test('an error beneath a gating hook still reaches the caller', async ($, on) => {
+  core(on)
+  // Nothing beneath answers the prompt, so the engine's dispatch fails.
+  await expect($.prompt.submit(typedPrompt)).rejects.toThrow('no implementation for prompt.submit')
+})
