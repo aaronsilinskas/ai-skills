@@ -62,6 +62,18 @@ A home's CI runs `uvx --refresh-package kaizen-kit --from kaizen-kit==<synced ve
 `--refresh-package` makes uv ask PyPI again, since a CI cache's package list may predate a release made minutes earlier.
 PyPI can take a few minutes to serve a new release, so the Release section's last step waits for it before any home commits a sync to it.
 It also validates the home marker and every registry page, so a malformed page fails CI rather than the next command that reads it.
+Even with `--refresh-package`, PyPI's CDN can serve a stale index for a few minutes after a release, and uv then reports no version of kaizen-kit at the synced version.
+So a home's CI can run the check in this bash loop, which retries that one resolution failure, 3 attempts 30 seconds apart, and fails at once on any other error, such as a hand edit the check finds:
+
+```bash
+for attempt in 1 2 3; do
+  out=$(uvx --refresh-package kaizen-kit --from kaizen-kit==<synced version> kaizen home sync --check 2>&1) && { printf '%s\n' "$out"; break; }
+  status=$?; printf '%s\n' "$out" >&2
+  [[ $out == *"no version of kaizen-kit"* && $attempt -lt 3 ]] || exit "$status"
+  echo "PyPI index not ready yet, retrying in 30s" >&2; sleep 30
+done
+```
+
 The `kaizen hook` commands are pre-commit hooks; a home's `docs/agents/pre-commit-hooks.md` lists the `.pre-commit-config.yaml` entries that run them.
 
 ## Move an existing home to the new names
