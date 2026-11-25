@@ -20,4 +20,4 @@ Since one user runs every home on a machine, the user upgrading the install is e
 ## Consequences
 
 Dependabot doesn't bump kaizen, so nothing announces a release.
-`kaizen home sync` checks PyPI once for a newer release and prints the upgrade command, and no other command uses the network.
+`kaizen home sync` checks PyPI once for a newer release and prints the upgrade command, and no other command looks up releases.

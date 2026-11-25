@@ -52,6 +52,11 @@ A GitHub issue labelled `spec` that describes one change too large for a single 
 All of its tickets merge into the default branch together, through one PR from its integration branch.
 _Avoid_: epic, feature, PRD
 
+**Domain-docs PR**:
+The PR `kaizen spec publish` opens from the branch `spec-<N>-domain-docs`, holding the glossary and ADR edits made while grilling that spec.
+`kaizen ticket publish` waits for it to merge before creating the spec's tickets, since they cite those edits.
+_Avoid_: docs PR, glossary PR, spec docs PR
+
 **Ticket**:
 One GitHub issue small enough to build in one ticket worktree.
 A lone ticket ships through its own PR; a spec's ticket is integrated into that spec's integration branch instead.
@@ -61,6 +66,11 @@ _Avoid_: task, story, slice
 The worktree `kaizen ticket start` creates for one ticket or one docs change, on its own branch.
 It is based on the project's remote default branch, or, for a ticket of a spec, on that spec's integration branch.
 _Avoid_: agent worktree, scratch worktree (that is a command's temporary worktree)
+
+**Base**:
+The branch a ticket is built on and compared against: its spec's integration branch, or else the project's remote default branch.
+`kaizen ticket compare` runs against its tip, and `kaizen ticket diff --base` reviews from its merge base with the ticket, a commit that stays put while the base moves on.
+_Avoid_: upstream, parent branch, target branch
 
 **Docs change**:
 A change to docs only, built without an issue.
