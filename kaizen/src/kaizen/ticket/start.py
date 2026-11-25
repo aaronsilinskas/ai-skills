@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from kaizen.shared.branch import (
+    IntegrationBranch,
     docs_branch,
+    find_integration_branch,
     integration_branch,
     remote_default_branch,
     spec_ticket_branch,
@@ -19,7 +21,6 @@ from kaizen.shared.registry import Project, refuse_undeclared_code_paths, resolv
 from kaizen.shared.worktree import add_ticket_worktree, link_ignored_paths, list_worktrees
 from kaizen.spec.common import (
     fetch_integrated_issues,
-    has_integration_branch,
     spec_sub_issues,
     ticket_blockers,
 )
@@ -61,6 +62,7 @@ def start(
     project = resolve(project_name, home.registry)
     checkout = project.main_checkout
     ticket_issue: Issue | None = None
+    base: str | None = None
     if ignore_blockers and spec is None:
         raise RefusalError(
             "--ignore-blockers applies only to a spec's ticket",
@@ -73,15 +75,18 @@ def start(
         ticket_issue = open_issue(project.github, issue, run)
         say(f"issue #{issue} is open: {ticket_issue.title}")
         if spec is not None:
-            _refuse_outside_spec(project.github, checkout, spec, issue, run)
+            found = _refuse_outside_spec(project.github, checkout, spec, issue, run)
+            where = "on origin" if found.on_origin else "local only (started with --local)"
             say(
-                f"issue #{issue} is a sub-issue of spec #{spec}, whose integration branch is on"
-                " origin"
+                f"issue #{issue} is a sub-issue of spec #{spec}, whose integration branch is"
+                f" {where}"
             )
+            base = found.ref
             _refuse_pending_blockers(
                 checkout,
                 IssueRef(project.github, issue),
                 spec,
+                found,
                 ignore_blockers,
                 home.registry,
                 run,
@@ -93,20 +98,21 @@ def start(
     title = ticket_issue.title if ticket_issue is not None else None
     worktree = project.worktree_root / branch
     _refuse_existing(checkout, branch, worktree, run)
-    base = remote_default_branch(checkout, run) if spec is None else integration_branch(spec)
+    if base is None:
+        base = f"origin/{remote_default_branch(checkout, run)}"
 
     if dry_run:
         say(f"would fetch origin in {checkout}")
         if project.worktree_links:
-            say(f"would refuse any worktree link that origin/{base} tracks")
-        say(f"would add worktree {worktree} on {branch} from origin/{base}")
+            say(f"would refuse any worktree link that {base} tracks")
+        say(f"would add worktree {worktree} on {branch} from {base}")
         link_ignored_paths(project, worktree, say, dry_run=True)
         return Started(worktree, branch, title)
 
     run(["git", "-C", checkout, "fetch", "origin"])
     say(f"fetched origin in {checkout}")
-    _refuse_tracked_links(project, f"origin/{base}", run)
-    add_ticket_worktree(project, checkout, worktree, branch, f"origin/{base}", run, say)
+    _refuse_tracked_links(project, base, run)
+    add_ticket_worktree(project, checkout, worktree, branch, base, run, say)
     say(f"worktree: {worktree}")
     if ticket_issue is not None:
         say(f"issue: #{issue} {ticket_issue.title}")
@@ -180,7 +186,8 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         description=(
             "Read the issue, fetch the project, and add the ticket worktree on a "
             "fix-<issue>-<slug> branch from origin's default branch (with --spec, on a "
-            "spec ticket branch from the spec's integration branch, refusing a ticket with an "
+            "spec ticket branch from the spec's integration branch, origin's or, while origin "
+            "lacks it, the local one `kaizen spec start --local` made, refusing a ticket with an "
             "open blocker not yet integrated into it unless --ignore-blockers; that check "
             "fetches the integration branch alone, also on --dry-run). Prints the worktree "
             "path and the issue's title, body and comments. With no issue, add a docs "
@@ -247,23 +254,30 @@ def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
     )
 
 
-def _refuse_outside_spec(github: str, checkout: str, spec: int, issue: int, run: Runner) -> None:
+def _refuse_outside_spec(
+    github: str, checkout: str, spec: int, issue: int, run: Runner
+) -> IntegrationBranch:
+    """Spec *spec*'s integration branch; refuses an issue outside the spec or a spec not started."""
     if issue not in {sub.number for sub in spec_sub_issues(github, spec, run)}:
         raise RefusalError(
             f"issue #{issue} is not a sub-issue of spec #{spec} in {github}",
             "check the issue and spec numbers, or add the issue to the spec's sub-issues",
         )
-    if not has_integration_branch(checkout, spec, run):
+    found = find_integration_branch(checkout, spec, run)
+    if found is None:
         raise RefusalError(
-            f"origin has no {integration_branch(spec)}, spec #{spec}'s integration branch",
-            f"run `kaizen spec start {spec}` first, or check the spec number",
+            f"origin has no {integration_branch(spec)}, spec #{spec}'s integration branch,"
+            " and neither does the main checkout's clone",
+            f"run `kaizen spec start {spec}` (or `--local`) first, or check the spec number",
         )
+    return found
 
 
 def _refuse_pending_blockers(
     checkout: str,
     ticket: IssueRef,
     spec: int,
+    found: IntegrationBranch,
     ignore_blockers: bool,
     projects_dir: Path,
     run: Runner,
@@ -271,7 +285,7 @@ def _refuse_pending_blockers(
 ) -> None:
     """Refuses a ticket whose open blocker is not yet integrated into the spec, the rule that
     keeps a ticket off `kaizen spec status`'s frontier; with *ignore_blockers*, says so instead."""
-    integrated = fetch_integrated_issues(checkout, spec, run)
+    integrated = fetch_integrated_issues(checkout, spec, found, run)
     blockers = ticket_blockers(ticket, integrated, projects_dir, run)
     branch = integration_branch(spec)
     if not blockers.waiting:

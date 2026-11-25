@@ -138,7 +138,7 @@ def test_integrate_pushes_only_the_integration_branch_never_the_ticket_branch(tm
 
     integrate(_worktree(tmp_path), shell, home=home_for(projects), say=_quiet)
 
-    assert [cmd[3:] for cmd in shell.ran("push")] == [["push", "origin", "HEAD:spec-25"]]
+    assert [cmd[3:] for cmd in shell.ran("push")] == [["push", "origin", "HEAD:refs/heads/spec-25"]]
 
 
 def test_the_merge_subject_names_the_ticket_branch(tmp_path):
@@ -158,7 +158,7 @@ def test_a_dry_run_issues_only_queries(tmp_path):
 
     integrate(_worktree(tmp_path), shell, home=home_for(projects), dry_run=True, say=lines.append)
 
-    queries = {("rev-parse",), ("ls-remote",), ("status",), ("rev-list",)}
+    queries = {("rev-parse",), ("ls-remote",), ("for-each-ref",), ("status",), ("rev-list",)}
     assert all(any(cmd[3:4] == list(q) for q in queries) for cmd in shell.calls)
     assert "would push the merge to spec-25" in lines
 

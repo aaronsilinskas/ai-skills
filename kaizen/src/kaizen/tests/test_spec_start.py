@@ -23,6 +23,8 @@ def _shell(tmp_path: Path, **overrides: str | BaseException) -> Shell:
             ("issue", "view"): overrides.get("issue", SPEC_OPEN),
             ("ls-remote", "--heads"): overrides.get("heads", ""),
             ("ls-remote", "--symref"): REMOTE_HEAD,
+            ("for-each-ref",): overrides.get("local", ""),
+            ("worktree", "list"): overrides.get("worktrees", ""),
             ("grep",): overrides.get("leaks", failed("git grep")),
             ("push",): overrides.get("push", ""),
         }
@@ -164,3 +166,68 @@ def test_start_refuses_to_run_outside_any_git_checkout(tmp_path):
 
     with pytest.raises(RefusalError, match="not a git repository"):
         _start(tmp_path, shell)
+
+
+def test_a_local_start_creates_the_branch_from_the_remote_default_and_pushes_nothing(tmp_path):
+    shell = _shell(tmp_path)
+    lines: list[str] = []
+
+    start(25, shell, home=home_for(proto_projects(tmp_path)), local=True, say=lines.append)
+
+    repo = str(tmp_path / "proto")
+    assert shell.ran("branch") == [
+        ["git", "-C", repo, "branch", "--no-track", "spec-25", "refs/remotes/origin/main"]
+    ]
+    assert not shell.ran("push")
+    assert "created the local branch spec-25 from origin/main; nothing was pushed" in lines
+
+
+def test_a_local_dry_run_issues_only_queries_and_prints_the_plan(tmp_path):
+    shell = _shell(tmp_path)
+    lines: list[str] = []
+
+    start(
+        25,
+        shell,
+        home=home_for(proto_projects(tmp_path)),
+        local=True,
+        dry_run=True,
+        say=lines.append,
+    )
+
+    assert not shell.ran("fetch")
+    assert not shell.ran("branch")
+    assert not shell.ran("push")
+    assert lines[-1] == "would create the local branch spec-25 from origin/main, pushing nothing"
+
+
+def test_a_local_start_refuses_a_spec_already_started_locally(tmp_path):
+    shell = _shell(tmp_path, local="abc123\n")
+
+    with pytest.raises(RefusalError, match=r"spec-25 already exists locally"):
+        _start(tmp_path, shell, local=True)
+    assert not shell.ran("branch")
+    assert not shell.ran("push")
+
+
+def test_start_pushes_a_local_branch_an_earlier_local_start_made_then_deletes_it(tmp_path):
+    shell = _shell(tmp_path, local="abc123\n")
+
+    _start(tmp_path, shell)
+
+    repo = str(tmp_path / "proto")
+    assert shell.ran("push") == [
+        ["git", "-C", repo, "push", "origin", "refs/heads/spec-25:refs/heads/spec-25"]
+    ]
+    assert shell.ran("branch", "-D") == [["git", "-C", repo, "branch", "-D", "spec-25"]]
+    (grep,) = shell.ran("grep")
+    assert grep[-1] == "spec-25"
+
+
+def test_start_refuses_to_push_a_local_branch_a_checkout_has_checked_out(tmp_path):
+    worktrees = f"worktree {tmp_path / 'proto'}\nHEAD abc123\nbranch refs/heads/spec-25\n\n"
+    shell = _shell(tmp_path, local="abc123\n", worktrees=worktrees)
+
+    with pytest.raises(RefusalError, match=r"spec-25 is checked out in"):
+        _start(tmp_path, shell)
+    assert not shell.ran("push")

@@ -9,10 +9,11 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.branch import integrated_issues, integration_branch, origin_has_branch
-from kaizen.shared.common import Runner, run_or_refuse
+from kaizen.shared.branch import IntegrationBranch, integrated_issues
+from kaizen.shared.common import RefusalError, Runner, run_or_refuse
 from kaizen.shared.issue_graph import IssueRef, LinkedIssue, blockers_of
 from kaizen.shared.registry import fetch_branch, home_repos
+from kaizen.shared.worktree import list_worktrees
 
 
 @dataclass(frozen=True)
@@ -87,18 +88,26 @@ def ticket_blockers(
     )
 
 
-def fetch_integrated_issues(checkout: str, spec: int, run: Runner) -> set[int]:
-    """Fetches spec *spec*'s integration branch alone from ``origin``, then reads the issues
-    integrated into it; refuses when the fetch fails."""
-    tip = fetch_branch(
-        checkout, integration_branch(spec), run, "check that origin is reachable, then rerun"
-    )
+def fetch_integrated_issues(
+    checkout: str, spec: int, branch: IntegrationBranch, run: Runner
+) -> set[int]:
+    """Reads the issues integrated into spec *spec*'s integration *branch*, after fetching it
+    alone from ``origin`` when it is there; refuses when the fetch fails."""
+    tip = branch.ref
+    if branch.on_origin:
+        tip = fetch_branch(checkout, branch.name, run, "check that origin is reachable, then rerun")
     return integrated_issues(checkout, spec, tip, run)
 
 
-def has_integration_branch(checkout: str, spec: int, run: Runner) -> bool:
-    """Whether ``origin`` has spec *spec*'s integration branch, asked of the remote itself."""
-    return origin_has_branch(checkout, integration_branch(spec), run)
+def refuse_checked_out(checkout: str, branch: str, run: Runner, *, rerun: str) -> None:
+    """Refuses when the main checkout or any of its worktrees is on *branch*, which a command is
+    about to delete; the fix ends by running *rerun* again."""
+    for worktree in list_worktrees(checkout, run):
+        if worktree.branch == branch:
+            raise RefusalError(
+                f"{branch} is checked out in {worktree.path}, so it can't be deleted",
+                f"switch {worktree.path} to another branch, then run `{rerun}` again",
+            )
 
 
 def spec_sub_issues(github: str, spec: int, run: Runner) -> list[SubIssue]:

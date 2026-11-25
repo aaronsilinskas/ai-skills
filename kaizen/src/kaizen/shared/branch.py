@@ -134,6 +134,39 @@ def origin_has_branch(checkout: str, branch: str, run: Runner) -> bool:
     return any(line.endswith(f"\trefs/heads/{branch}") for line in out.splitlines())
 
 
+def local_branch_head(checkout: str, branch: str, run: Runner) -> str | None:
+    """The commit the local *branch* points at, or ``None`` when there is no such branch."""
+    out = run(
+        ["git", "-C", checkout, "for-each-ref", "--format=%(objectname)", f"refs/heads/{branch}"]
+    )
+    return out.strip() or None
+
+
+@dataclass(frozen=True)
+class IntegrationBranch:
+    """Where a started spec's integration branch is: on ``origin``, or only in the local clone,
+    where ``kaizen spec start --local`` made it and no push has published it yet."""
+
+    name: str
+    on_origin: bool
+
+    @property
+    def ref(self) -> str:
+        """The ref a command reads it at: ``origin/<name>``, or the local branch itself."""
+        return f"origin/{self.name}" if self.on_origin else self.name
+
+
+def find_integration_branch(checkout: str, spec: int, run: Runner) -> IntegrationBranch | None:
+    """Spec *spec*'s integration branch, on ``origin`` when the remote has it, else the local
+    branch; ``None`` when the spec is not started. Only queries."""
+    branch = integration_branch(spec)
+    if origin_has_branch(checkout, branch, run):
+        return IntegrationBranch(branch, on_origin=True)
+    if local_branch_head(checkout, branch, run) is not None:
+        return IntegrationBranch(branch, on_origin=False)
+    return None
+
+
 def prune_tracking_ref(
     checkout: str, branch: str, stale: bool, run: Runner, *, dry_run: bool, say: Say
 ) -> None:

@@ -30,6 +30,8 @@ def _shell(branch: str = SPEC_BRANCH, **overrides: Reply) -> Shell:
         {
             ("rev-parse", "--abbrev-ref", "HEAD"): f"{branch}\n",
             ("ls-remote", "--symref"): "ref: refs/heads/main\tHEAD\nabc123\tHEAD\n",
+            ("ls-remote", "--heads"): overrides.get("heads", "def456\trefs/heads/spec-117\n"),
+            ("for-each-ref",): overrides.get("local", ""),
             ("fetch",): overrides.get("fetch", ""),
             ("merge-base", "--is-ancestor"): overrides.get("ancestor", ""),
             ("log",): LOG,
@@ -42,7 +44,16 @@ def _shell(branch: str = SPEC_BRANCH, **overrides: Reply) -> Shell:
 
 def _mutating(shell: Shell) -> list[list[str]]:
     """Every recorded git call that could change the worktree, its branch or its index."""
-    queries = {"rev-parse", "ls-remote", "fetch", "merge-base", "log", "diff", "status"}
+    queries = {
+        "rev-parse",
+        "ls-remote",
+        "for-each-ref",
+        "fetch",
+        "merge-base",
+        "log",
+        "diff",
+        "status",
+    }
     return [cmd for cmd in shell.calls if cmd[3] not in queries]
 
 
@@ -149,3 +160,12 @@ def test_a_failed_ancestry_check_is_an_error_not_a_verdict(kaizen, capsys):
     captured = capsys.readouterr()
     assert captured.err.startswith("error: git -C")
     assert "is not an ancestor" not in captured.out
+
+
+def test_a_spec_ticket_whose_integration_branch_is_only_local_diffs_against_it(kaizen, capsys):
+    shell = _shell(heads="", local="abc123\n")
+
+    assert kaizen(["ticket", "diff", _worktree(SPEC_BRANCH), "--base"], run=shell) == 0
+
+    assert capsys.readouterr().out == "spec-117\n"
+    assert not shell.ran("fetch")

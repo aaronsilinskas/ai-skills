@@ -73,6 +73,7 @@ def _shell(
         {
             ("rev-parse", "--show-toplevel"): overrides.get("toplevel", f"{tmp_path / 'proto'}\n"),
             ("ls-remote", "--heads"): overrides.get("heads", HEADS),
+            ("for-each-ref",): overrides.get("local", ""),
             ("log",): overrides.get("merges", MERGES),
             ("worktree", "list"): overrides.get("worktrees", _worktrees(tmp_path)),
             ("gh", "api"): overrides.get("gh", gh_api),
@@ -364,3 +365,13 @@ def test_json_gives_a_blocker_outside_the_home_as_a_count_without_its_repo(tmp_p
     assert [b["number"] for b in ticket["open_blockers"]] == [12]
     assert ticket["blockers_outside_home"] == 2
     assert "stranger" not in out
+
+
+def test_a_spec_started_with_local_counts_as_started_and_reads_the_local_branch(tmp_path):
+    shell = _shell(tmp_path, [sub_issue_json(30)], heads="", local="abc123\n", merges="")
+    said = _status(tmp_path, shell)
+
+    assert "integration: spec-25, local only until its first integration pushes it" in said
+    assert _row(said, 30).split()[2] == "no"
+    assert not shell.ran("fetch")
+    assert shell.ran("log")[0][-1] == "spec-25"

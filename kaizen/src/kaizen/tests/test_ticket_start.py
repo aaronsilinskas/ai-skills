@@ -77,6 +77,7 @@ def _shell(**overrides: str | BaseException) -> Shell:
         ("log", "--merges"): overrides.get("merges", MERGES),
         ("gh", "api"): gh_api,
         ("ls-remote", "--heads"): overrides.get("integration", INTEGRATION_BRANCH),
+        ("for-each-ref",): overrides.get("local", ""),
         ("ls-remote",): overrides.get("remote_head", REMOTE_HEAD),
         ("branch", "--list"): overrides.get("branches", ""),
         ("worktree", "list"): overrides.get("worktrees", ""),
@@ -665,3 +666,18 @@ def test_start_refuses_when_git_cannot_list_the_base_for_the_tracked_check(tmp_p
         start("proto", 7, "x", shell, home=home_for(projects), say=_quiet)
 
     assert not shell.ran("worktree", "add")
+
+
+def test_with_spec_started_locally_the_worktree_is_based_on_the_local_integration_branch(
+    tmp_path,
+):
+    shell = _shell(integration="", local="abc123\n")
+    lines: list[str] = []
+
+    start("proto", 1358, "x", shell, home=home_for(_proto(tmp_path)), spec=25, say=lines.append)
+
+    (add,) = shell.ran("worktree", "add")
+    assert add[-1] == "spec-25"
+    assert shell.ran("log", "--merges")[0][-1] == "spec-25"
+    assert not shell.ran("fetch", "-q")
+    assert "whose integration branch is local only (started with --local)" in " ".join(lines)

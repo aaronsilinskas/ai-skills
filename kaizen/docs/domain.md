@@ -48,6 +48,8 @@ Paths below are relative to `kaizen/src/kaizen/`.
   It also holds the starter README and page a new home gets, beside the parser so the two change together.
 - `shared/branch.py`: the branch names (an **integration branch** `spec-<N>`, its tickets' `spec-<N>-fix-<issue>-<slug>`, a lone ticket's `fix-<issue>-<slug>` and a **docs ticket**'s `docs-<slug>`) and the merge subject that **integrates** a ticket.
   Names are worked out from numbers, so the integration branch's history alone records which tickets are integrated.
+  `find_integration_branch` says where a started spec's integration branch is: on `origin`, or only local, as `spec start --local` leaves it until the spec's first integration pushes it.
+  Every command that reads an integration branch prefers `origin`'s, so a local copy matters only while `origin` lacks the branch, and the push that publishes it deletes the local copy, which `spec finish` would otherwise refuse as unmerged.
   It also fast-forwards the **main checkout** after a finish, only when that is safe, and prints a skip otherwise.
 - `shared/leak.py`: the **leak check**, for every command that pushes, opens a PR or publishes an issue (ADR 0002).
   `leak_check` searches a checkout's tracked files, a commit's tree or the index; `leak_check_text` searches text about to be sent to GitHub.
@@ -80,6 +82,7 @@ One module per command; each group's `--help` lists them.
   `ticket/common.py` holds the `ticket` group's gh queries and its refusal of a closed issue.
 - `spec/`: publish a spec, and start, integrate, ship, finish or report the status of its integration branch.
   `spec integrate` merges in a scratch worktree and pushes only after the check command passes; the ticket branch is never pushed (ADR 0001).
+  `spec start --local` makes the integration branch with no push; `ticket start --spec`, `ticket diff`, `ticket compare` and `spec integrate` then base the spec's tickets on the local branch, and `spec status` counts it as started.
   `spec/common.py` reads a spec's sub-issues and each ticket's blockers, for `spec status` and `ticket start --spec`.
 - `project/`: `project leak-check`, the leak check on its own for a push no other command makes, and `project labels`, which creates the workflow labels a project's repo lacks and never edits or deletes one.
 - `issue/`: `issue show`, `issue link` and `issue publish`, built on the issue graph.

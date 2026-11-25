@@ -4,13 +4,18 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.branch import integrated_issues, integration_branch, remote_default_branch
+from kaizen.shared.branch import (
+    find_integration_branch,
+    integrated_issues,
+    integration_branch,
+    remote_default_branch,
+)
 from kaizen.shared.common import RefusalError, Runner, Say
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.pr import check_pr_text, create_pr, open_pr, read_body, update_pr
 from kaizen.shared.registry import resolve_current
-from kaizen.spec.common import SubIssue, has_integration_branch, spec_sub_issues
+from kaizen.spec.common import SubIssue, spec_sub_issues
 
 
 @dataclass(frozen=True)
@@ -39,10 +44,18 @@ def ship(
     checkout = project.main_checkout
     say(f"{project.name} project at {checkout}")
     branch = integration_branch(spec)
-    if not has_integration_branch(checkout, spec, run):
+    found = find_integration_branch(checkout, spec, run)
+    if found is None:
         raise RefusalError(
             f"origin has no {branch}: spec #{spec} was never started",
             f"start it with `kaizen spec start {spec}` and integrate its tickets first",
+        )
+    if not found.on_origin:
+        raise RefusalError(
+            f"origin has no {branch}: spec #{spec} was started with --local and nothing is"
+            " integrated yet",
+            f"integrate its tickets first with `kaizen spec integrate <ticket-worktree>`, whose"
+            f" first run pushes {branch}",
         )
     say(f"origin has {branch}")
     default = remote_default_branch(checkout, run)

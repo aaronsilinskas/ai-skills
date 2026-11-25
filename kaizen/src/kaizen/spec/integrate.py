@@ -18,11 +18,13 @@ from kaizen.shared.leak import leak_check
 from kaizen.shared.registry import (
     NO_CHECK,
     TicketWorktree,
+    local_base,
     refuse_nothing_ahead,
     refuse_uncommitted,
     resolve_ticket_worktree,
 )
 from kaizen.shared.worktree import refuse_hook_inside, scratch_worktree
+from kaizen.spec.common import refuse_checked_out
 
 CHECK_OUTPUT_LINES = 30
 """How much of a failing check's output the refusal shows: enough for pytest's summary."""
@@ -53,10 +55,13 @@ def integrate(
         fix="commit them (or discard them) so the integration holds everything you tested",
     )
     say("worktree is clean")
+    # A spec started with --local has its integration branch only in the clone until this push.
+    local = local_base(ticket, run)
+    base = local or f"origin/{target}"
     ahead = refuse_nothing_ahead(
-        ticket, f"origin/{target}", run, fix="commit the ticket's work before integrating it"
+        ticket, base, run, fix="commit the ticket's work before integrating it"
     )
-    say(f"{ahead} commit(s) ahead of origin/{target}")
+    say(f"{ahead} commit(s) ahead of {base}")
     check = project.check
     if check is None:
         raise RefusalError(
@@ -67,21 +72,26 @@ def integrate(
     say(f"check command: {check}")
     checkout = project.main_checkout
     refuse_hook_inside(checkout, ticket.path, run)
+    if local:
+        refuse_checked_out(checkout, target, run, rerun=f"kaizen spec integrate {ticket.path}")
 
     if dry_run:
         say(f"would fetch origin in {checkout}")
-        say(f"would merge {ticket.branch} into origin/{target} in a scratch worktree")
+        say(f"would merge {ticket.branch} into {base} in a scratch worktree")
         say("would skip the check (none declared)" if check == NO_CHECK else f"would run {check}")
         say("would run the leak check")
-        say(f"would push the merge to {target}")
+        if local:
+            say(f"would push the merge to {target}, creating it on origin")
+            say(f"would delete the local {target}, which origin then holds")
+        else:
+            say(f"would push the merge to {target}")
         say(f"would remove worktree {ticket.path} and local branch {ticket.branch}")
         return
 
     run(["git", "-C", checkout, "fetch", "origin"])
     say(f"fetched origin in {checkout}")
-    base = f"origin/{target}"
     with scratch_worktree(checkout, base, run, say, prefix="kaizen-integrate-") as scratch:
-        _merge(ticket, spec, scratch, run)
+        _merge(ticket, spec, base, scratch, run)
         say(f"merged {ticket.branch} into {base}")
         if check == NO_CHECK:
             say("skipped the check: the project declares none")
@@ -91,7 +101,11 @@ def integrate(
         leak_check(scratch, home, run, public=project.public, denied=project.leak_deny, base=base)
         say("leak check found nothing")
         _push(scratch, target, run)
-        say(f"pushed the merge to {target}")
+        say(f"pushed the merge to {target}" + (", creating it on origin" if local else ""))
+    if local:
+        # Force-delete is safe: the merge just pushed has the local branch's tip as a parent.
+        run(["git", "-C", checkout, "branch", "-D", target])
+        say(f"deleted the local {target}, which origin now holds")
     run(["git", "-C", checkout, "worktree", "remove", str(ticket.path)])
     say(f"removed worktree {ticket.path}")
     # Force-delete is safe: the branch is merged into the integration branch just pushed.
@@ -109,7 +123,10 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
             "runs from an interpreter inside the ticket worktree), run the project's check "
             "command there and the leak check, push the merge to spec-<N>, and remove "
             "the ticket worktree and its local branch. The ticket branch is never pushed, and "
-            "neither the main checkout nor the ticket worktree is changed by the merge."
+            "neither the main checkout nor the ticket worktree is changed by the merge. For a spec "
+            "started with `kaizen spec start --local`, whose spec-<N> is still only local, the "
+            "merge is into that local branch, the push creates spec-<N> on origin, and the local "
+            "spec-<N> is then deleted (refused first if a checkout has it checked out)."
         ),
     )
     parser.add_argument(
@@ -123,8 +140,7 @@ def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
     integrate(args.worktree, run, home=home, dry_run=args.dry_run)
 
 
-def _merge(ticket: TicketWorktree, spec: int, scratch: Path, run: Runner) -> None:
-    target = integration_branch(spec)
+def _merge(ticket: TicketWorktree, spec: int, base: str, scratch: Path, run: Runner) -> None:
     message = integration_merge_message(ticket.branch, spec)
     try:
         run(["git", "-C", str(scratch), "merge", "--no-ff", "-m", message, ticket.branch])
@@ -134,8 +150,8 @@ def _merge(ticket: TicketWorktree, spec: int, scratch: Path, run: Runner) -> Non
             raise
         run(["git", "-C", str(scratch), "merge", "--abort"])
         raise RefusalError(
-            f"{ticket.branch} conflicts with origin/{target} in:\n{conflicts.rstrip()}",
-            f"in {ticket.path}, merge origin/{target} into {ticket.branch} and resolve those"
+            f"{ticket.branch} conflicts with {base} in:\n{conflicts.rstrip()}",
+            f"in {ticket.path}, merge {base} into {ticket.branch} and resolve those"
             f" files, commit, then rerun `kaizen spec integrate {ticket.path}`",
         ) from None
 
@@ -155,7 +171,7 @@ def _run_check(check: str, scratch: Path, run: Runner) -> None:
 
 def _push(scratch: Path, target: str, run: Runner) -> None:
     try:
-        run(["git", "-C", str(scratch), "push", "origin", f"HEAD:{target}"])
+        run(["git", "-C", str(scratch), "push", "origin", f"HEAD:refs/heads/{target}"])
     except subprocess.CalledProcessError as exc:
         if not push_rejected(exc):
             raise

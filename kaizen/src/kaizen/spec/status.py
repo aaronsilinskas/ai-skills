@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from kaizen.shared.branch import integration_branch, parse_ticket_branch
+from kaizen.shared.branch import find_integration_branch, integration_branch, parse_ticket_branch
 from kaizen.shared.common import Runner, Say
 from kaizen.shared.home import Home
 from kaizen.shared.issue_graph import IssueRef, LinkedIssue
@@ -21,7 +21,6 @@ from kaizen.spec.common import (
     SubIssue,
     TicketBlockers,
     fetch_integrated_issues,
-    has_integration_branch,
     spec_sub_issues,
     ticket_blockers,
 )
@@ -81,15 +80,18 @@ def status(
     project = resolve_current(run, home.registry)
     checkout = project.main_checkout
     branch = integration_branch(spec)
-    started = has_integration_branch(checkout, spec, run)
-    integrated = fetch_integrated_issues(checkout, spec, run) if started else set()
+    found = find_integration_branch(checkout, spec, run)
+    started = found is not None
+    integrated = fetch_integrated_issues(checkout, spec, found, run) if found else set()
     tickets = _tickets(project, spec, integrated, home.registry, run)
     frontier = _frontier(tickets)
     if as_json:
         say(json.dumps(_as_json(project.github, spec, started, tickets, frontier), indent=2))
         return
     say(f"{project.name} project at {checkout}")
-    if started:
+    if found is not None and not found.on_origin:
+        say(f"integration: {branch}, local only until its first integration pushes it")
+    elif started:
         say(f"integration: origin/{branch}, {len(integrated)} ticket(s) integrated")
     else:
         say(f"integration: not started (origin has no {branch})")
@@ -249,11 +251,14 @@ def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]"
         "status",
         help="print a spec's tickets and its frontier",
         description=(
-            "Run from the project's root. Fetch origin/spec-<N> alone (when origin has it), then "
+            "Run from the project's root. Fetch origin/spec-<N> alone (when origin has it; a "
+            "local spec-<N> that `kaizen spec start --local` made, which origin lacks, is read "
+            "as it is and counts as started), then "
             "print one row per sub-issue of the spec: reference, state (closed as not planned "
             "shows as skipped), whether it is integrated (an integration merge in "
-            "origin/spec-<N>'s history, read as `kaizen spec ship` reads it, or not-started when "
-            "origin has no spec-<N>), whether it has a ticket worktree under the project's "
+            "spec-<N>'s history, read as `kaizen spec ship` reads it, or not-started when "
+            "neither origin nor the clone has spec-<N>), whether it has a ticket worktree under "
+            "the project's "
             "worktree root, assignees, labels, open blockers in the home's repos (one outside "
             "them prints as 'blocked by an issue outside this home', with no repo name, and "
             "counts as open), and title. Then the "

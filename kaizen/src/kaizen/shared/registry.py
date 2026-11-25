@@ -49,7 +49,12 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
-from kaizen.shared.branch import integration_branch, parse_ticket_branch, remote_default_branch
+from kaizen.shared.branch import (
+    find_integration_branch,
+    integration_branch,
+    parse_ticket_branch,
+    remote_default_branch,
+)
 from kaizen.shared.comment_only import FileChange
 from kaizen.shared.common import RefusalError, Runner, run_or_refuse
 
@@ -472,10 +477,24 @@ class TicketWorktree:
 def fetch_base(ticket: TicketWorktree, run: Runner) -> str:
     """Fetches only the ticket's base branch from ``origin`` and returns its ref, ``origin/<base>``.
 
-    Refuses when ``origin`` lacks the branch, such as a spec whose integration branch was never
-    started.
+    A spec's ticket whose integration branch is only local (see ``local_base``) gets that branch,
+    and nothing is fetched. Refuses when neither ``origin`` nor the clone has the branch, such as
+    a spec whose integration branch was never started.
     """
+    local = local_base(ticket, run)
+    if local is not None:
+        return local
     return fetch_branch(str(ticket.path), ticket.base_branch, run, _missing_base_fix(ticket))
+
+
+def local_base(ticket: TicketWorktree, run: Runner) -> str | None:
+    """The local integration branch a spec's ticket is based on while ``origin`` lacks it, as
+    ``kaizen spec start --local`` leaves it until the first integration; ``None`` for any other
+    ticket. Only queries."""
+    if ticket.spec is None:
+        return None
+    found = find_integration_branch(str(ticket.path), ticket.spec, run)
+    return found.ref if found is not None and not found.on_origin else None
 
 
 def fetch_branch(checkout: str, branch: str, run: Runner, fix: str) -> str:

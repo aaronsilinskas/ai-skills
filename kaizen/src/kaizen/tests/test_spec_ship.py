@@ -85,6 +85,7 @@ def _shell(tmp_path: Path, **overrides: Reply) -> _ShipShell:
             ("rev-parse", "--show-toplevel"): overrides.get("toplevel", f"{tmp_path / 'proto'}\n"),
             ("ls-remote", "--heads"): overrides.get("heads", HEADS),
             ("ls-remote", "--symref"): REMOTE_HEAD,
+            ("for-each-ref",): overrides.get("local", ""),
             ("gh", "api"): overrides.get("sub_issues", SUB_ISSUES),
             ("log",): overrides.get("merges", MERGES),
             ("grep",): overrides.get("leaks", failed("git grep")),
@@ -184,6 +185,13 @@ def test_ship_refuses_a_spec_whose_integration_branch_origin_lacks(tmp_path):
     shell = _shell(tmp_path, heads="")
 
     _refused(tmp_path, shell, r"origin has no spec-25(.|\n)*`kaizen spec start 25`")
+    assert not shell.ran("fetch")
+
+
+def test_ship_refuses_a_spec_started_with_local_whose_branch_is_not_pushed_yet(tmp_path):
+    shell = _shell(tmp_path, heads="", local="abc123\n")
+
+    _refused(tmp_path, shell, r"started with --local(.|\n)*`kaizen spec integrate")
     assert not shell.ran("fetch")
 
 
