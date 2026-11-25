@@ -10,7 +10,7 @@ from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.registry import (
     Project,
-    local_base,
+    base_ref,
     resolve_checkout,
     resolve_ticket_worktree,
 )
@@ -50,8 +50,7 @@ def _base(project: Project, checkout: Path, run: Runner, projects_dir: Path) -> 
     branch = run(["git", "-C", str(checkout), "rev-parse", "--abbrev-ref", "HEAD"]).strip()
     if checkout.resolve() == project.path.resolve() or parse_ticket_branch(branch) is None:
         return f"origin/{remote_default_branch(str(checkout), run)}"
-    ticket = resolve_ticket_worktree(checkout, run, projects_dir)
-    return local_base(ticket, run) or ticket.base_ref
+    return base_ref(resolve_ticket_worktree(checkout, run, projects_dir), run)
 
 
 def add_parser(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:

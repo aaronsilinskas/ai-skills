@@ -12,7 +12,7 @@ from typing import Literal
 from kaizen.shared.command import VERDICT_MEANING, Verdict, run_from, verdict
 from kaizen.shared.common import Runner, Say
 from kaizen.shared.home import Home
-from kaizen.shared.registry import fetch_base, local_base, resolve_ticket_worktree, uncommitted
+from kaizen.shared.registry import base_ref, fetch_base, resolve_ticket_worktree, uncommitted
 from kaizen.shared.worktree import link_ignored_paths, scratch_worktree
 
 Side = Literal["ticket", "base"]
@@ -49,7 +49,7 @@ def compare(
     project = ticket.project
     line = shlex.join(command)
     if dry_run:
-        base = local_base(ticket, run) or ticket.base_ref
+        base = base_ref(ticket, run)
         say(f"base: {base}")
         say(f"would fetch {base}")
         say(f"would add a scratch worktree at {base}")

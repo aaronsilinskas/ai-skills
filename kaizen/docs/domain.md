@@ -82,7 +82,6 @@ One module per command; each group's `--help` lists them.
   `ticket/common.py` holds the `ticket` group's gh queries and its refusal of a closed issue.
 - `spec/`: publish a spec, and start, integrate, ship, finish or report the status of its integration branch.
   `spec integrate` merges in a scratch worktree and pushes only after the check command passes; the ticket branch is never pushed (ADR 0001).
-  `spec start --local` makes the integration branch with no push; `ticket start --spec`, `ticket diff`, `ticket compare` and `spec integrate` then base the spec's tickets on the local branch, and `spec status` counts it as started.
   `spec/common.py` reads a spec's sub-issues and each ticket's blockers, for `spec status` and `ticket start --spec`.
 - `project/`: `project leak-check`, the leak check on its own for a push no other command makes, and `project labels`, which creates the workflow labels a project's repo lacks and never edits or deletes one.
 - `issue/`: `issue show`, `issue link` and `issue publish`, built on the issue graph.

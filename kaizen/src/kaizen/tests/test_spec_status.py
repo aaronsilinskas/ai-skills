@@ -232,7 +232,7 @@ def test_a_spec_with_no_integration_branch_still_prints_rows_and_frontier(tmp_pa
     shell = _shell(tmp_path, [sub_issue_json(30)], heads="")
     said = _status(tmp_path, shell)
 
-    assert "integration: not started (origin has no spec-25)" in said
+    assert "integration: not started (neither origin nor the clone has spec-25)" in said
     assert _row(said, 30).split()[2] == "not-started"
     assert "frontier: #30" in said
     assert not shell.ran("fetch")

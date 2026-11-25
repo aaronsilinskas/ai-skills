@@ -487,6 +487,12 @@ def fetch_base(ticket: TicketWorktree, run: Runner) -> str:
     return fetch_branch(str(ticket.path), ticket.base_branch, run, _missing_base_fix(ticket))
 
 
+def base_ref(ticket: TicketWorktree, run: Runner) -> str:
+    """The ticket's base ref as last fetched, fetching nothing: ``local_base`` when it has one,
+    else ``origin/<base>``. Only queries."""
+    return local_base(ticket, run) or ticket.base_ref
+
+
 def local_base(ticket: TicketWorktree, run: Runner) -> str | None:
     """The local integration branch a spec's ticket is based on while ``origin`` lacks it, as
     ``kaizen spec start --local`` leaves it until the first integration; ``None`` for any other

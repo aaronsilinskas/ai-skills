@@ -56,8 +56,8 @@ def integrate(
     )
     say("worktree is clean")
     # A spec started with --local has its integration branch only in the clone until this push.
-    local = local_base(ticket, run)
-    base = local or f"origin/{target}"
+    local_ref = local_base(ticket, run)
+    base = local_ref or f"origin/{target}"
     ahead = refuse_nothing_ahead(
         ticket, base, run, fix="commit the ticket's work before integrating it"
     )
@@ -72,7 +72,7 @@ def integrate(
     say(f"check command: {check}")
     checkout = project.main_checkout
     refuse_hook_inside(checkout, ticket.path, run)
-    if local:
+    if local_ref:
         refuse_checked_out(checkout, target, run, rerun=f"kaizen spec integrate {ticket.path}")
 
     if dry_run:
@@ -80,7 +80,7 @@ def integrate(
         say(f"would merge {ticket.branch} into {base} in a scratch worktree")
         say("would skip the check (none declared)" if check == NO_CHECK else f"would run {check}")
         say("would run the leak check")
-        if local:
+        if local_ref:
             say(f"would push the merge to {target}, creating it on origin")
             say(f"would delete the local {target}, which origin then holds")
         else:
@@ -101,8 +101,8 @@ def integrate(
         leak_check(scratch, home, run, public=project.public, denied=project.leak_deny, base=base)
         say("leak check found nothing")
         _push(scratch, target, run)
-        say(f"pushed the merge to {target}" + (", creating it on origin" if local else ""))
-    if local:
+        say(f"pushed the merge to {target}" + (", creating it on origin" if local_ref else ""))
+    if local_ref:
         # Force-delete is safe: the merge just pushed has the local branch's tip as a parent.
         run(["git", "-C", checkout, "branch", "-D", target])
         say(f"deleted the local {target}, which origin now holds")

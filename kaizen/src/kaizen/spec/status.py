@@ -94,7 +94,7 @@ def status(
     elif started:
         say(f"integration: origin/{branch}, {len(integrated)} ticket(s) integrated")
     else:
-        say(f"integration: not started (origin has no {branch})")
+        say(f"integration: not started (neither origin nor the clone has {branch})")
     say(f"tickets of #{spec}:")
     for line in _table(tickets, project.github, started):
         say(f"  {line}")
