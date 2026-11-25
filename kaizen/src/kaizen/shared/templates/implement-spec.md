@@ -50,7 +50,8 @@ Each implementer brief also:
 - says to read repo files in its ticket worktree, as **The main checkout is not the integration base** above explains;
 - allows the `--dry-run` form of any `kaizen` command, which runs only queries, and any dry-run recipe the home overlay gives.
 
-A ticket that adds a rule to the check command or a hook must pass it across the whole integration branch (`origin/<default>...spec-<N>`), since `integrate` runs the check command there, not just on the ticket's diff.
+A ticket that adds a rule to the check command or a hook must pass it across the whole integration branch (`origin/<default>...spec-<N>`), not just on the ticket's diff.
+`integrate` runs the check command across that whole branch.
 Integrate that ticket first, or put its rule in the brief of every ticket integrated before it.
 
 ## Work the frontier (skill steps 4 and 6)

@@ -82,7 +82,7 @@ uv run pytest -q
 bash scripts/check.sh
 ```
 
-`scripts/check.sh` runs ruff, the ruff formatter's check, mypy, import-linter and pytest, and fails if any of them does.
+`scripts/check.sh` runs ruff, the ruff formatter's check, mypy, import-linter, pytest and the synced files' line length check, and fails if any of them does.
 The tests sit inside the package, beside the code they cover, and the built wheel leaves them out.
 
 ## Release

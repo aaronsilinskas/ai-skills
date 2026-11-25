@@ -9,7 +9,8 @@ Run each check or test command (the project's check command, `pytest`, `pre-comm
 Otherwise the shell reports the last command's exit code, and a failed step looks like success.
 To shorten its long output, read the exit code first (`cmd; echo "exit=$?"` on its own line), or write the output to a file and read its tail.
 
-`kaizen` ends its stderr with its own exit code, `kaizen: exit <code>`, so its output may be shortened with `kaizen ... 2>&1 | tail -n <N>`, or filtered with `grep` as long as the pattern keeps `kaizen: exit`.
+`kaizen` ends its stderr with its own exit code, `kaizen: exit <code>`, so `kaizen ... 2>&1 | tail -n <N>` may shorten its output.
+A `grep` may filter it too, as long as the pattern keeps `kaizen: exit`.
 Never pipe it through `head`, which cuts that line.
 A non-zero exit means stop.
 `kaizen: exit 1 (refused: nothing changed)` follows a `refused:` message.
