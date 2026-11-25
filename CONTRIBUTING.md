@@ -19,6 +19,11 @@ One exception to Matt's conventions: skill frontmatter keeps `argument-hint` whe
 Use Matt's `writing-for-agents` skill (installed under `.claude/skills/`) when creating or updating a skill.
 
 
+## Plugins
+
+Each plugin's icon is `plugins/<plugin>/.claude-plugin/icon.png`, rendered from `icon.svg` beside it; the validator and the plugin directory read the PNG.
+To change it, edit `icon.svg`, re-render it as `icon.png`, a square PNG of 512 to 2048 px, and bump the plugin's version in both its `plugin.json` and `.claude-plugin/marketplace.json`.
+
 ## Consistency check
 
 Before a PR, and after adding, removing or editing a skill, run the check command:
