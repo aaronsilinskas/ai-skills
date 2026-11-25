@@ -17,4 +17,5 @@ def command_parsers() -> dict[str, argparse.ArgumentParser]:
 
 
 def has_dry_run(parser: argparse.ArgumentParser) -> bool:
+    # argparse has no public way to list a parser's options.
     return any("--dry-run" in action.option_strings for action in parser._actions)

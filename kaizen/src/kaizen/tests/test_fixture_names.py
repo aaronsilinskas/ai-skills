@@ -24,6 +24,13 @@ _REPO_REFERENCES = [
 issue reference."""
 
 
+def _owners(line: str) -> list[str]:
+    """The owner of each repo *line* names, in the order of ``_REPO_REFERENCES``."""
+    return [
+        match.group("owner") for pattern in _REPO_REFERENCES for match in pattern.finditer(line)
+    ]
+
+
 def _scanned() -> list[Path]:
     templates = sorted((PACKAGE / "shared" / "templates").iterdir())
     return templates + sorted((PACKAGE / "tests").glob("*.py"))
@@ -32,12 +39,11 @@ def _scanned() -> list[Path]:
 def test_templates_and_tests_name_only_generic_or_third_party_owners():
     allowed = GENERIC_OWNERS | THIRD_PARTY_OWNERS
     found = [
-        f"{path.relative_to(PACKAGE)}:{number}: {match.group(0)}"
+        f"{path.relative_to(PACKAGE)}:{number}: {owner}"
         for path in _scanned()
         for number, line in enumerate(path.read_text().splitlines(), start=1)
-        for pattern in _REPO_REFERENCES
-        for match in pattern.finditer(line)
-        if match.group("owner").lower() not in allowed
+        for owner in _owners(line)
+        if owner.lower() not in allowed
     ]
 
     assert found == []
@@ -53,6 +59,4 @@ def test_the_scan_finds_a_repo_named_in_each_way():
         "see stranger/one#3",
     ]
 
-    assert [
-        [m.group("owner") for p in _REPO_REFERENCES for m in p.finditer(line)] for line in lines
-    ] == [["stranger"]] * len(lines)
+    assert [_owners(line) for line in lines] == [["stranger"]] * len(lines)
