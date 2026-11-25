@@ -11,9 +11,9 @@ A code change that fits in one PR, with its design settled, skips the spec.
 Open one issue for it (`ready-for-agent`, no `spec` parent) and build it through the **Ticket implementation workflow** below, so its PR closes that issue and `code-review` runs before merge.
 Anything that needs design discussion or more than one ticket takes the full **Spec workflow**.
 
-Changes only to docs need no issue: build them as a **docs ticket**.
+Changes only to docs need no issue: build them as a **docs change**.
 Read `docs/agents/implement.md` in full first, then start it with `kaizen ticket start <project> --slug <slug>`.
-Ship it with `kaizen ticket ship` like any ticket, never with raw `git push` or `gh pr create`.
+Ship it with `kaizen ticket ship` like a ticket, never with raw `git push` or `gh pr create`.
 
 ## Spec workflow
 

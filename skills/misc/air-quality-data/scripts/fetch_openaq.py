@@ -293,7 +293,6 @@ Examples:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # ---- sensors subcommand ----
     p_sensors = sub.add_parser("sensors", help="Find PM2.5 monitors near a location")
     p_sensors.add_argument("--lat", type=float, required=True)
     p_sensors.add_argument("--lon", type=float, required=True)
@@ -307,7 +306,6 @@ Examples:
     )
     p_sensors.set_defaults(func=cmd_sensors)
 
-    # ---- history subcommand ----
     p_hist = sub.add_parser(
         "history", help="Fetch PM2.5 measurement history for a sensor"
     )

@@ -6,7 +6,7 @@
 # Runs five checks and exits non-zero if ANY of them fails. All of them run
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
-#   1. Conventions, adopted from Matt Pocock's skills (decided in #44):
+#   1. Conventions, the ones Matt Pocock's skills follow, since this repo overlays them:
 #      a. No em-dash (U+2014) in any git-tracked file outside .claude/skills/,
 #         which holds Matt's installed copies that this repo doesn't own.
 #      b. Every skills/<bucket>/<skill>/SKILL.md has a `description:` that

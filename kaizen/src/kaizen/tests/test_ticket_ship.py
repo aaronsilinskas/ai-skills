@@ -439,7 +439,7 @@ def _docs_shell(**overrides: str) -> ShipShell:
     return _shell(branch=f"{DOCS_BRANCH}\n", **overrides)
 
 
-def test_shipping_a_docs_ticket_pushes_its_branch(tmp_path):
+def test_shipping_a_docs_change_pushes_its_branch(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
@@ -448,7 +448,7 @@ def test_shipping_a_docs_ticket_pushes_its_branch(tmp_path):
     assert shell.ran("push") == [["git", "-C", str(worktree), "push", "-u", "origin", DOCS_BRANCH]]
 
 
-def test_a_docs_tickets_pr_body_has_no_closes_line_and_ends_with_the_attribution(tmp_path):
+def test_the_pr_body_of_a_docs_change_has_no_closes_line_and_ends_with_the_attribution(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
@@ -457,7 +457,7 @@ def test_a_docs_tickets_pr_body_has_no_closes_line_and_ends_with_the_attribution
     assert shell.bodies == [f"Writes the state once per Reboot.\n\n{FOOTER}\n"]
 
 
-def test_shipping_a_docs_ticket_reads_no_issue(tmp_path):
+def test_shipping_a_docs_change_reads_no_issue(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell()
 
@@ -466,7 +466,7 @@ def test_shipping_a_docs_ticket_reads_no_issue(tmp_path):
     assert not shell.ran("issue", "view")
 
 
-def test_shipping_a_docs_ticket_still_runs_the_leak_check(tmp_path):
+def test_shipping_a_docs_change_still_runs_the_leak_check(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(leaks="docs/setup.md:3:see /fixture/home/relay\n")
 
@@ -476,7 +476,7 @@ def test_shipping_a_docs_ticket_still_runs_the_leak_check(tmp_path):
     assert not shell.ran("push")
 
 
-def test_reshipping_a_docs_ticket_reuses_its_open_pr(tmp_path):
+def test_reshipping_a_docs_change_reuses_its_open_pr(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(prs=OPEN_PRS)
 
@@ -486,7 +486,7 @@ def test_reshipping_a_docs_ticket_reuses_its_open_pr(tmp_path):
     assert shipped.url == OPEN_PR
 
 
-def test_reshipping_a_docs_ticket_updates_its_pr_body_with_no_closes_line(tmp_path):
+def test_reshipping_a_docs_change_updates_its_pr_body_with_no_closes_line(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(prs=OPEN_PRS)
 
@@ -495,7 +495,7 @@ def test_reshipping_a_docs_ticket_updates_its_pr_body_with_no_closes_line(tmp_pa
     assert shell.bodies == [body.read_text().rstrip() + f"\n\n{FOOTER}\n"]
 
 
-def test_ship_compares_a_docs_ticket_with_the_default_branch_counting_renames_as_both_paths(
+def test_ship_compares_a_docs_change_with_the_default_branch_counting_renames_as_both_paths(
     tmp_path,
 ):
     projects, worktree, body = _docs_setup(tmp_path)
@@ -508,7 +508,7 @@ def test_ship_compares_a_docs_ticket_with_the_default_branch_counting_renames_as
     ]
 
 
-def test_ship_refuses_a_docs_ticket_that_touches_code_naming_only_the_code_files(tmp_path):
+def test_ship_refuses_a_docs_change_that_touches_code_naming_only_the_code_files(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(changed="docs/setup.md\nsrc/state.py\npackage.json\nsrcs/notes.md\n")
 
@@ -522,7 +522,7 @@ def test_ship_refuses_a_docs_ticket_that_touches_code_naming_only_the_code_files
     assert not shell.ran("push")
 
 
-def test_ship_refuses_a_docs_ticket_that_touches_a_file_a_glob_code_path_matches(tmp_path):
+def test_ship_refuses_a_docs_change_that_touches_a_file_a_glob_code_path_matches(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, code_paths="*.py, lib/")
     shell = _docs_shell(changed="README.md\nnew_module.py\ndocs/example.py\n")
 
@@ -534,7 +534,7 @@ def test_ship_refuses_a_docs_ticket_that_touches_a_file_a_glob_code_path_matches
     assert not shell.ran("push")
 
 
-def test_ship_refuses_a_docs_ticket_of_a_project_that_declares_no_code_paths(tmp_path):
+def test_ship_refuses_a_docs_change_of_a_project_that_declares_no_code_paths(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, code_paths=None)
     shell = _docs_shell()
 
@@ -548,7 +548,7 @@ DOCS_ONLY = "docs/index.md\ndocs/auto-merge-docs.md\n"
 DOCS_AND_README = "docs/index.md\nREADME.md\n"
 
 
-def test_a_docs_ticket_changing_only_auto_merge_paths_gets_auto_merge_on_its_pr(tmp_path):
+def test_a_docs_change_to_only_auto_merge_paths_gets_auto_merge_on_its_pr(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_ONLY)
 
@@ -557,7 +557,7 @@ def test_a_docs_ticket_changing_only_auto_merge_paths_gets_auto_merge_on_its_pr(
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", NEW_PR]]
 
 
-def test_a_docs_ticket_changing_only_paths_an_auto_merge_glob_matches_gets_auto_merge(tmp_path):
+def test_a_docs_change_to_only_paths_an_auto_merge_glob_matches_gets_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="**/*.md")
     shell = _docs_shell(changed=DOCS_AND_README)
 
@@ -566,7 +566,7 @@ def test_a_docs_ticket_changing_only_paths_an_auto_merge_glob_matches_gets_auto_
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--auto", "--merge", NEW_PR]]
 
 
-def test_a_docs_ticket_changing_a_path_outside_auto_merge_paths_gets_no_auto_merge(tmp_path):
+def test_a_docs_change_to_a_path_outside_auto_merge_paths_gets_no_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README)
 
@@ -575,7 +575,7 @@ def test_a_docs_ticket_changing_a_path_outside_auto_merge_paths_gets_no_auto_mer
     assert not shell.ran("pr", "merge")
 
 
-def test_ship_names_the_changed_paths_that_kept_a_docs_ticket_from_auto_merging(tmp_path):
+def test_ship_names_the_changed_paths_that_kept_a_docs_change_from_auto_merging(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README)
     lines: list[str] = []
@@ -585,7 +585,7 @@ def test_ship_names_the_changed_paths_that_kept_a_docs_ticket_from_auto_merging(
     assert "no auto-merge: outside auto_merge_paths (docs/): README.md" in lines
 
 
-def test_a_docs_ticket_of_a_project_without_auto_merge_paths_gets_no_auto_merge(tmp_path):
+def test_a_docs_change_of_a_project_without_auto_merge_paths_gets_no_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path)
     shell = _docs_shell(changed=DOCS_ONLY)
 
@@ -594,7 +594,7 @@ def test_a_docs_ticket_of_a_project_without_auto_merge_paths_gets_no_auto_merge(
     assert not shell.ran("pr", "merge")
 
 
-def test_ship_says_a_project_without_auto_merge_paths_kept_a_docs_ticket_from_auto_merging(
+def test_ship_says_a_project_without_auto_merge_paths_kept_a_docs_change_from_auto_merging(
     tmp_path,
 ):
     projects, worktree, body = _docs_setup(tmp_path)
@@ -644,7 +644,7 @@ def test_ship_says_a_ticket_closing_an_issue_waits_for_review(tmp_path):
     assert "no auto-merge: a ticket closing an issue waits for review" in lines
 
 
-def test_reshipping_a_docs_ticket_changing_only_auto_merge_paths_auto_merges_its_open_pr(
+def test_reshipping_a_docs_change_to_only_auto_merge_paths_auto_merges_its_open_pr(
     tmp_path,
 ):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
@@ -656,7 +656,7 @@ def test_reshipping_a_docs_ticket_changing_only_auto_merge_paths_auto_merges_its
 
 
 def _docs_only_lines(tmp_path: Path) -> list[str]:
-    """What ``ship`` prints for a docs ticket changing only its project's auto-merge paths."""
+    """What ``ship`` prints for a docs change to only its project's auto-merge paths."""
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     lines: list[str] = []
     ship(
@@ -670,7 +670,7 @@ def _docs_only_lines(tmp_path: Path) -> list[str]:
     return lines
 
 
-def test_ship_says_why_a_docs_ticket_auto_merges(tmp_path):
+def test_ship_says_why_a_docs_change_auto_merges(tmp_path):
     lines = _docs_only_lines(tmp_path)
 
     assert "auto-merge: every changed path is under auto_merge_paths (docs/)" in lines
@@ -693,7 +693,7 @@ def test_a_dry_run_says_it_would_enable_auto_merge_and_enables_nothing(tmp_path)
     assert lines[-1] == "would enable auto-merge on the PR"
 
 
-def test_a_docs_ticket_with_no_net_change_gets_no_auto_merge(tmp_path):
+def test_a_docs_change_with_an_empty_diff_gets_no_auto_merge(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed="")
 
@@ -702,7 +702,7 @@ def test_a_docs_ticket_with_no_net_change_gets_no_auto_merge(tmp_path):
     assert not shell.ran("pr", "merge")
 
 
-def test_reshipping_a_docs_ticket_that_no_longer_qualifies_turns_its_pr_auto_merge_off(tmp_path):
+def test_reshipping_a_docs_change_that_no_longer_qualifies_turns_its_pr_auto_merge_off(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README, prs=OPEN_PRS, auto_merge=AUTO_MERGE_ON)
 
@@ -711,7 +711,7 @@ def test_reshipping_a_docs_ticket_that_no_longer_qualifies_turns_its_pr_auto_mer
     assert shell.ran("pr", "merge") == [["gh", "pr", "merge", "--disable-auto", OPEN_PR]]
 
 
-def test_reshipping_a_docs_ticket_leaves_a_pr_without_auto_merge_alone(tmp_path):
+def test_reshipping_a_docs_change_leaves_a_pr_without_auto_merge_alone(tmp_path):
     projects, worktree, body = _docs_setup(tmp_path, auto_merge_paths="docs/")
     shell = _docs_shell(changed=DOCS_AND_README, prs=OPEN_PRS)
 

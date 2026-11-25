@@ -154,7 +154,7 @@ test('the default autoOpen leaves the panel closed at session start', async ($, 
   expect(opened).toEqual([])
 })
 
-// --- gating hooks: the plugin's own faults never change what they gate -------
+// Gating hooks: the plugin's own faults never change what they gate.
 
 const failStateWrites = (on: On) => on('state.set', () => ({ deny: 'disk full' }) as never)
 

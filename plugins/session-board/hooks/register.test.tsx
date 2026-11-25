@@ -156,8 +156,6 @@ const focused = (runs: string[][]) =>
 
 const permissionAsk = { tool: 'Bash', input: { command: 'git push' }, tool_use_id: 'call-1', approver: 'person' } as never
 
-// --- status transitions ------------------------------------------------------
-
 test('a typed prompt sets the title and marks the session working', async ($, on) => {
   const w = engine(on)
   await start($)
@@ -206,8 +204,6 @@ test("a subagent's turn leaves the session's status alone", async ($, on) => {
   await $.turn.complete(answered('result: nope', 'agent-1'))
   expect(mine(w.files).status).toBe('working')
 })
-
-// --- the session's name -------------------------------------------------------
 
 const rename = (args: string) => slashCommand('rename', args)
 
@@ -288,8 +284,6 @@ test("a named session's notification carries its name", async ($, on) => {
   expect(w.notes).toEqual(['core · board work|needs input: which repo?'])
 })
 
-// --- permission asks ---------------------------------------------------------
-
 test('a permission ask marks the session needs-permission with the command', async ($, on) => {
   const w = engine(on)
   on('tool.check', () => ({ decision: 'ask' as const }))
@@ -329,8 +323,6 @@ test('an allowed call goes back to working as it starts to run', async ($, on) =
   await $.tool.run({ tool: 'Bash', command: 'git push', tool_use_id: 'call-1' } as never)
   expect(mine(w.files).status).toBe('working')
 })
-
-// --- the board ---------------------------------------------------------------
 
 test('the pane lists sessions that need you before the others', async ($, on) => {
   const w = engine(on)
@@ -394,8 +386,6 @@ test('dismissing the band hides it until a session changes', async ($, on) => {
   await back.unmount()
 })
 
-// --- switching ---------------------------------------------------------------
-
 test("Go on a pane row runs the focus script with that session's tty and job", async ($, on) => {
   const w = engine(on)
   other(w.files, 'aura', { status: 'permission', tty: 'ttys009' })
@@ -449,8 +439,6 @@ test('/sessions go <project> with no match switches nowhere', async ($, on) => {
   expect((await $.command.run(sessionsGo('go nope'))).text).toBe('No other session matches "nope".')
   expect(focused(w.runs)).toEqual([])
 })
-
-// --- cleaning ----------------------------------------------------------------
 
 const sessionsClean = slashCommand('sessions', 'clean')
 
@@ -524,7 +512,7 @@ test('/sessions clean removes nothing when HOME is not an absolute path', async 
   expect(removals(w.runs)).toEqual([])
 })
 
-// --- gating hooks: the board's own faults never change what they gate --------
+// Gating hooks: the board's own faults never change what they gate.
 
 test('a prompt outside the schema goes through untouched', async ($, on) => {
   engine(on)

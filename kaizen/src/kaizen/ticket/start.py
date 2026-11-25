@@ -1,5 +1,5 @@
 """``kaizen ticket start``: create a project's ticket worktree for one issue, or for a docs
-ticket."""
+change."""
 
 import argparse
 import re
@@ -37,7 +37,7 @@ class Started:
     worktree: Path
     branch: str
     title: str | None
-    """The issue's title; ``None`` for a docs ticket."""
+    """The issue's title; ``None`` for a docs change."""
 
 
 def start(
@@ -57,7 +57,8 @@ def start(
 
     With *spec*, the worktree is spec *spec*'s ticket worktree, based on its integration branch;
     a ticket with an open blocker not yet integrated is refused unless *ignore_blockers*.
-    With no *issue*, it is the docs ticket worktree on ``docs-<slug>``, so *slug* is required.
+    With no *issue*, it is the ticket worktree for a docs change on ``docs-<slug>``, so *slug* is
+    required.
     """
     project = resolve(project_name, home.registry)
     checkout = project.main_checkout
@@ -70,7 +71,7 @@ def start(
         )
     if issue is None:
         branch = docs_branch(_refuse_bad_docs_start(project, slug, spec))
-        say(f"no issue: a docs ticket on {branch}, which may not touch code")
+        say(f"no issue: a docs change on {branch}, which may not touch code")
     else:
         ticket_issue = open_issue(project.github, issue, run)
         say(f"issue #{issue} is open: {ticket_issue.title}")
@@ -152,7 +153,7 @@ def _refuse_tracked_links(project: Project, base: str, run: Runner) -> None:
 
 
 def _refuse_bad_docs_start(project: Project, slug: str | None, spec: int | None) -> str:
-    """The docs ticket's slug; refuses a spec, a missing or malformed slug, and a project
+    """The docs change's slug; refuses a spec, a missing or malformed slug, and a project
     with no code paths to guard."""
     if spec is not None:
         raise RefusalError(
@@ -162,7 +163,7 @@ def _refuse_bad_docs_start(project: Project, slug: str | None, spec: int | None)
         )
     if slug is None:
         raise RefusalError(
-            "no issue and no --slug: a docs ticket's branch is named from its slug",
+            "no issue and no --slug: a docs change's branch is named from its slug",
             f"pass --slug <slug>, or an issue number for a code change: "
             f"kaizen ticket start {project.name} <issue>",
         )
@@ -182,7 +183,7 @@ def _refuse_bad_slug(slug: str) -> str:
 def add_parser(subparsers: Subparsers) -> None:
     parser = subparsers.add_parser(
         "start",
-        help="create the ticket worktree for an issue",
+        help="create the ticket worktree for an issue or a docs change",
         description=(
             "Read the issue, fetch the project, and add the ticket worktree on a "
             "fix-<issue>-<slug> branch from origin's default branch (with --spec, on a "
@@ -190,8 +191,8 @@ def add_parser(subparsers: Subparsers) -> None:
             "lacks it, the local one `kaizen spec start --local` made, refusing a ticket with an "
             "open blocker not yet integrated into it unless --ignore-blockers; that check "
             "fetches the integration branch alone, also on --dry-run). Prints the worktree "
-            "path and the issue's title, body and comments. With no issue, add a docs "
-            "ticket worktree on a docs-<slug> branch for a change that touches no code "
+            "path and the issue's title, body and comments. With no issue, add the "
+            "ticket worktree for a docs change, which touches no code, on a docs-<slug> branch "
             "(--slug required, --spec refused); `kaizen ticket ship` refuses it if it touches "
             "the project's code_paths. "
             "Each path in the project's worktree_links (git-ignored, such as a downloaded "
@@ -205,7 +206,7 @@ def add_parser(subparsers: Subparsers) -> None:
         "issue",
         type=int,
         nargs="?",
-        help="the issue number in the project's repo; omit it for a docs ticket",
+        help="the issue number in the project's repo; omit it for a docs change",
     )
     parser.add_argument(
         "--slug",

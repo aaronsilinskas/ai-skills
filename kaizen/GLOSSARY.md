@@ -58,14 +58,14 @@ A lone ticket ships through its own PR; a spec's ticket is integrated into that 
 _Avoid_: task, story, slice
 
 **Ticket worktree**:
-The worktree created for one ticket, on that ticket's branch.
+The worktree `kaizen ticket start` creates for one ticket or one docs change, on its own branch.
 It is based on the project's remote default branch, or, for a ticket of a spec, on that spec's integration branch.
 _Avoid_: agent worktree, scratch worktree (that is a command's temporary worktree)
 
-**Docs ticket**:
-A change to docs only, which needs no issue.
+**Docs change**:
+A change to docs only, built without an issue.
 It is built in a ticket worktree from the project's remote default branch, and may touch none of the project's declared code paths.
-_Avoid_: issue-less ticket, docs PR
+_Avoid_: docs ticket, issue-less ticket, docs PR
 
 **Integration branch**:
 The branch that collects every ticket of one spec, so that a single PR merges the whole spec into the project's default branch.
