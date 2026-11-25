@@ -70,10 +70,10 @@ def cli_home(tmp_path: Path, settings: str = "", synced_version: str | None = RE
     return root
 
 
-def register(home: Path, name: str, github: str) -> None:
+def register(home: Path, name: str, github: str, path: Path | None = None) -> None:
     """Adds a private project *name* in *github* to the registry of the fixture home at *home*,
-    with its main checkout at ``/fixture/<name>``."""
-    page = f"---\npath: /fixture/{name}\ngithub: {github}\npublic: false\n---\n"
+    with its main checkout at *path* (default: ``/fixture/<name>``)."""
+    page = f"---\npath: {path or f'/fixture/{name}'}\ngithub: {github}\npublic: false\n---\n"
     (home / "projects" / f"{name}.md").write_text(page)
 
 

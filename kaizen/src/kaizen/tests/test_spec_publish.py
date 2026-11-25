@@ -19,6 +19,7 @@ from kaizen.tests.ticket_shell import (
     cli_home,
     home_for,
     quiet,
+    register,
 )
 
 TOPLEVEL = "/fixture/proto"
@@ -262,7 +263,7 @@ def test_an_empty_footer_leaves_the_domain_docs_pr_body_without_a_footer_line(tm
     assert _publish_in_home(tmp_path, 'pr_footer = ""\n') == DOCS_PR_BODY
 
 
-MAP = "# Glossary Map\n\n## Contexts\n\n- [Ctx](./ctx/GLOSSARY.md): a context\n"
+ONE_CONTEXT_MAP = "# Glossary Map\n\n## Contexts\n\n- [Ctx](./ctx/GLOSSARY.md): a context\n"
 
 
 class _PathspecShell(_Shell):
@@ -284,7 +285,7 @@ class _PathspecShell(_Shell):
         return super().__call__(cmd)
 
 
-def _map_checkout(tmp_path: Path, glossary_map: str = MAP) -> Path:
+def _map_checkout(tmp_path: Path, glossary_map: str = ONE_CONTEXT_MAP) -> Path:
     checkout = tmp_path / "proto"
     checkout.mkdir()
     (checkout / "GLOSSARY-MAP.md").write_text(glossary_map)
@@ -353,9 +354,7 @@ def test_the_dry_run_lists_a_mapped_contexts_changed_docs(tmp_path, capsys):
     checkout = _map_checkout(tmp_path)
     shell = _PathspecShell(["ctx/GLOSSARY.md", "ctx/docs/adr/0002-thing.md"], str(checkout))
     home = cli_home(tmp_path)
-    (home / "projects" / "relay.md").write_text(
-        f"---\npath: {checkout}\ngithub: acme/relay\npublic: false\n---\n"
-    )
+    register(home, "proto", "owner/proto", checkout)
 
     argv = ["spec", "publish", str(_spec(tmp_path)), "--dry-run"]
     assert main(argv, run=shell, cwd=home, env={}) == 0
@@ -363,3 +362,46 @@ def test_the_dry_run_lists_a_mapped_contexts_changed_docs(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "domain docs for the PR: ctx/GLOSSARY.md, ctx/docs/adr/0002-thing.md\n" in out
     assert not shell.ran("gh")
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        "- [Ctx](./ctx/GLOSSARY.md#terms): anchored",
+        '- [Ctx](ctx/GLOSSARY.md "Ctx glossary"): titled',
+        "- [Ctx](<./ctx/GLOSSARY.md>): in angle brackets",
+    ],
+)
+def test_a_context_link_with_an_anchor_title_or_angle_brackets_names_its_glossary(tmp_path, entry):
+    checkout = _map_checkout(tmp_path, f"# Glossary Map\n\n## Contexts\n\n{entry}\n")
+    shell = _PathspecShell(["ctx/GLOSSARY.md"], str(checkout))
+
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
+
+    assert shell.ran("git", "add") == [["git", "add", "--", "ctx/GLOSSARY.md"]]
+
+
+def test_only_the_contexts_section_names_context_glossaries(tmp_path):
+    glossary_map = (
+        "# Glossary Map\n\nSee [the old one](./old/GLOSSARY.md).\n\n## Contexts\n\n"
+        "- [Ctx](./ctx/GLOSSARY.md): a context\n\n## Relationships\n\n"
+        "- [Other](./other/GLOSSARY.md) reads Ctx\n"
+    )
+    checkout = _map_checkout(tmp_path, glossary_map)
+    changed = ["ctx/GLOSSARY.md", "old/GLOSSARY.md", "other/GLOSSARY.md"]
+    shell = _PathspecShell(changed, str(checkout))
+
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
+
+    assert shell.ran("git", "add") == [["git", "add", "--", "ctx/GLOSSARY.md"]]
+
+
+def test_an_unreadable_map_falls_back_to_the_root_domain_docs(tmp_path):
+    checkout = tmp_path / "proto"
+    checkout.mkdir()
+    (checkout / "GLOSSARY-MAP.md").write_bytes(b"## Contexts\n\n- [Ctx](./ctx/GLOSSARY.md) \xff\n")
+    shell = _PathspecShell(["GLOSSARY.md", "ctx/GLOSSARY.md"], str(checkout))
+
+    publish(_spec(tmp_path), None, None, shell, quiet, home=_home(tmp_path, toplevel=str(checkout)))
+
+    assert shell.ran("git", "add") == [["git", "add", "--", "GLOSSARY.md"]]

@@ -7,12 +7,11 @@ home's docs), in order:
    body is everything after it.
 2. Delete the local spec file.
 3. Close the source ``idea`` issue (``--idea``) as superseded by the spec.
-4. If the domain docs have changes, commit only those on a new
-   ``spec-<N>-domain-docs`` branch, push, open a PR referencing the spec, turn on
-   auto-merge, switch back to ``main``, and delete the local branch. The domain docs are
-   the root ``GLOSSARY.md`` and ``docs/adr/``, plus, when a root ``GLOSSARY-MAP.md`` lists
-   contexts, each context's ``GLOSSARY.md`` that the map links to and the ``docs/adr/``
-   beside it.
+4. If the domain docs have changes, commit only those on a new ``spec-<N>-domain-docs``
+   branch, push, open a PR referencing the spec, turn on auto-merge, switch back to
+   ``main``, and delete the local branch. The domain docs are the root ``GLOSSARY.md`` and
+   ``docs/adr/``, plus, when a root ``GLOSSARY-MAP.md`` lists contexts, each context's
+   ``GLOSSARY.md`` that the map links to and the ``docs/adr/`` beside it.
 
 Every precondition is checked before anything leaves the machine: on ``main``,
 nothing staged, the spec has a title, the checkout is a registered project's main
@@ -42,9 +41,12 @@ from kaizen.shared.leak import leak_check, leak_check_text
 from kaizen.shared.pr import enable_auto_merge, with_footer
 from kaizen.shared.registry import Project, resolve_current
 
-DOMAIN_DOC_PATHS = ("GLOSSARY.md", "docs/adr")
+GLOSSARY = "GLOSSARY.md"
+ADR_DIR = "docs/adr"
+DOMAIN_DOC_PATHS = (GLOSSARY, ADR_DIR)
 GLOSSARY_MAP = "GLOSSARY-MAP.md"
-_MAP_LINK = re.compile(r"\]\(([^)\s]+)\)")
+_MAP_LINK = re.compile(r"\]\(\s*(?:<([^>]*)>|([^)\s]*))")
+"""A Markdown link's target, bare or in angle brackets, before any title."""
 OUTSIDE_CHECKOUT_FIX = "run from the project's root, inside its git checkout"
 
 
@@ -64,19 +66,42 @@ def split_spec(text: str) -> tuple[str, str]:
 
 def domain_doc_paths(root: Path) -> list[str]:
     """The root glossary and ADRs, plus each context's when *root* has a ``GLOSSARY-MAP.md``:
-    the ``GLOSSARY.md`` a context entry links to and the ``docs/adr`` beside it."""
+    the ``GLOSSARY.md`` an entry of its ``## Contexts`` section links to, and the ``docs/adr``
+    beside it. A map that can't be read, or names no context glossary, adds nothing."""
     paths = list(DOMAIN_DOC_PATHS)
     try:
-        glossary_map = (root / GLOSSARY_MAP).read_text()
-    except OSError:
+        glossary_map = (root / GLOSSARY_MAP).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
         return paths
-    for target in _MAP_LINK.findall(glossary_map):
-        glossary = posixpath.normpath(target)
-        if posixpath.basename(glossary) != "GLOSSARY.md" or glossary.startswith(("/", "..")):
-            continue
+    for glossary in filter(
+        None, map(_context_glossary, _MAP_LINK.finditer(_contexts(glossary_map)))
+    ):
         context = posixpath.dirname(glossary)
-        paths += [p for p in (glossary, posixpath.join(context, "docs/adr")) if p not in paths]
+        paths += [p for p in (glossary, posixpath.join(context, ADR_DIR)) if p not in paths]
     return paths
+
+
+def _contexts(glossary_map: str) -> str:
+    """The text of the map's ``## Contexts`` section; empty when it has none."""
+    section: list[str] = []
+    inside = False
+    for line in glossary_map.splitlines():
+        if line.startswith("## "):
+            inside = line[3:].strip() == "Contexts"
+        elif inside:
+            section.append(line)
+    return "\n".join(section)
+
+
+def _context_glossary(link: re.Match[str]) -> str | None:
+    """The checkout-relative ``GLOSSARY.md`` path a map link targets; ``None`` for any other
+    target, such as another file, a URL or a path outside the checkout."""
+    target = (link.group(1) or link.group(2)).split("#", 1)[0]
+    glossary = posixpath.normpath(target)
+    outside = glossary.startswith("/") or glossary.split("/", 1)[0] == ".."
+    if ":" in target or outside or posixpath.basename(glossary) != GLOSSARY:
+        return None
+    return glossary
 
 
 def changed_domain_docs(root: Path, run: Runner) -> list[str]:
