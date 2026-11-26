@@ -147,6 +147,11 @@ def proto_projects(tmp_path: Path, public: bool = True) -> Path:
     return directory
 
 
+def proto_pr_argv(verb: str, *args: str) -> list[str]:
+    """The argv of ``gh pr <verb>`` on ``proto``'s GitHub repo, then *args*."""
+    return ["gh", "-R", "owner/proto", "pr", verb, *args]
+
+
 SPEC_START: dict[tuple[str, ...], Reply] = {
     ("rev-parse", "--show-toplevel"): f"{RELAY}\n",
     ("issue", "view"): '{"state": "OPEN", "title": "S", "labels": [{"name": "spec"}]}',

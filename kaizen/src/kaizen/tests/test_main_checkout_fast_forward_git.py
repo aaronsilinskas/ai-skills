@@ -8,20 +8,7 @@ from pathlib import Path
 
 from kaizen.shared.branch import fast_forward_main_checkout
 from kaizen.shared.common import run_subprocess
-from kaizen.tests.real_git import git
-
-
-def _commit(repo: Path, name: str, text: str) -> None:
-    (repo / name).write_text(text)
-    git("-C", repo, "add", name)
-    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
-
-
-def _clone(origin: Path, dest: Path) -> Path:
-    git("clone", "-q", origin, dest)
-    git("-C", dest, "config", "user.name", "Test")
-    git("-C", dest, "config", "user.email", "test@example.com")
-    return dest
+from kaizen.tests.real_git import clone, commit, git
 
 
 @dataclass(frozen=True)
@@ -32,7 +19,7 @@ class Repos:
 
     def merge(self, name: str, text: str) -> None:
         """Moves ``origin/main`` from the other clone, as a merged PR does."""
-        _commit(self.other, name, text)
+        commit(self.other, name, text)
         git("-C", self.other, "push", "-q", "origin", "main")
 
     def fetch(self) -> None:
@@ -53,10 +40,10 @@ def _repos(tmp_path: Path) -> Repos:
     """A main checkout on ``main`` at origin's tip, and another clone to push merges from."""
     origin = tmp_path / "origin.git"
     git("init", "-q", "--bare", "-b", "main", origin)
-    checkout = _clone(origin, tmp_path / "proto")
-    _commit(checkout, "README", "proto\n")
+    checkout = clone(origin, tmp_path / "proto")
+    commit(checkout, "README", "proto\n")
     git("-C", checkout, "push", "-q", "origin", "main")
-    other = _clone(origin, tmp_path / "other")
+    other = clone(origin, tmp_path / "other")
     return Repos(origin, checkout, other)
 
 
@@ -158,7 +145,7 @@ def test_a_detached_checkout_is_skipped_and_its_default_branch_left_unmoved(tmp_
 
 def test_a_default_branch_with_local_commits_is_skipped_and_left_unmoved(tmp_path):
     repos = _repos(tmp_path)
-    _commit(repos.checkout, "local.txt", "unpushed\n")
+    commit(repos.checkout, "local.txt", "unpushed\n")
     ahead = repos.head()
     repos.merge("feature.txt", "merged\n")
 

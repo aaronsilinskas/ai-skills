@@ -28,9 +28,9 @@ def _checkout(tmp_path: Path) -> Path:
 
 
 def _shell(checkout: Path, **answers: Reply) -> Shell:
-    """git and gh for a checkout at *checkout*: its toplevel, an origin on GitHub, a public repo
-    and three tracked files; keyword *answers* (``toplevel``, ``remote``, ``repo``, ``files``)
-    replace those."""
+    """``git`` and ``gh`` for a checkout at *checkout*: its toplevel, an origin on GitHub, a
+    public repo and three tracked files; keyword *answers* (``toplevel``, ``remote``, ``repo``,
+    ``files``) replace those."""
     return Shell(
         {
             ("rev-parse", "--show-toplevel"): answers.get("toplevel", f"{checkout}\n"),

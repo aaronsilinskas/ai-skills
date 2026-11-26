@@ -14,7 +14,7 @@ import pytest
 from kaizen.shared.common import RefusalError, run_subprocess
 from kaizen.spec.integrate import integrate
 from kaizen.spec.start import start as spec_start
-from kaizen.tests.real_git import git
+from kaizen.tests.real_git import clone, commit, git
 from kaizen.tests.ticket_shell import home_for, issue_json, quiet, sub_issue_json
 from kaizen.ticket.compare import compare
 from kaizen.ticket.diff import diff
@@ -23,12 +23,6 @@ from kaizen.ticket.start import start as ticket_start
 SPEC = 25
 ISSUE = 7
 SPEC_JSON = '{"state": "OPEN", "title": "S", "labels": [{"name": "spec"}]}'
-
-
-def _commit(repo: Path, name: str, text: str) -> None:
-    (repo / name).write_text(text)
-    git("-C", repo, "add", name)
-    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
 
 
 @dataclass
@@ -75,11 +69,8 @@ def repos(tmp_path, monkeypatch) -> Repos:
     tmp_path = tmp_path.resolve()
     origin = tmp_path / "origin.git"
     git("init", "-q", "--bare", "-b", "main", origin)
-    checkout = tmp_path / "proto"
-    git("clone", "-q", origin, checkout)
-    git("-C", checkout, "config", "user.name", "Test")
-    git("-C", checkout, "config", "user.email", "test@example.com")
-    _commit(checkout, ".gitignore", ".claude/\n")
+    checkout = clone(origin, tmp_path / "proto")
+    commit(checkout, ".gitignore", ".claude/\n")
     git("-C", checkout, "push", "-q", "origin", "main")
     projects = tmp_path / "projects"
     projects.mkdir()
@@ -94,7 +85,7 @@ def _start_ticket(repos: Repos, run: Runs) -> Path:
     started = ticket_start(
         "proto", ISSUE, "add-greeting", run, home=home_for(repos.projects), spec=SPEC, say=quiet
     )
-    _commit(started.worktree, "greeting.txt", "hello\n")
+    commit(started.worktree, "greeting.txt", "hello\n")
     return started.worktree
 
 
@@ -151,7 +142,7 @@ def test_a_later_ticket_starts_and_integrates_from_origin_after_the_first_push(r
     first = repos.on_origin(f"refs/heads/spec-{SPEC}")
 
     worktree = ticket_start("proto", ISSUE, "second", run, home=home, spec=SPEC, say=quiet).worktree
-    _commit(worktree, "second.txt", "again\n")
+    commit(worktree, "second.txt", "again\n")
     integrate(worktree, run, home=home, say=quiet)
 
     tip = f"refs/heads/spec-{SPEC}"

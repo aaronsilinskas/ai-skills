@@ -66,7 +66,7 @@ def _env(tmp_path: Path, **extra: str) -> dict[str, str]:
 
 
 def _shell(root: Path, origin: str | BaseException = HTTPS, grep: Reply = "") -> Shell:
-    """git answering for a repo at *root* with *origin*, whose tracked files *grep* answers the
+    """``git`` answering for a repo at *root* with *origin*, whose tracked files *grep* answers the
     leak check's search for (default: nothing found)."""
     return Shell(
         {

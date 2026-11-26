@@ -102,11 +102,11 @@ def main(
     real_stdout, real_stderr = sys.stdout, sys.stderr
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(line_buffering=True)
-        sys.stdout = cast(TextIO, _SurvivesClosedPipe(sys.stdout))
+        sys.stdout = cast("TextIO", _SurvivesClosedPipe(sys.stdout))
     if isinstance(sys.stderr, io.TextIOWrapper):
         # The wrapper is no TextIO to mypy: it overrides write and flush and hands every other
         # attribute to the stream it wraps through __getattr__.
-        sys.stderr = cast(TextIO, _SurvivesClosedPipe(sys.stderr))
+        sys.stderr = cast("TextIO", _SurvivesClosedPipe(sys.stderr))
     try:
         running = __version__ if version is None else version
         return _run(args, run, cwd, env, Install(running, latest))
