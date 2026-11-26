@@ -127,14 +127,15 @@ def start(
 
 
 def _write_issue_file(worktree: Path, lines: list[str], run: Runner) -> Path:
-    """Writes *lines* to ``kaizen-issue.md`` in *worktree*'s own git dir, and returns its path.
+    """Writes *lines* to ``ISSUE_FILE`` in *worktree*'s own git dir, and returns its path.
 
     The last line ``start`` prints names it, so a run piped to ``tail`` still shows where the
     issue is. In the git dir, it is never committed or shown by ``git status``, needs no ignore
     rule in the project, and goes when ``git worktree remove`` removes the worktree.
     """
-    path = Path(run(["git", "-C", str(worktree), "rev-parse", "--git-path", ISSUE_FILE]).strip())
-    path.write_text("\n".join(lines) + "\n")
+    git_path = run(["git", "-C", str(worktree), "rev-parse", "--git-path", ISSUE_FILE]).strip()
+    path = worktree / git_path
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
 
@@ -207,12 +208,11 @@ def add_parser(subparsers: Subparsers) -> None:
             "lacks it, the local one `kaizen spec start --local` made, refusing a ticket with an "
             "open blocker not yet integrated into it unless --ignore-blockers; that check "
             "fetches the integration branch alone, also on --dry-run). Prints the worktree "
-            "path and the issue's title, body and comments, and writes them to kaizen-issue.md in "
+            f"path and the issue's title, body and comments, and writes them to {ISSUE_FILE} in "
             "the worktree's own git dir, never committed, whose path is the last line printed. "
-            "With no issue, add the "
-            "ticket worktree for a docs change, which touches no code, on a docs-<slug> branch "
-            "(--slug required, --spec refused); `kaizen ticket ship` refuses it if it touches "
-            "the project's code_paths. "
+            "With no issue, add the ticket worktree for a docs change, which touches no code, "
+            "on a docs-<slug> branch (--slug required, --spec refused); `kaizen ticket ship` "
+            "refuses it if it touches the project's code_paths. "
             "Each path in the project's worktree_links (git-ignored, such as a downloaded "
             "tool) is then symlinked from the main checkout into the worktree; one missing "
             "there is warned about, and one the base commit tracks is refused. "
