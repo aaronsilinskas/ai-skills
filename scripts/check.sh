@@ -3,7 +3,7 @@
 # check.sh: this repo's one check command, for the skills collection and the
 # kaizen package alike.
 #
-# Runs five checks and exits non-zero if ANY of them fails. All of them run
+# Runs six checks and exits non-zero if ANY of them fails. All of them run
 # every time (even after an earlier failure) so one run surfaces every problem.
 #
 #   1. Conventions, the ones Matt Pocock's skills follow, since this repo overlays them:
@@ -33,6 +33,7 @@
 #      PATH; CI installs it.
 #   5. kaizen: kaizen/scripts/check.sh, the kaizen package's own check,
 #      exits 0.
+#   6. Hooks: the unit tests beside the Claude Code hooks in hooks/ pass.
 #
 # Run it before a PR, and after editing skills:
 #
@@ -399,6 +400,11 @@ fi
 echo
 echo "== Check 5: kaizen (kaizen/scripts/check.sh) =="
 run_quiet "kaizen/scripts/check.sh" bash kaizen/scripts/check.sh
+
+# ── Check 6: Hooks ─────────────────────────────────────────────────────────
+echo
+echo "== Check 6: hooks (unit tests in hooks/) =="
+run_quiet "hooks/ unit tests" python3 -B -m unittest discover -s hooks -p 'test_*.py'
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo

@@ -1,6 +1,6 @@
 # Contributing
 
-How to change this repo's skills (`skills/`), plugins (`plugins/`) and kaizen (`kaizen/`), check the change, and release kaizen.
+How to change this repo's skills (`skills/`), plugins (`plugins/`), hooks (`hooks/`) and kaizen (`kaizen/`), check the change, and release kaizen.
 
 ## Setup
 
@@ -45,6 +45,7 @@ It works from any directory.
 3. **Links:** every relative link in a git-tracked Markdown file names a tracked file or directory. Matt's copies and kaizen's templates, whose links resolve where they are rendered, are skipped.
 4. **Plugins:** `claude plugin validate .` passes, and `claude plugin test` passes for each plugin. Without the `claude` CLI on the PATH it reports SKIP; CI installs it.
 5. **kaizen:** `kaizen/scripts/check.sh` passes (see [kaizen](#kaizen)).
+6. **Hooks:** the tests beside each hook in `hooks/` pass, run with `python3 -m unittest`.
 
 CI (`.github/workflows/check.yml`) runs the same command on every pull request and on pushes to `main`.
 
