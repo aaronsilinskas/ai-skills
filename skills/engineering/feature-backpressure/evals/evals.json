@@ -205,6 +205,126 @@
           "type": "output_check"
         }
       ]
+    },
+    {
+      "id": 9,
+      "prompt": "Audit this project's features for feature creep.",
+      "expected_output": "The skill fires in audit mode: it reads the ledger, scans every feature, sorts each into a bucket and writes the HTML report.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+        "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+        "The response asks the user which candidates to explore before cutting anything"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+          "type": "output_check"
+        },
+        {
+          "text": "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Which of kaizen's ticket and hook commands could we cut? Audit them at commit 7cb42d2 using agent transcripts as evidence.",
+      "expected_output": "Known answers from the kaizen pilot: `ticket publish --wait-timeout` sorts as cut, `hook no-commit-to-branch` as merge, and `ticket diff`, young but heavily used, as keep.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+        "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+        "The response asks the user which candidates to explore before cutting anything",
+        "`ticket publish --wait-timeout` sorts as cut",
+        "`hook no-commit-to-branch` sorts as merge",
+        "`ticket diff` sorts as keep despite its young age",
+        "Calls from the session that built a command are left out of its use count, and hooks are counted by pass and fail outcomes"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+          "type": "output_check"
+        },
+        {
+          "text": "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        },
+        {
+          "text": "`ticket publish --wait-timeout` sorts as cut",
+          "type": "output_check"
+        },
+        {
+          "text": "`hook no-commit-to-branch` sorts as merge",
+          "type": "output_check"
+        },
+        {
+          "text": "`ticket diff` sorts as keep despite its young age",
+          "type": "output_check"
+        },
+        {
+          "text": "Calls from the session that built a command are left out of its use count, and hooks are counted by pass and fail outcomes",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Review the settings screens of our mobile app and tell me which features are worth keeping. We have no telemetry.",
+      "expected_output": "The skill fires in audit mode on an application: use comes from the user's knowledge, the issue tracker and reachability, and features whose use stays unknown go to measure, naming the signal they wait for.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+        "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+        "The response asks the user which candidates to explore before cutting anything",
+        "Use evidence comes from sources other than agent transcripts: the user's knowledge, the issue tracker or reachability",
+        "Each measure candidate names the signal it waits for"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+          "type": "output_check"
+        },
+        {
+          "text": "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        },
+        {
+          "text": "Use evidence comes from sources other than agent transcripts: the user's knowledge, the issue tracker or reachability",
+          "type": "output_check"
+        },
+        {
+          "text": "Each measure candidate names the signal it waits for",
+          "type": "output_check"
+        }
+      ]
     }
   ]
 }

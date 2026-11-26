@@ -1,7 +1,7 @@
 ---
 name: feature-backpressure
-description: "Push back on features: weigh the cost of each command, flag, option or config key against evidence of its use, and propose the smallest version that serves that use. Use when about to add a feature, flag, option or config key, or when a spec or request proposes one."
-argument-hint: "feature proposal to weigh"
+description: "Push back on features: weigh the cost of each command, flag, option or config key against evidence of its use, propose the smallest version that serves it, and audit existing features into cut, merge, shrink, measure or keep. Use when about to add a feature, flag, option or config key, when a spec or request proposes one, or when asked to audit a project's features or feature creep."
+argument-hint: "feature proposal to weigh, or a project, module or path to audit"
 ---
 
 # Feature Backpressure
@@ -58,6 +58,37 @@ Verdict: **build smaller**. Deferred: `--format csv`, revisit when an issue asks
 
 A feature you add while implementing something else, one the issue didn't ask for, you may build: name it in your handback with its cost and use, so the user can weigh it there.
 
+## Audit Mode
+
+Run it when the user asks to audit a project's features, or one module or path of them. An audit only reports: it gives each feature a bucket and its evidence, the user approves each cut, and each cut ships as its own change.
+
+1. **Read the ledger**, and apply its audit rules (see **Feature Ledger**) before scanning.
+2. **Scan the scope.** List every feature in it: each command, flag, config key, hook, behaviour or application feature a user or caller reaches. Date each by the commit that added it (for a flag, the commit that added its argument definition).
+3. **Measure cost and use** for each, by the evidence sources above and the counting rules below.
+4. **Sort** each feature into the first bucket that fits, trying them in this order:
+   1. **trivial**: its cost is too small to weigh, such as a one-line alias. Count it and move on.
+   2. **cut**: it has a real cost and no evidenced use across the chances it had to be used.
+   3. **merge**: another feature, in the project or a tool it already depends on, does the same job; fold it into that one.
+   4. **shrink**: it is used, but only some of its parts are; the unused parts go.
+   5. **measure**: its use is unknown; name the signal it waits for and where that would come from. Telemetry may be that signal, named as a proposal of its own for proposal mode.
+   6. **keep**: its evidenced use justifies its cost.
+
+   No age rule protects a young feature: judge it, like any other, by its use across the chances it had.
+5. **Write the report** to the temp directory, as [HTML-REPORT.md](HTML-REPORT.md) specifies, open it, and ask the user which candidates to explore.
+6. **Grill** through the candidates the user picks: call the Skill tool with "grilling". Ask for value only on the features cost and use leave undecided. Write each decision to the ledger as it is made.
+
+The audit is done when every feature in scope sits in one bucket with its cost and use, the report is written, and each decision from the grilling is in the ledger.
+
+### Counting use
+
+Count what shows a feature serving someone, not what touches it:
+
+- **Building isn't use.** Drop the calls from the session that built or changed the feature: its building and testing.
+- **Setup commands count outcomes**, such as homes made or repos registered, not calls, so dev runs don't inflate them.
+- **Hooks count outcomes**: each pass and each fail, not each call. A guard that has never failed shows up as one.
+- **Once-per-trigger features** (once per spec, once per repo) are judged against how often their trigger happened, so a low count by design doesn't read as disuse.
+- **A cross-cutting rule is one feature.** Judge a rule that spans many commands, such as `--dry-run` on every mutating command, as a whole, so it isn't cut piece by piece.
+
 ## Feature Ledger
 
 Each project keeps its decisions in `docs/feature-backpressure.md`, one Markdown table at that fixed path, so the user answers each unknown once. Create it with its first row:
@@ -78,6 +109,7 @@ One row per decided feature. **Value** holds the user's rating, or `-` when they
 - **decline** verdicts, and the **deferred** extras of a build-smaller verdict, with why, so they aren't proposed again until their revisit condition comes up.
 - **measure** rows (a **measure first** verdict), whose revisit condition names the signal they wait for.
 - **groundwork** features, kept for work not yet started: "groundwork for X", revisit when X starts.
+- **audit verdicts** the grilling settled (cut, merge, shrink, keep), so the next audit skips them.
 - any other verdict the user gave a value rating, so they aren't asked again.
 
 A plain **build** with no value rating needs no row, and a **build smaller** needs rows only for its deferred extras.
@@ -86,6 +118,7 @@ The ledger stays current by these rules:
 
 - The change that acts on a verdict (a cut, a shrink, a merge, a deferred extra built) updates its row in the same commit.
 - Proposal mode rewrites a deferred row as **build** when it adds that extra back.
+- An audit skips settled rows until their revisit condition comes up, re-checks any row dated before its feature's last commit, and drops the rows for features that no longer exist.
 - Only a hard-to-reverse decision with a real trade-off also gets an ADR: call the Skill tool with "domain-modeling" to write it, and point the row's reason at it.
 
 ## Checklist
@@ -95,3 +128,4 @@ The ledger stays current by these rules:
 - [ ] Value came from the user, asked only where cost and use left a part undecided
 - [ ] The report ends on exactly one verdict, with deferred extras or the settling evidence named
 - [ ] The ledger holds a row for every verdict that needs one
+- [ ] An audit put every feature in scope in one bucket with its cost and use, and its report caps the cards at 10 with a count of the rest
