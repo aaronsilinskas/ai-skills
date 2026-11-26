@@ -92,10 +92,9 @@ ignore = [
     # A summary may wrap over several lines, closing on its last one.
     "D205",
     "D209",
-    # What a docstring says is review's call, not lint's.
+    # Whether a summary is in the imperative mood is review's call, not lint's.
     "D401",
-    "D404",
-    # A docstring's last section ends at its closing quotes.
+    # It wants a blank line before the closing quotes after an Args section.
     "D413",
 ]
 
