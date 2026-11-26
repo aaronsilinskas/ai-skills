@@ -4,7 +4,7 @@ A few extra, optional [Agent Skills](https://agentskills.io/) that build on [Mat
 
 The overlay sits on top of Matt's skills and depends on them, so install his first. Huge thanks to Matt for the foundation.
 
-The repo also hosts two Claude Code plugins and kaizen, a workflow CLI. None of them needs the skills.
+The repo also hosts two Claude Code plugins, a few standalone Claude Code hooks and kaizen, a workflow CLI. None of them needs the skills.
 
 ## Quick start
 
@@ -71,10 +71,19 @@ Install one from the prompt of a Claude Code terminal session. Answer `y` to add
 
 From a shell it's `claude plugin install agent-progress --marketplace aaronsilinskas/ai-skills`. In the desktop app, click + next to the prompt box, then Plugins, Add marketplace with `aaronsilinskas/ai-skills`, then Add plugin.
 
+## Hooks
+
+Standalone Claude Code hooks, each one Python file with no dependencies. Neither `npx skills` nor a plugin installs them: you register each one in your `settings.json`, as [hooks/README.md](hooks/README.md) shows.
+
+| Hook | What it does |
+| --- | --- |
+| `zsh_equals_guard.py` | Escapes a Bash word that starts with an unquoted `=`, such as `echo ====` or `[ a == b ]`, which zsh would expand to a command path. |
+| `gh_issue_comments_guard.py` | Blocks `gh issue view --comments` without `--json`, which off a terminal prints only the comments, so an issue with none looks empty. |
+
 ## kaizen
 
 When coding agents work across public and private repositories, they do the mechanical steps a little differently each time, and sooner or later a private repository's name or a local path lands in a public commit. [kaizen](kaizen/README.md) is a command-line tool that does those steps the same way every time: it gives each ticket its own worktree, opens the pull request, and checks every commit, pull request and issue before it goes out so nothing from a private repository reaches a public one. It works from a home repository, one repository where your agent sessions start and that keeps the workflow instructions they follow the same for every project. Install it with `uv tool install kaizen-kit`. It's a separate product from the skills, and `npx skills` doesn't install it.
 
 ## Contributing
 
-To change a skill, a plugin or kaizen, read [CONTRIBUTING.md](CONTRIBUTING.md).
+To change a skill, a plugin, a hook or kaizen, read [CONTRIBUTING.md](CONTRIBUTING.md).
