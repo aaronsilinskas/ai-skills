@@ -23,6 +23,7 @@ from kaizen.shared.pr import (
     read_body,
     update_pr,
 )
+from kaizen.shared.pr_wait import SHIP_TIMEOUT, ChecksTarget, wait_until_finished
 from kaizen.shared.registry import Project
 from kaizen.shared.ticket_worktree import (
     TicketWorktree,
@@ -41,6 +42,8 @@ from kaizen.ticket.common import open_issue_title
 class Shipped:
     url: str | None
     """The PR's URL; ``None`` after a dry run that would open a new one."""
+    github: str
+    """The ``owner/repo`` the PR is in."""
 
 
 class _AutoMerge(NamedTuple):
@@ -115,7 +118,8 @@ def ship(
             say("would enable auto-merge on the PR")
         elif stale:
             say(f"would turn off auto-merge on the open PR: {reusable}")
-        return Shipped(reusable)
+        say("would wait until the PR's checks pass and it merges cleanly")
+        return Shipped(reusable, project.github)
 
     _push(ticket, run)
     say(f"pushed {branch} to origin")
@@ -132,7 +136,7 @@ def ship(
     elif stale:
         disable_auto_merge(url, run)
         say(f"turned off auto-merge on the open PR: {url}")
-    return Shipped(url)
+    return Shipped(url, project.github)
 
 
 def add_parser(subparsers: Subparsers) -> None:
@@ -162,7 +166,13 @@ def add_parser(subparsers: Subparsers) -> None:
             "code (its syntax tree without docstrings) is unchanged, with the comment and "
             "docstring text across the change no longer than before. When such a ticket no "
             "longer qualifies, ship turns auto-merge off on its open PR. Prints whether "
-            "auto-merge is on and why, and the PR URL. Refuses a spec's "
+            "auto-merge is on and why, and the PR URL. Then waits on the PR as `kaizen pr wait` "
+            "does, auto-merge or not: the ticket is finished only once its checks pass (or the "
+            "repo has no CI workflows) and it merges cleanly, or it merged. Short of that it "
+            "prints `not finished: <reason>` on stderr and exits 1 when a check failed or the "
+            "PR conflicts with its base (fix it, commit and ship again), or 2 when the wait "
+            f"times out after {SHIP_TIMEOUT}s (run `kaizen pr wait <worktree>`); give the shell "
+            "call a 10-minute timeout. Refuses a spec's "
             "ticket worktree (spec-<N>-fix-<issue>-<slug>), which `kaizen spec integrate` takes."
         ),
     )
@@ -173,8 +183,12 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.set_defaults(command=HomeCommand(_command))
 
 
-def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    ship(args.worktree, args.title, args.body_file, run, home=home, dry_run=args.dry_run)
+def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:
+    shipped = ship(args.worktree, args.title, args.body_file, run, home=home, dry_run=args.dry_run)
+    if args.dry_run or shipped.url is None:
+        return 0
+    target = ChecksTarget(shipped.url, shipped.github)
+    return wait_until_finished(target, run, wait_again=f"kaizen pr wait {args.worktree}")
 
 
 def _auto_merge(project: Project, changed: list[str]) -> _AutoMerge:

@@ -95,9 +95,10 @@ kaizen spec ship <N> --title "<PR title>" --body-file <file>
 ```
 
 It adds the `Closes` lines and the home's PR footer, so the body file leaves both out.
-Hand the PR URL to the user.
+Like `kaizen ticket ship`, it then waits for the PR, and a non-zero exit means the spec is unfinished, as `docs/agents/implement.md` describes for a ticket's PR.
+On exit 1, fix the failed check or the conflict through a ticket worktree and `kaizen spec integrate`, then ship again; on exit 2, run `kaizen pr wait spec-<N>` from the project's root.
+Hand the PR URL to the user once `ship` exits 0.
 To change the PR's body later, edit the body file and rerun `kaizen spec ship` with the same `--title`: it updates the open PR and keeps the `Closes` lines.
-To wait for its CI, run `kaizen pr wait spec-<N>` from the project's root, as `docs/agents/implement.md` describes for a ticket's PR.
 `integrate` already removed every ticket worktree, so the skill's cleanup waits for the merge.
 After the user says the PR merged:
 

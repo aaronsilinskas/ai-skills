@@ -14,6 +14,7 @@ from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
 from kaizen.tests.conftest import Kaizen
 from kaizen.tests.ticket_shell import (
+    FINISHED_PR,
     FOOTER,
     HOME_FOOTER,
     RELAY,
@@ -38,6 +39,9 @@ OPEN_PRS = f'[{{"number": 1385, "state": "OPEN", "url": "{OPEN_PR}"}}]'
 TITLE = "Persist each Reboot in one app-state.json write"
 AUTO_MERGE_OFF = '{"autoMergeRequest": null}'
 AUTO_MERGE_ON = '{"autoMergeRequest": {"mergeMethod": "MERGE"}}'
+VIEW = ("state,mergeable,baseRefName",)
+"""The words of the ``gh pr view`` each poll of ship's wait on its PR runs."""
+CONFLICTING = '{"state": "OPEN", "mergeable": "CONFLICTING", "baseRefName": "main"}'
 
 
 def _setup(tmp_path: Path, public: bool = True) -> tuple[Path, Path, Path]:
@@ -57,6 +61,8 @@ def _setup(tmp_path: Path, public: bool = True) -> tuple[Path, Path, Path]:
 
 def _shell(show: Reply = "", **overrides: str | BaseException) -> ShipShell:
     answers: dict[tuple[str, ...], Reply] = {
+        **FINISHED_PR,
+        **({VIEW: overrides["view"]} if "view" in overrides else {}),
         ("rev-parse", "--abbrev-ref", "HEAD"): overrides.get("branch", f"{BRANCH}\n"),
         ("ls-remote",): REMOTE_HEAD,
         ("status", "--porcelain"): overrides.get("status", ""),
@@ -333,7 +339,7 @@ def test_a_dry_run_reship_says_it_would_update_the_open_pr_and_edits_nothing(tmp
     ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=True, say=lines.append)
 
     assert not shell.ran("pr", "edit")
-    assert lines[-1] == f"would update the open PR's title and body: {OPEN_PR}"
+    assert lines[-2] == f"would update the open PR's title and body: {OPEN_PR}"
 
 
 def test_ship_never_force_pushes(tmp_path):
@@ -690,7 +696,7 @@ def test_a_dry_run_says_it_would_enable_auto_merge_and_enables_nothing(tmp_path)
     ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=True, say=lines.append)
 
     assert not shell.ran("pr", "merge")
-    assert lines[-1] == "would enable auto-merge on the PR"
+    assert lines[-2] == "would enable auto-merge on the PR"
 
 
 def test_a_docs_change_with_an_empty_diff_gets_no_auto_merge(tmp_path):
@@ -728,7 +734,7 @@ def test_a_dry_run_reship_says_it_would_turn_auto_merge_off_and_changes_nothing(
     ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=True, say=lines.append)
 
     assert not shell.ran("pr", "merge")
-    assert lines[-1] == f"would turn off auto-merge on the open PR: {OPEN_PR}"
+    assert lines[-2] == f"would turn off auto-merge on the open PR: {OPEN_PR}"
 
 
 SOURCE = '''def double(x):
@@ -1086,3 +1092,55 @@ def test_a_body_closing_the_issue_by_its_full_reference_gets_no_closes_line(tmp_
     ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     assert shell.bodies == [f"Writes the state once.\n\nFixes owner/proto#1358\n\n{FOOTER}\n"]
+
+
+def test_ship_exits_0_once_its_pr_merges_cleanly_in_a_repo_with_no_ci(kaizen, tmp_path, capsys):
+    shell = _shell()
+
+    assert _ship_hub_ticket(kaizen, tmp_path, shell) == 0
+
+    assert shell.ran("gh", "-R", "acme/relay", "pr", "view", NEW_PR)
+    assert capsys.readouterr().out.splitlines()[-1] == (
+        f"no checks reported on PR {NEW_PR}, and the repo has no CI workflows"
+    )
+
+
+def test_ship_waits_on_its_pr_only_after_opening_it(kaizen, tmp_path):
+    shell = _shell()
+
+    _ship_hub_ticket(kaizen, tmp_path, shell)
+
+    opened = shell.calls.index(shell.ran("pr", "create")[0])
+    assert all(shell.calls.index(view) > opened for view in shell.ran(*VIEW))
+
+
+def test_ship_says_a_pr_that_conflicts_with_its_base_is_not_finished(kaizen, tmp_path, capsys):
+    shell = _shell(view=CONFLICTING)
+
+    assert _ship_hub_ticket(kaizen, tmp_path, shell) == 1
+
+    assert capsys.readouterr().err.splitlines()[-2:] == [
+        f"not finished: PR {NEW_PR} conflicts with main (merge origin/main into its branch); "
+        "fix it, commit and ship again",
+        "kaizen: exit 1",
+    ]
+
+
+def test_an_auto_merging_pr_is_waited_on_too(tmp_path):
+    shell = _ship_from_a_home_whose_marker_sets(
+        tmp_path, "auto_merge_comment_only = true", page_opts_in=True
+    )
+
+    merge = shell.calls.index(shell.ran("pr", "merge")[0])
+    assert any(shell.calls.index(view) > merge for view in shell.ran(*VIEW))
+
+
+def test_a_dry_run_ends_saying_it_would_wait_and_waits_on_nothing(tmp_path):
+    projects, worktree, body = _setup(tmp_path)
+    shell = _shell()
+    lines: list[str] = []
+
+    ship(worktree, TITLE, body, shell, home=home_for(projects), dry_run=True, say=lines.append)
+
+    assert lines[-1] == "would wait until the PR's checks pass and it merges cleanly"
+    assert not shell.ran(*VIEW)

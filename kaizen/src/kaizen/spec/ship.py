@@ -15,6 +15,7 @@ from kaizen.shared.common import RefusalError, Runner, Say, Subparsers
 from kaizen.shared.home import Home
 from kaizen.shared.leak import leak_check
 from kaizen.shared.pr import create_pr, open_pr, pr_body, read_body, update_pr
+from kaizen.shared.pr_wait import SHIP_TIMEOUT, ChecksTarget, wait_until_finished
 from kaizen.shared.registry import resolve_current
 from kaizen.spec.common import SubIssue, spec_sub_issues
 
@@ -23,6 +24,8 @@ from kaizen.spec.common import SubIssue, spec_sub_issues
 class Shipped:
     url: str | None
     """The PR's URL; ``None`` after a dry run that would open a new one."""
+    github: str
+    """The ``owner/repo`` the PR is in."""
 
 
 def ship(
@@ -79,15 +82,16 @@ def ship(
             say(f"would update the open PR's title and body: {reusable}")
         else:
             say(f"would open a ready PR from {branch} into {default}: {title}")
-        return Shipped(reusable)
+        say("would wait until the PR's checks pass and it merges cleanly")
+        return Shipped(reusable, project.github)
 
     if reusable:
         update_pr(project.github, reusable, title, body, run)
         say(f"updated the open PR's title and body: {reusable}")
-        return Shipped(reusable)
+        return Shipped(reusable, project.github)
     url = create_pr(project.github, default, branch, title, body, run)
     say(f"opened PR: {url}")
-    return Shipped(url)
+    return Shipped(url, project.github)
 
 
 def add_parser(subparsers: Subparsers) -> None:
@@ -105,7 +109,13 @@ def add_parser(subparsers: Subparsers) -> None:
             "review, from spec-<N> into the default branch, or reuse the open one and update its "
             "title and body from --title and --body-file. The body "
             "starts with 'Closes #<spec>' and a 'Closes #<ticket>' line per integrated ticket "
-            "and ends with the home's PR footer unless it already does or the footer is empty."
+            "and ends with the home's PR footer unless it already does or the footer is empty. "
+            "Then waits on the PR as `kaizen pr wait` does: the spec is finished only once its "
+            "checks pass (or the repo has no CI workflows) and it merges cleanly. Short of that "
+            "it prints `not finished: <reason>` on stderr and exits 1 when a check failed or "
+            "the PR conflicts with its base (fix it, integrate or commit the fix, and ship "
+            f"again), or 2 when the wait times out after {SHIP_TIMEOUT}s (run `kaizen pr wait "
+            "spec-<N>`); give the shell call a 10-minute timeout."
         ),
     )
     parser.add_argument("spec", type=int, help="the spec's issue number")
@@ -115,8 +125,13 @@ def add_parser(subparsers: Subparsers) -> None:
     parser.set_defaults(command=HomeCommand(_command))
 
 
-def _command(args: argparse.Namespace, run: Runner, home: Home) -> None:
-    ship(args.spec, args.title, args.body_file, run, home=home, dry_run=args.dry_run)
+def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:
+    shipped = ship(args.spec, args.title, args.body_file, run, home=home, dry_run=args.dry_run)
+    if args.dry_run or shipped.url is None:
+        return 0
+    target = ChecksTarget(shipped.url, shipped.github)
+    wait_again = f"kaizen pr wait {integration_branch(args.spec)}"
+    return wait_until_finished(target, run, wait_again=wait_again)
 
 
 def _integrated_tickets(

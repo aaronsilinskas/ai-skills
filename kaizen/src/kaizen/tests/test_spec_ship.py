@@ -13,6 +13,7 @@ from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
 from kaizen.spec.ship import ship
 from kaizen.tests.ticket_shell import (
+    FINISHED_PR,
     FOOTER,
     HOME_FOOTER,
     RELAY,
@@ -64,6 +65,8 @@ def _shell(tmp_path: Path, **overrides: Reply) -> ShipShell:
     return ShipShell(
         NEW_PR,
         {
+            **FINISHED_PR,
+            **({VIEW: overrides["view"]} if "view" in overrides else {}),
             ("rev-parse", "--show-toplevel"): overrides.get("toplevel", f"{tmp_path / 'proto'}\n"),
             ("ls-remote", "--heads"): overrides.get("heads", HEADS),
             ("ls-remote", "--symref"): REMOTE_HEAD,
@@ -266,7 +269,7 @@ def test_a_dry_run_with_an_open_pr_says_it_would_update_it_and_edits_nothing(tmp
     ship(25, TITLE, body, shell, home=home_for(projects), dry_run=True, say=lines.append)
 
     assert not shell.ran("pr", "edit")
-    assert lines[-1] == f"would update the open PR's title and body: {OPEN_PR}"
+    assert lines[-2] == f"would update the open PR's title and body: {OPEN_PR}"
 
 
 def test_a_dry_run_issues_only_queries_and_prints_the_plan(tmp_path):
@@ -279,7 +282,7 @@ def test_a_dry_run_issues_only_queries_and_prints_the_plan(tmp_path):
     assert shell.ran("grep")
     assert not shell.ran("fetch")
     assert not shell.ran("pr", "create")
-    assert lines[-1] == f"would open a ready PR from spec-25 into main: {TITLE}"
+    assert lines[-2] == f"would open a ready PR from spec-25 into main: {TITLE}"
 
 
 def test_ship_prints_one_line_per_completed_step(tmp_path):
@@ -417,3 +420,48 @@ def test_a_footer_pointing_outside_the_home_refuses_before_any_gh_call(tmp_path,
         ship(25, TITLE, body, shell, home=home, say=quiet, dry_run=dry_run)
 
     assert _gh_calls(shell) == []
+
+
+VIEW = ("state,mergeable,baseRefName",)
+"""The words of the ``gh pr view`` each poll of ship's wait on its PR runs."""
+
+
+def _ship_relay_spec(tmp_path: Path, shell: ShipShell) -> int:
+    """Runs ``kaizen spec ship 25`` in ``relay`` in the fixture home and returns its exit code."""
+    body = tmp_path / "body.md"
+    body.write_text("Adds the spec lifecycle.\n")
+    argv = ["spec", "ship", "25", "--title", TITLE, "--body-file", str(body)]
+    return main(argv, run=shell, cwd=cli_home(tmp_path), env={})
+
+
+def test_spec_ship_waits_on_its_pr_in_the_projects_repo_after_opening_it(tmp_path):
+    shell = _shell(tmp_path, toplevel=f"{RELAY}\n")
+
+    assert _ship_relay_spec(tmp_path, shell) == 0
+
+    opened = shell.calls.index(shell.ran("pr", "create")[0])
+    (view, *_) = shell.ran("gh", "-R", "acme/relay", "pr", "view", NEW_PR)
+    assert shell.calls.index(view) > opened
+
+
+def test_spec_ship_says_a_pr_that_conflicts_with_its_base_is_not_finished(tmp_path, capsys):
+    conflicting = '{"state": "OPEN", "mergeable": "CONFLICTING", "baseRefName": "main"}'
+    shell = _shell(tmp_path, toplevel=f"{RELAY}\n", view=conflicting)
+
+    assert _ship_relay_spec(tmp_path, shell) == 1
+
+    assert capsys.readouterr().err.splitlines()[-2] == (
+        f"not finished: PR {NEW_PR} conflicts with main (merge origin/main into its branch); "
+        "fix it, commit and ship again"
+    )
+
+
+def test_a_spec_dry_run_ends_saying_it_would_wait_and_waits_on_nothing(tmp_path):
+    shell = _shell(tmp_path)
+    projects, body = _setup(tmp_path)
+    lines: list[str] = []
+
+    ship(25, TITLE, body, shell, home=home_for(projects), dry_run=True, say=lines.append)
+
+    assert lines[-1] == "would wait until the PR's checks pass and it merges cleanly"
+    assert not shell.ran(*VIEW)

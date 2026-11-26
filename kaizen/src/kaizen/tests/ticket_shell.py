@@ -157,6 +157,20 @@ SPEC_START: dict[tuple[str, ...], Reply] = {
 push."""
 
 
+_MERGES_CLEANLY = '{"state": "OPEN", "mergeable": "MERGEABLE", "baseRefName": "main"}'
+
+FINISHED_PR: dict[tuple[str, ...], Reply] = {
+    ("state,mergeable,baseRefName",): _MERGES_CLEANLY,
+    ("pr", "checks"): subprocess.CalledProcessError(
+        1, ["gh", "pr", "checks"], output="", stderr="no checks reported on the 'x' branch\n"
+    ),
+    (".total_count",): "0\n",
+}
+"""Replies under which a ship's wait on its PR ends at the first poll, finished: the PR merges
+cleanly and its repo has no CI workflows. They go first in a shell's answers, ahead of any
+broader ``gh pr view`` or ``gh api`` key."""
+
+
 class Shell:
     """Records each argv and answers queries from canned replies.
 
