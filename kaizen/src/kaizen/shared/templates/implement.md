@@ -5,7 +5,7 @@ Repo-specific refinements to the `implement` skill. Where a note here differs fr
 The ticket's git lifecycle is `kaizen ticket start`, `kaizen ticket ship` and `kaizen ticket finish`; `kaizen ticket abandon` drops an unmerged ticket.
 `kaizen ticket <command> --help` is the reference for each; `--dry-run` prints the plan, and a refusal names its fix.
 
-Run each check or test command (the project's check command, `pytest`, `pre-commit`, `mypy`) on its own or chained with `&&`, never piped or after `;`.
+Run each check (the project's check command, `pytest`, `pre-commit`, `mypy`) on its own or chained with `&&`, never piped or after `;`.
 Otherwise the shell reports the last command's exit code, and a failed step looks like success.
 To shorten its long output, read the exit code first (`cmd; echo "exit=$?"` on its own line), or write the output to a file and read its tail.
 

@@ -21,8 +21,16 @@ from typing import TextIO, assert_never, cast
 from kaizen import __version__
 from kaizen.home import init as home_init
 from kaizen.home import sync as home_sync
+from kaizen.hook import (
+    doc_paths,
+    glossary_terms,
+    no_commit_to_branch,
+    prose_marks,
+    section_banners,
+    test_names,
+    work_tracking,
+)
 from kaizen.hook import leak_check as hook_leak_check
-from kaizen.hook import no_commit_to_branch, prose_marks, section_banners, work_tracking
 from kaizen.issue import link as issue_link
 from kaizen.issue import publish as issue_publish
 from kaizen.issue import show as issue_show
@@ -52,7 +60,16 @@ GROUPS = {
     "home": ("set up a new home, or sync its synced files", (home_init, home_sync)),
     "hook": (
         "the pre-commit hooks, each run on the files pre-commit passes",
-        (hook_leak_check, no_commit_to_branch, prose_marks, section_banners, work_tracking),
+        (
+            hook_leak_check,
+            no_commit_to_branch,
+            prose_marks,
+            section_banners,
+            work_tracking,
+            doc_paths,
+            glossary_terms,
+            test_names,
+        ),
     ),
     "issue": ("read, link and publish issues", (issue_show, issue_link, issue_publish)),
     "project": (

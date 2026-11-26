@@ -15,6 +15,13 @@ repos:
 - `kaizen hook prose-marks`: refuses em dashes and curly quotes in Markdown; en dashes are allowed.
 - `kaizen hook section-banners`: refuses a comment that is only a rule of ten or more `-` or `=`, or a titled one-line banner such as `--- name ---`.
 - `kaizen hook work-tracking`: refuses "later ticket", "slice N", "issue N" and a bare issue number in a comment; `owner/repo#N` and issue URLs pass.
+- `kaizen hook doc-paths`: refuses a backticked repo path in the agent docs (every `AGENTS.md` and `GLOSSARY.md`, and Markdown under a `docs/` folder) that names nothing tracked.
+  A repo path holds a `/` and is folder names ending in `/`, or folder names and a file name with an extension; globs, placeholders, URLs, branches and `owner/repo` are not.
+  Folders named `adr`, `history`, `research` or `wiki` and synced files are skipped, and it reads the whole index, so deleting a folder the docs still name is refused.
+  `args: [--allow, <path>]` lets the docs name a path in another repo or one not made yet.
+- `kaizen hook glossary-terms`: refuses Markdown that uses a term listed on an `_Avoid_:` line of a `GLOSSARY.md` in the file's folder or above it.
+  A term with a qualifier in parentheses, or one the glossary defines, is never refused, nor is one in code or double quotes.
+- `kaizen hook test-names`: refuses a pytest test named `test` and at most one word, such as `test_parse`, or only vacuous words, such as `test_it_works`.
 
 The two comment hooks read only comments: Python's through its tokenizer, and whole-line comments by their prefix in the languages below.
 Those are shell, YAML, TOML, C-family languages, JavaScript, TypeScript, Kotlin, Rust, SQL and Lua.

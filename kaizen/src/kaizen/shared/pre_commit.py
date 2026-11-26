@@ -45,6 +45,9 @@ HOOK_ENTRIES = (
     HookEntry("prose-marks", "kaizen prose marks"),
     HookEntry("section-banners", "kaizen section banners"),
     HookEntry("work-tracking", "kaizen work-tracking references"),
+    HookEntry("doc-paths", "kaizen doc paths", whole_commit=True, always_run=True),
+    HookEntry("glossary-terms", "kaizen glossary terms"),
+    HookEntry("test-names", "kaizen test names"),
 )
 
 LOCAL_REPO = "  - repo: local\n    hooks:\n" + "".join(entry.stanza() for entry in HOOK_ENTRIES)

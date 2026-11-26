@@ -12,7 +12,16 @@ EM_DASH = "\u2014"
 EN_DASH = "\u2013"
 CURLY_QUOTES = "\u2018\u2019\u201c\u201d"
 
-HOOKS = ["leak-check", "no-commit-to-branch", "prose-marks", "section-banners", "work-tracking"]
+HOOKS = [
+    "leak-check",
+    "no-commit-to-branch",
+    "prose-marks",
+    "section-banners",
+    "work-tracking",
+    "doc-paths",
+    "glossary-terms",
+    "test-names",
+]
 
 
 def _file(tmp_path: Path, name: str, text: str) -> str:
@@ -22,7 +31,7 @@ def _file(tmp_path: Path, name: str, text: str) -> str:
     return str(path)
 
 
-def test_hook_help_lists_the_five_hooks(tmp_path, capsys):
+def test_hook_help_lists_every_hook(tmp_path, capsys):
     with pytest.raises(SystemExit):
         main(["hook", "--help"], cwd=tmp_path, env={})
 
