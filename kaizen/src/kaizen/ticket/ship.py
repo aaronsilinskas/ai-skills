@@ -45,6 +45,11 @@ class Shipped:
     github: str
     """The ``owner/repo`` the PR is in."""
 
+    @property
+    def target(self) -> ChecksTarget | None:
+        """The PR to wait on; ``None`` after a dry run that would open a new one."""
+        return None if self.url is None else ChecksTarget(self.url, self.github)
+
 
 class _AutoMerge(NamedTuple):
     enabled: bool
@@ -185,9 +190,9 @@ def add_parser(subparsers: Subparsers) -> None:
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:
     shipped = ship(args.worktree, args.title, args.body_file, run, home=home, dry_run=args.dry_run)
-    if args.dry_run or shipped.url is None:
+    target = shipped.target
+    if args.dry_run or target is None:
         return 0
-    target = ChecksTarget(shipped.url, shipped.github)
     return wait_until_finished(target, run, wait_again=f"kaizen pr wait {args.worktree}")
 
 

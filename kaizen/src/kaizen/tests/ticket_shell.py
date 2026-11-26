@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from kaizen.shared.home import Home
+from kaizen.shared.pr_wait import REPO_WORKFLOWS
 
 Reply = str | BaseException | Callable[[list[str]], str]
 
@@ -164,7 +165,7 @@ FINISHED_PR: dict[tuple[str, ...], Reply] = {
     ("pr", "checks"): subprocess.CalledProcessError(
         1, ["gh", "pr", "checks"], output="", stderr="no checks reported on the 'x' branch\n"
     ),
-    (".total_count",): "0\n",
+    (REPO_WORKFLOWS,): "0\n",
 }
 """Replies under which a ship's wait on its PR ends at the first poll, finished: the PR merges
 cleanly and its repo has no CI workflows. They go first in a shell's answers, ahead of any

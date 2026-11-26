@@ -12,6 +12,7 @@ import pytest
 
 from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
+from kaizen.shared.pr_wait import VIEW_FIELDS
 from kaizen.tests.conftest import Kaizen
 from kaizen.tests.ticket_shell import (
     FINISHED_PR,
@@ -39,8 +40,7 @@ OPEN_PRS = f'[{{"number": 1385, "state": "OPEN", "url": "{OPEN_PR}"}}]'
 TITLE = "Persist each Reboot in one app-state.json write"
 AUTO_MERGE_OFF = '{"autoMergeRequest": null}'
 AUTO_MERGE_ON = '{"autoMergeRequest": {"mergeMethod": "MERGE"}}'
-VIEW = ("state,mergeable,baseRefName",)
-"""The words of the ``gh pr view`` each poll of ship's wait on its PR runs."""
+VIEW = (VIEW_FIELDS,)
 CONFLICTING = '{"state": "OPEN", "mergeable": "CONFLICTING", "baseRefName": "main"}'
 
 

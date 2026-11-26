@@ -27,6 +27,11 @@ class Shipped:
     github: str
     """The ``owner/repo`` the PR is in."""
 
+    @property
+    def target(self) -> ChecksTarget | None:
+        """The PR to wait on; ``None`` after a dry run that would open a new one."""
+        return None if self.url is None else ChecksTarget(self.url, self.github)
+
 
 def ship(
     spec: int,
@@ -113,9 +118,10 @@ def add_parser(subparsers: Subparsers) -> None:
             "Then waits on the PR as `kaizen pr wait` does: the spec is finished only once its "
             "checks pass (or the repo has no CI workflows) and it merges cleanly. Short of that "
             "it prints `not finished: <reason>` on stderr and exits 1 when a check failed or "
-            "the PR conflicts with its base (fix it, integrate or commit the fix, and ship "
-            f"again), or 2 when the wait times out after {SHIP_TIMEOUT}s (run `kaizen pr wait "
-            "spec-<N>`); give the shell call a 10-minute timeout."
+            "the PR conflicts with its base (fix it through a ticket worktree and `kaizen spec "
+            "integrate`, and ship again), or 2 when the wait times out after "
+            f"{SHIP_TIMEOUT}s (run `kaizen pr wait spec-<N>`); give the shell call a "
+            "10-minute timeout."
         ),
     )
     parser.add_argument("spec", type=int, help="the spec's issue number")
@@ -127,11 +133,12 @@ def add_parser(subparsers: Subparsers) -> None:
 
 def _command(args: argparse.Namespace, run: Runner, home: Home) -> int:
     shipped = ship(args.spec, args.title, args.body_file, run, home=home, dry_run=args.dry_run)
-    if args.dry_run or shipped.url is None:
+    target = shipped.target
+    if args.dry_run or target is None:
         return 0
-    target = ChecksTarget(shipped.url, shipped.github)
     wait_again = f"kaizen pr wait {integration_branch(args.spec)}"
-    return wait_until_finished(target, run, wait_again=wait_again)
+    ship_again = "fix it through a ticket worktree and `kaizen spec integrate`, and ship again"
+    return wait_until_finished(target, run, wait_again=wait_again, ship_again=ship_again)
 
 
 def _integrated_tickets(

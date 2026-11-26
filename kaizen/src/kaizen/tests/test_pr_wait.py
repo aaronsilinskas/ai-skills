@@ -11,7 +11,7 @@ import pytest
 
 from kaizen.pr.wait import wait
 from kaizen.shared.common import RefusalError
-from kaizen.shared.pr_wait import SHIP_TIMEOUT, ChecksTarget, wait_until_finished
+from kaizen.shared.pr_wait import SHIP_TIMEOUT, VIEW_FIELDS, ChecksTarget, wait_until_finished
 from kaizen.tests.ticket_shell import Shell, failed, home_for, quiet
 
 
@@ -43,8 +43,7 @@ def _checks(*checks: dict[str, str]) -> str:
     return json.dumps(list(checks))
 
 
-VIEW = ("state,mergeable,baseRefName",)
-"""The words of the ``gh pr view`` each poll runs."""
+VIEW = (VIEW_FIELDS,)
 
 
 def _view(state: str = "OPEN", mergeable: str = "MERGEABLE") -> str:
@@ -384,7 +383,7 @@ def test_a_ship_whose_check_failed_says_to_fix_it_and_ship_again():
 
     assert _finish(shell, Clock()) == (
         1,
-        ["not finished: 1 of 1 check(s) failed on PR 42; fix it, commit and ship again"],
+        ["not finished: 1 of 1 check(s) failed on PR 42: check; fix it, commit and ship again"],
     )
 
 
@@ -398,3 +397,15 @@ def test_a_ship_whose_wait_timed_out_says_to_wait_again():
         f"not finished: timed out after {SHIP_TIMEOUT}s on PR 42; still pending: check; "
         "run `kaizen pr wait wt` until it exits 0"
     ]
+
+
+def test_only_the_repos_own_active_workflows_count_as_its_ci():
+    shell = _shell({("pr", "checks"): NO_CHECKS, ("gh", "api"): "0\n"})
+
+    _wait(shell, Clock(), [])
+
+    (api,) = shell.ran("gh", "api")
+    assert api[-1] == (
+        '[.workflows[] | select(.state == "active" and (.path | startswith(".github/workflows/")))]'
+        " | length"
+    )

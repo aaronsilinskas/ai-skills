@@ -150,6 +150,7 @@ def wait_until_finished(
     run: Runner,
     *,
     wait_again: str,
+    ship_again: str = "fix it, commit and ship again",
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], float] = time.monotonic,
     say: Say = print,
@@ -163,10 +164,7 @@ def wait_until_finished(
     waited = wait(target, run, timeout=SHIP_TIMEOUT, sleep=sleep, clock=clock, say=say)
     if waited.code == 0:
         return 0
-    if waited.code == TIMED_OUT:
-        then = f"run `{wait_again}` until it exits 0"
-    else:
-        then = "fix it, commit and ship again"
+    then = f"run `{wait_again}` until it exits 0" if waited.code == TIMED_OUT else ship_again
     warn(f"not finished: {waited.reason}; {then}")
     return waited.code
 
@@ -184,11 +182,11 @@ def _report(checks: list[_Check], target: ChecksTarget, say: Say) -> Waited:
     """Prints the outcome of a finished set of checks and returns it."""
     failed = [check for check in checks if check["bucket"] in FAILED_BUCKETS]
     if failed:
-        reason = f"{len(failed)} of {len(checks)} check(s) failed on PR {target.ref}"
-        say(f"{reason}:")
+        count = f"{len(failed)} of {len(checks)} check(s) failed on PR {target.ref}"
+        say(f"{count}:")
         for check in failed:
             _say_failure(check, say)
-        return Waited(1, reason)
+        return Waited(1, f"{count}: {', '.join(check['name'] for check in failed)}")
     return _said(Waited(0, f"all {len(checks)} check(s) passed on PR {target.ref}"), say)
 
 
@@ -226,10 +224,18 @@ def _unreadable(target: ChecksTarget, exc: subprocess.CalledProcessError) -> Ref
     )
 
 
+REPO_WORKFLOWS = (
+    '[.workflows[] | select(.state == "active" and (.path | startswith(".github/workflows/")))]'
+    " | length"
+)
+"""Counts the active workflows the repo itself defines, leaving out GitHub's dynamic ones (such
+as Dependabot's), which never report a check on a PR."""
+
+
 def _workflow_count(target: ChecksTarget, run: Runner) -> int:
-    """How many GitHub Actions workflows the PR's repo defines."""
+    """How many active GitHub Actions workflows the PR's repo defines."""
     repo = target.github or "{owner}/{repo}"
-    out = run(["gh", "api", f"repos/{repo}/actions/workflows", "--jq", ".total_count"])
+    out = run(["gh", "api", f"repos/{repo}/actions/workflows", "--jq", REPO_WORKFLOWS])
     return int(out.strip())
 
 

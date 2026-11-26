@@ -11,6 +11,7 @@ import pytest
 
 from kaizen.shared.cli import main
 from kaizen.shared.common import RefusalError
+from kaizen.shared.pr_wait import VIEW_FIELDS
 from kaizen.spec.ship import ship
 from kaizen.tests.ticket_shell import (
     FINISHED_PR,
@@ -422,8 +423,7 @@ def test_a_footer_pointing_outside_the_home_refuses_before_any_gh_call(tmp_path,
     assert _gh_calls(shell) == []
 
 
-VIEW = ("state,mergeable,baseRefName",)
-"""The words of the ``gh pr view`` each poll of ship's wait on its PR runs."""
+VIEW = (VIEW_FIELDS,)
 
 
 def _ship_relay_spec(tmp_path: Path, shell: ShipShell) -> int:
@@ -452,7 +452,7 @@ def test_spec_ship_says_a_pr_that_conflicts_with_its_base_is_not_finished(tmp_pa
 
     assert capsys.readouterr().err.splitlines()[-2] == (
         f"not finished: PR {NEW_PR} conflicts with main (merge origin/main into its branch); "
-        "fix it, commit and ship again"
+        "fix it through a ticket worktree and `kaizen spec integrate`, and ship again"
     )
 
 
