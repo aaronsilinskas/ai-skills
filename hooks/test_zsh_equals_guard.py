@@ -61,26 +61,40 @@ class LeavesSafeCommandsAlone(unittest.TestCase):
         result = run_hook(command)
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
 
-    def test_command_without_equals_words(self):
+    def test_equals_inside_a_word_is_not_escaped(self):
         self.assert_untouched("git log --format=%h a==b")
 
-    def test_quoted_words(self):
+    def test_quoted_words_are_not_escaped(self):
         self.assert_untouched("echo '====' \"==\" $'=x'")
 
-    def test_already_escaped_word(self):
+    def test_an_already_escaped_word_is_not_escaped_again(self):
         self.assert_untouched("echo \\====")
 
-    def test_double_bracket_test(self):
+    def test_double_bracket_tests_are_not_escaped(self):
         self.assert_untouched("[[ a == b ]] && echo same")
 
-    def test_comment(self):
-        self.assert_untouched("ls  # see ==== below")
+    def test_arithmetic_is_not_escaped(self):
+        self.assert_untouched("(( 1 == 1 )) && echo $(( 2 == 2 ))")
 
-    def test_heredoc_body(self):
+    def test_comments_are_not_escaped(self):
+        self.assert_untouched("ls  # see ==== below\nls;# it's ====")
+
+    def test_heredoc_bodies_are_not_escaped(self):
         self.assert_untouched("cat <<'EOF'\n====\n[ a == b ]\nEOF\necho done")
 
-    def test_lone_equals_sign(self):
+    def test_a_lone_equals_sign_is_not_escaped(self):
         self.assert_untouched("[ a = b ]")
+
+
+class FindsWordsOutsideHeredocBodies(unittest.TestCase):
+    def test_a_here_string_does_not_start_a_heredoc(self):
+        self.assertEqual(rewritten(run_hook("cat <<<EOF\necho ====")), "cat <<<EOF\necho \\====")
+
+    def test_a_quoted_heredoc_operator_does_not_start_a_heredoc(self):
+        self.assertEqual(rewritten(run_hook('echo "<<EOF"\necho ====')), 'echo "<<EOF"\necho \\====')
+
+    def test_a_redirect_target_is_escaped(self):
+        self.assertEqual(rewritten(run_hook("echo hi >=x")), "echo hi >\\=x")
 
 
 class BlocksWhenTheQuotingIsUnclear(unittest.TestCase):

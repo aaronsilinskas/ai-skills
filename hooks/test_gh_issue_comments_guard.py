@@ -39,13 +39,13 @@ class AllowsOtherCommands(unittest.TestCase):
         result = run_hook(command)
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
 
-    def test_comments_with_json(self):
+    def test_comments_with_json_are_allowed(self):
         self.assert_allowed("gh issue view 12 --comments --json body,comments")
 
-    def test_issue_view_without_comments(self):
+    def test_issue_view_without_comments_is_allowed(self):
         self.assert_allowed("gh issue view 12")
 
-    def test_pr_view_with_comments(self):
+    def test_pr_view_with_comments_is_allowed(self):
         self.assert_allowed("gh pr view 12 --comments")
 
 

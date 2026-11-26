@@ -7,6 +7,8 @@ with none reads as empty and the agent misses its body. Each command segment
 Exit 2 blocks the call and shows stderr to the agent.
 """
 
+from __future__ import annotations
+
 import json
 import re
 import sys
@@ -15,7 +17,7 @@ SEGMENT_SPLIT = re.compile(r"&&|\|\||[;|\n]")
 ISSUE_VIEW = re.compile(r"\bgh\b.*\bissue\s+view\b")
 
 
-def offending_segments(command: str) -> list:
+def offending_segments(command: str) -> list[str]:
     return [
         segment.strip()
         for segment in SEGMENT_SPLIT.split(command)

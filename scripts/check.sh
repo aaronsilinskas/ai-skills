@@ -404,7 +404,7 @@ run_quiet "kaizen/scripts/check.sh" bash kaizen/scripts/check.sh
 # ── Check 6: Hooks ─────────────────────────────────────────────────────────
 echo
 echo "== Check 6: hooks (unit tests in hooks/) =="
-run_quiet "hooks/ unit tests" python3 -m unittest discover -s hooks -p 'test_*.py'
+run_quiet "hooks/ unit tests" python3 -B -m unittest discover -s hooks -p 'test_*.py'
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo
