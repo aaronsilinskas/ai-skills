@@ -1,0 +1,210 @@
+{
+  "skill_name": "feature-backpressure",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a dark mode feature to the settings page.",
+      "expected_output": "The skill fires and weighs the feature's cost against evidence of use before building it, ending on one verdict.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a --verbose flag to the sync command so it prints every file it copies.",
+      "expected_output": "The skill fires on the new flag and weighs it before building.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Give the export command an option to choose between JSON, CSV and XML output.",
+      "expected_output": "The skill fires, splits the option into its formats, and proposes the smallest version the evidenced use serves.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+        "Formats without evidence of use are listed as deferred extras or the verdict is measure first"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        },
+        {
+          "text": "Formats without evidence of use are listed as deferred extras or the verdict is measure first",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Add a retry_limit config key so users can set how many times an upload is retried.",
+      "expected_output": "The skill fires on the new config key and weighs it before building.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "The spec proposes a new `report` command with --since, --until, --format and --group-by. Implement it.",
+      "expected_output": "The skill fires on the proposed command and flags before implementation, and asks the user to rate value only for parts cost and use leave undecided.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+        "The response asks the user for value (high, low or unsure) only on undecided parts, never rating value itself"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user for value (high, low or unsure) only on undecided parts, never rating value itself",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Fix the bug where the sync command crashes on an empty directory.",
+      "expected_output": "The skill stays quiet: a bug fix adds no feature.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill does not trigger"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill does not trigger",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Refactor the config loader into one module without changing its behaviour.",
+      "expected_output": "The skill stays quiet: a refactor adds no feature.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill does not trigger"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill does not trigger",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Fix the typos in the README's install section.",
+      "expected_output": "The skill stays quiet: a docs edit adds no feature.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill does not trigger"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill does not trigger",
+          "type": "output_check"
+        }
+      ]
+    }
+  ]
+}
