@@ -27,7 +27,9 @@ kaizen ticket start <project> <issue>
 ```
 
 `<project>` is a `{{registry}}/` page name.
-Its output is the ticket (title, body and comments), so don't fetch the issue again. State the title, as the skill asks.
+Its output is the ticket (title, body and comments), so don't fetch the issue again.
+Its last line names the file it also wrote the ticket to, in the worktree's git dir: read that file before building, even after a `tail` of the output.
+State the title, as the skill asks.
 Do all edits, tests and commits inside the worktree path it prints.
 Never run `pre-commit install` in a ticket worktree: the main checkout's install covers every worktree.
 Every worktree shares one hook, so an install there points it at that worktree's environment, and every commit fails once the worktree is gone.

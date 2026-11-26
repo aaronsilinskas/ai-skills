@@ -12,7 +12,7 @@ import pytest
 
 from kaizen.shared.common import RefusalError
 from kaizen.tests.ticket_shell import Reply, Shell, failed, home_for, issue_json, quiet, register
-from kaizen.ticket.start import start
+from kaizen.ticket.start import ISSUE_FILE, start
 
 ISSUE_OPEN = issue_json(
     title="Each Reboot writes app-state.json twice", body="Two writes per Reboot."
@@ -39,6 +39,19 @@ def _blockers(*blockers: tuple[int, str] | tuple[int, str, str]) -> str:
         item = {"number": number, "title": f"B{number}", "state": state, "repository_url": url}
         lines.append(json.dumps(item) + "\n")
     return "".join(lines)
+
+
+def _git_path(cmd: list[str]) -> str:
+    """A ``git -C <worktree> rev-parse --git-path <name>`` reply: *name* in a folder standing in
+    for the worktree's own git dir, which it makes, as ``git worktree add`` would."""
+    worktree, name = cmd[cmd.index("-C") + 1], cmd[-1]
+    git_dir = Path(f"{worktree}.gitdir")
+    git_dir.mkdir(parents=True, exist_ok=True)
+    return f"{git_dir / name}\n"
+
+
+def _issue_file(tmp_path: Path, branch: str) -> Path:
+    return tmp_path / f"proto/.claude/worktrees/{branch}.gitdir/{ISSUE_FILE}"
 
 
 def _open_issue(title: str) -> str:
@@ -73,6 +86,7 @@ def _shell(**overrides: str | BaseException) -> Shell:
         return reply
 
     answers: dict[tuple[str, ...], Reply] = {
+        ("rev-parse", "--git-path"): _git_path,
         ("issue", "view"): overrides.get("issue", ISSUE_OPEN),
         ("log", "--merges"): overrides.get("merges", MERGES),
         ("gh", "api"): gh_api,
@@ -344,7 +358,8 @@ def test_start_prints_the_worktree_path_and_the_issue_title(tmp_path):
 
     start("proto", 7, "x", _shell(), home=home_for(_proto(tmp_path)), say=lines.append)
 
-    assert lines[-4:-2] == [
+    at = lines.index("issue: #7 Each Reboot writes app-state.json twice")
+    assert lines[at - 1 : at + 1] == [
         f"worktree: {tmp_path}/proto/.claude/worktrees/fix-7-x",
         "issue: #7 Each Reboot writes app-state.json twice",
     ]
@@ -371,7 +386,8 @@ def test_start_prints_the_issue_body_and_every_comment_after_the_title(tmp_path)
 
     start("proto", 7, "x", _shell(issue=issue), home=home_for(_proto(tmp_path)), say=lines.append)
 
-    assert lines[-4:] == [
+    at = lines.index("issue: #7 Each Reboot writes app-state.json twice")
+    assert lines[at : at + 4] == [
         "issue: #7 Each Reboot writes app-state.json twice",
         "\nbody:\n## Problem\n\nTwo writes per Reboot.",
         "\ncomment by alice on 2026-11-19:\nSeen on rev B too.",
@@ -391,7 +407,8 @@ def test_start_says_when_the_issue_has_no_body_and_no_comments(tmp_path):
         say=lines.append,
     )
 
-    assert lines[-3:] == ["issue: #7 Bare", "\nbody: none", "\n(no comments)"]
+    at = lines.index("issue: #7 Bare")
+    assert lines[at : at + 3] == ["issue: #7 Bare", "\nbody: none", "\n(no comments)"]
 
 
 @pytest.mark.parametrize("author", [None, {"login": ""}])
@@ -402,7 +419,7 @@ def test_start_names_a_deleted_comment_author_ghost(tmp_path, author):
 
     start("proto", 7, "x", _shell(issue=issue), home=home_for(_proto(tmp_path)), say=lines.append)
 
-    assert lines[-1] == "\ncomment by ghost on 2026-01-02:\nOld note."
+    assert "\ncomment by ghost on 2026-01-02:\nOld note." in lines
 
 
 def test_start_asks_gh_for_the_body_and_comments_as_json_never_with_the_comments_flag(tmp_path):
@@ -414,6 +431,39 @@ def test_start_asks_gh_for_the_body_and_comments_as_json_never_with_the_comments
     assert view[-2] == "--json"
     assert {"body", "comments"} <= set(view[-1].split(","))
     assert "--comments" not in view
+
+
+def test_start_writes_the_issue_to_a_file_in_the_worktrees_git_dir_and_names_it_last(tmp_path):
+    issue = issue_json(
+        title="Bare",
+        body="Two writes.",
+        comments=[{"author": {"login": "al"}, "body": "Rev B.", "createdAt": "2026-11-19T08:30Z"}],
+    )
+    lines: list[str] = []
+
+    start("proto", 7, "x", _shell(issue=issue), home=home_for(_proto(tmp_path)), say=lines.append)
+
+    issue_file = _issue_file(tmp_path, "fix-7-x")
+    assert issue_file.read_text() == (
+        "issue: #7 Bare\n\nbody:\nTwo writes.\n\ncomment by al on 2026-11-19:\nRev B.\n"
+    )
+    assert lines[-1] == f"issue saved to {issue_file}: read it before building"
+
+
+def test_with_spec_start_writes_the_issue_file_too(tmp_path):
+    lines: list[str] = []
+
+    start("proto", 1358, "x", _shell(), home=home_for(_proto(tmp_path)), spec=25, say=lines.append)
+
+    issue_file = _issue_file(tmp_path, "spec-25-fix-1358-x")
+    assert issue_file.read_text().startswith("issue: #1358 ")
+    assert lines[-1] == f"issue saved to {issue_file}: read it before building"
+
+
+def test_a_dry_run_writes_no_issue_file(tmp_path):
+    start("proto", 7, "x", _shell(), home=home_for(_proto(tmp_path)), dry_run=True, say=quiet)
+
+    assert not _issue_file(tmp_path, "fix-7-x").exists()
 
 
 def test_a_dry_run_does_not_print_the_issue_body(tmp_path):

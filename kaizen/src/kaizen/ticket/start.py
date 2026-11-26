@@ -31,6 +31,7 @@ SLUG_WORDS = 5
 # Dropped from the end of a derived slug, where they dangle once the title is cut short.
 SLUG_TRAILING_STOPWORDS = frozenset({"the", "for", "a", "an", "of", "to", "and"})
 _SLUG = re.compile(r"[\w.-]+")
+ISSUE_FILE = "kaizen-issue.md"
 
 
 @dataclass(frozen=True)
@@ -117,10 +118,25 @@ def start(
     add_ticket_worktree(project, checkout, worktree, branch, base, run, say)
     say(f"worktree: {worktree}")
     if ticket_issue is not None:
-        say(f"issue: #{issue} {ticket_issue.title}")
-        for line in body_and_comments_lines(ticket_issue):
+        lines = [f"issue: #{issue} {ticket_issue.title}", *body_and_comments_lines(ticket_issue)]
+        for line in lines:
             say(line)
+        issue_file = _write_issue_file(worktree, lines, run)
+        say(f"issue saved to {issue_file}: read it before building")
     return Started(worktree, branch, title)
+
+
+def _write_issue_file(worktree: Path, lines: list[str], run: Runner) -> Path:
+    """Writes *lines* to ``ISSUE_FILE`` in *worktree*'s own git dir, and returns its path.
+
+    The last line ``start`` prints names it, so a run piped to ``tail`` still shows where the
+    issue is. In the git dir, it is never committed or shown by ``git status``, needs no ignore
+    rule in the project, and goes when ``git worktree remove`` removes the worktree.
+    """
+    git_path = run(["git", "-C", str(worktree), "rev-parse", "--git-path", ISSUE_FILE]).strip()
+    path = worktree / git_path
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
 def _refuse_tracked_links(project: Project, base: str, run: Runner) -> None:
@@ -192,10 +208,11 @@ def add_parser(subparsers: Subparsers) -> None:
             "lacks it, the local one `kaizen spec start --local` made, refusing a ticket with an "
             "open blocker not yet integrated into it unless --ignore-blockers; that check "
             "fetches the integration branch alone, also on --dry-run). Prints the worktree "
-            "path and the issue's title, body and comments. With no issue, add the "
-            "ticket worktree for a docs change, which touches no code, on a docs-<slug> branch "
-            "(--slug required, --spec refused); `kaizen ticket ship` refuses it if it touches "
-            "the project's code_paths. "
+            f"path and the issue's title, body and comments, and writes them to {ISSUE_FILE} in "
+            "the worktree's own git dir, never committed, whose path is the last line printed. "
+            "With no issue, add the ticket worktree for a docs change, which touches no code, "
+            "on a docs-<slug> branch (--slug required, --spec refused); `kaizen ticket ship` "
+            "refuses it if it touches the project's code_paths. "
             "Each path in the project's worktree_links (git-ignored, such as a downloaded "
             "tool) is then symlinked from the main checkout into the worktree; one missing "
             "there is warned about, and one the base commit tracks is refused. "
