@@ -27,7 +27,7 @@ from kaizen.hook import (
     no_commit_to_branch,
     prose_marks,
     section_banners,
-    vacuous_tests,
+    test_names,
     work_tracking,
 )
 from kaizen.hook import leak_check as hook_leak_check
@@ -68,7 +68,7 @@ GROUPS = {
             work_tracking,
             doc_paths,
             glossary_terms,
-            vacuous_tests,
+            test_names,
         ),
     ),
     "issue": ("read, link and publish issues", (issue_show, issue_link, issue_publish)),

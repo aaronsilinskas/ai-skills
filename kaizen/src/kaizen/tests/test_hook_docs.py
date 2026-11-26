@@ -69,6 +69,15 @@ def test_a_path_written_relative_to_its_doc_resolves_from_the_doc_s_folder(tmp_p
     assert kaizen(["hook", "doc-paths"], _repo(tmp_path, docs)[1]) == 1
 
 
+def test_a_path_whose_first_folder_sits_above_the_doc_must_resolve_from_there(tmp_path, kaizen):
+    docs = {"AGENTS.md": "Read `docs/adr/`.\n", "docs/a.md": "", "pkg/docs/adr/0001-a.md": ""}
+
+    assert kaizen(["hook", "doc-paths"], _repo(tmp_path, docs)[1]) == 1
+
+    docs["pkg/AGENTS.md"] = docs.pop("AGENTS.md")
+    assert kaizen(["hook", "doc-paths"], _repo(tmp_path, docs)[1]) == 0
+
+
 @pytest.mark.parametrize(
     "span",
     [

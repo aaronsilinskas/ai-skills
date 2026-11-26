@@ -15,9 +15,7 @@ from kaizen.shared.home import Home
 _TEST_FILES = ("test_*.py", "*_test.py")
 """pytest's default test file names."""
 
-VACUOUS = frozenset(
-    {"basic", "case", "example", "happy", "it", "ok", "path", "sanity", "simple", "smoke", "works"}
-)
+VACUOUS = frozenset({"basic", "happy", "it", "ok", "path", "simple", "works"})
 """Words that say a test passes, not what it guarantees."""
 
 _FIX = (

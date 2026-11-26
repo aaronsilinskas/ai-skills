@@ -124,7 +124,7 @@ One module per command; each group's `--help` lists them.
   `hook/common.py` holds the one refusal every file hook raises, listing each finding's file, line and rule.
   `hook/markdown.py` gives the Markdown hooks the lines outside fenced code and the code spans in them.
   `hook doc-paths` reads the whole index rather than the staged files, since a commit that deletes a folder stages none of the docs naming it.
-  `hook glossary-terms` reads the `_Avoid_:` lines of each `GLOSSARY.md` at or above a file; `hook test-names` reads test names through `ast`, in `hook/vacuous_tests.py`, a name pytest won't collect as tests.
+  `hook glossary-terms` reads the `_Avoid_:` lines of each `GLOSSARY.md` at or above a file; `hook test-names` reads test names through `ast`.
 
 ## Constraints
 

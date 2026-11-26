@@ -35,8 +35,8 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        # The first study makes docs/research/.
-        args: [--allow, docs/research/]
+        # The first study makes docs/research/, and the first root-level decision docs/adr/.
+        args: [--allow, docs/research/, --allow, docs/adr/]
       - id: kaizen-glossary-terms
         name: kaizen glossary terms
         entry: uv run --project kaizen kaizen hook glossary-terms

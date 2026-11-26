@@ -26,7 +26,7 @@ def _file(tmp_path: Path, name: str, text: str) -> str:
         "test_basic",
         "test_it_works",
         "test_happy_path",
-        "test_basic_example",
+        "test_basic_ok",
         "test__parse",
     ],
 )

@@ -44,26 +44,39 @@ def is_agent_doc(path: str) -> bool:
 
 
 class _Tracked:
-    """The tracked files and folders, by full path and by every trailing part of it, so a path
-    written relative to its doc or to a folder the doc names still matches."""
+    """The tracked files and the folders that hold them, by full path and by every trailing part
+    of it."""
 
     def __init__(self, files: list[str]) -> None:
         self.paths: set[str] = set()
-        self.endings: set[str] = set()
+        self.trailing_parts: set[str] = set()
         for name in files:
             parts = name.split("/")
             for end in range(1, len(parts) + 1):
-                path = "/".join(parts[:end])
-                self.paths.add(path)
-                self.endings.update("/".join(parts[start:end]) for start in range(end))
+                self.paths.add("/".join(parts[:end]))
+                self.trailing_parts.update("/".join(parts[start:end]) for start in range(end))
 
     def holds(self, doc: str, path: re.Match[str]) -> bool:
-        """Whether the repo *path* the *doc* names is tracked; one that resolves outside the
-        repo is not this hook's to judge, so it is taken as tracked."""
-        if not path.group("up"):
-            return path.group("rest").rstrip("/") in self.endings
-        resolved = posixpath.normpath(posixpath.join(posixpath.dirname(doc), path.group()))
-        return resolved == ".." or resolved.startswith("../") or resolved in self.paths
+        """Whether the repo *path* the *doc* names is tracked.
+
+        Behind ``./`` or ``../`` it resolves from the doc's folder; one that resolves outside the
+        repo is not this hook's to judge. Otherwise, when its first name is tracked in the doc's
+        folder or a folder above it, it resolves from there, and when not, it is written relative
+        to some folder the doc names elsewhere, so it need only end a tracked path.
+        """
+        folder = posixpath.dirname(doc)
+        if path.group("up"):
+            resolved = posixpath.normpath(posixpath.join(folder, path.group()))
+            return resolved == ".." or resolved.startswith("../") or resolved in self.paths
+        rest = path.group("rest").rstrip("/")
+        first = rest.split("/")[0]
+        bases = [base for base in map(str, PurePosixPath(doc).parents) if self._has(base, first)]
+        if not bases:
+            return rest in self.trailing_parts
+        return any(self._has(base, rest) for base in bases)
+
+    def _has(self, base: str, path: str) -> bool:
+        return posixpath.normpath(posixpath.join(base, path)) in self.paths
 
 
 def _allowed(span: str, allow: list[str]) -> bool:
@@ -98,8 +111,10 @@ def add_parser(subparsers: Subparsers) -> None:
             "code that holds a / and is only folder names ending in /, or folder names and a "
             "file name with an extension, such as `docs/adr/` or `src/app/cli.py`: globs, "
             "<placeholders>, spaces, URLs, absolute and ~ paths, branches such as origin/main "
-            "and repos such as owner/repo are not. It names a tracked path when some tracked "
-            "path ends with it, or, behind ./ or ../, when it resolves from the doc's folder. It "
+            "and repos such as owner/repo are not. Behind ./ or ../ a path resolves from the doc's "
+            "folder. Otherwise, when its first name is tracked in the doc's folder or a folder "
+            "above it, it must resolve from one of those; when not, it is taken as relative to "
+            "a folder the doc names elsewhere and need only end some tracked path. It "
             "reads the whole index, so any file names pre-commit passes are ignored."
         ),
     )
