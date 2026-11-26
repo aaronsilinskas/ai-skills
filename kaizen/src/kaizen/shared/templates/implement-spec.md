@@ -41,6 +41,7 @@ kaizen ticket start <project> <issue> --spec <N>
 
 It refuses a ticket with an open blocker not yet integrated into `spec-<N>`; integrate the blocker first, or pass `--ignore-blockers` when starting early is intended.
 Tell the implementer to work only inside that path and to report done in its handback once its work is committed there.
+Hand it too the issue file the last line of `start`'s output names, and tell it to read that file before building.
 The skill's "merges the integration branch tip into its own branch before reporting done" is dropped: a refused `integrate` is the only thing that starts a conflict fix.
 
 Each implementer brief also:
