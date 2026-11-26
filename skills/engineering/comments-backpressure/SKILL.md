@@ -41,6 +41,18 @@ raise ValueError(f"band {key!r} overlaps {other!r}: a pixel belongs to one band"
 log.warning("retrying upload: server dropped the connection mid-chunk")
 ```
 
+## Point to the Source
+
+A doc, from a docstring to a README or `AGENTS.md`, names the source of truth and points to it. Lists, flags and config that live in a file or command (`.pre-commit-config.yaml`, `--help`, `.github/dependabot.yml`) stay there: a copy is a cache that goes stale the next time the source changes. The doc keeps what no source records, such as why a hook runs.
+
+```markdown
+<!-- Before: a copy of .pre-commit-config.yaml, stale once a hook is added -->
+Pre-commit runs `ruff`, `ruff-format`, `mypy` and `check-yaml`.
+
+<!-- After: a pointer -->
+The hooks are in `.pre-commit-config.yaml`.
+```
+
 ## Specific Cases
 
 - **Docstrings, public APIs included.** A docstring holds a contract the signature can't show: an ordering constraint, a side effect, return semantics, or when it raises. A symbol whose name and signature say it all goes without one. When the project's linter requires docstrings or it publishes generated API docs, follow the project with a one-line summary of what the name leaves out, plus those contracts.
@@ -61,4 +73,5 @@ When a docstring survives, format it per the target language's conventions:
 - [ ] Every comment and docstring in scope sits in one bucket, and its action is taken or reported
 - [ ] Every comment left is a **keep**
 - [ ] Asserts, logs and errors carry their reason in the message
+- [ ] Docs point to the file or command that owns a list, flag or config rather than copying it
 - [ ] Surviving prose is formatted per the target language's reference file
