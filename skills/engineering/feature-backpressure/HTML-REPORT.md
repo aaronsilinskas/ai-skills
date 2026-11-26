@@ -7,8 +7,8 @@ The audit report is one self-contained HTML file: inline CSS, no scripts, no ext
 - **Candidates** are the features in the cut, merge, shrink and measure buckets.
 - Sort them by bucket in that order, then by cost, highest first, so the costliest cuts lead.
 - Show the top 10 as cards. Close the list with a count of the candidates left out, by bucket, so the user can ask for the next batch.
-- Keeps and trivials get no cards: show each as a count, with the units' names in one collapsed `<details>` list.
-- Ledger rows skipped as settled get one line: how many, and that the ledger holds them.
+- Keeps and trivials get no cards: show each as a count.
+- The ledger gets one line: how many rows were skipped as settled, re-checked, and dropped for features that no longer exist.
 
 ## Scaffold
 
@@ -34,7 +34,7 @@ The audit report is one self-contained HTML file: inline CSS, no scripts, no ext
     <main>
       <header>...</header>
       <section id="candidates">...</section>
-      <section id="rest">...</section>
+      <section id="rest">...</section> <!-- left-out count, keep and trivial counts, ledger line -->
     </main>
   </body>
 </html>
@@ -49,13 +49,9 @@ The project, the scope audited, the commit, the date, and one line of totals: un
 One `<article>` per candidate:
 
 - **Title**: the feature's name as a user types or sees it (`ticket publish --wait-timeout`), and its bucket as a badge.
-- **Cost and use**, side by side in the `.sides` grid. Cost: what the feature adds (code, tests, docs, config surface, failure modes). Use: the count or finding, its source, and the window it covers, with the method rule applied (calls from the building session dropped, outcomes counted for setup commands, trigger rate for once-per-trigger units).
+- **Cost and use**, side by side in the `.sides` grid. Cost: what the feature adds (code, tests, docs, config surface, failure modes). Use: the count or finding, its source, and the window it covers, counted by the skill's **Counting use** rules.
 - **Added**: the date of the commit that added it.
 - **Action**: one sentence. For a cut, what goes; for a merge, what it folds into; for a shrink, which parts go; for a measure, the signal it waits for and where it would come from.
 - **Value**: the user's rating from the ledger, or "ask" when cost and use leave the feature undecided.
 
 Prose stays short: one line per field. When a card needs a paragraph, the evidence isn't settled yet.
-
-## Rest of the audit
-
-After the cards: the count of candidates left out by bucket, the keep and trivial counts with their names collapsed, and the ledger lines (rows skipped as settled, rows due for a re-check, rows dropped for features that no longer exist).

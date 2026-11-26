@@ -7,7 +7,7 @@ A step tagged _(user-run)_ is the user's, as `AGENTS.md` **Workflows** says; tel
 
 ## Sizing
 
-A change that adds a feature (a command, flag, option or config key) first runs `feature-backpressure` proposal mode, before its issue or spec is written.
+A change that adds a feature first runs `feature-backpressure` proposal mode, before its issue or spec is written.
 
 A code change that fits in one PR, with its design settled, skips the spec.
 Open one issue for it (`ready-for-agent`, no `spec` parent) and build it through the **Ticket implementation workflow** below, so its PR closes that issue and `code-review` runs before merge.
