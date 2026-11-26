@@ -10,24 +10,11 @@ import pytest
 
 from kaizen.shared.common import RefusalError, run_subprocess
 from kaizen.spec.integrate import integrate
-from kaizen.tests.real_git import git
+from kaizen.tests.real_git import clone, commit, git
 from kaizen.tests.ticket_shell import home_for, install_hook, quiet
 
 SPEC = 25
 BRANCH = f"spec-{SPEC}-fix-7-add-greeting"
-
-
-def _commit(repo: Path, name: str, text: str) -> None:
-    (repo / name).write_text(text)
-    git("-C", repo, "add", name)
-    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
-
-
-def _clone(origin: Path, dest: Path) -> Path:
-    git("clone", "-q", origin, dest)
-    git("-C", dest, "config", "user.name", "Test")
-    git("-C", dest, "config", "user.email", "test@example.com")
-    return dest
 
 
 @dataclass(frozen=True)
@@ -44,10 +31,10 @@ class Repos:
         """Moves ``origin``'s integration branch from another clone, as a parallel run would."""
         other = self.origin.parent / f"other-{name}"
         if not other.exists():
-            _clone(self.origin, other)
+            clone(self.origin, other)
         git("-C", other, "fetch", "-q", "origin")
         git("-C", other, "checkout", "-q", "-B", f"spec-{SPEC}", f"origin/spec-{SPEC}")
-        _commit(other, name, text)
+        commit(other, name, text)
         git("-C", other, "push", "-q", "origin", f"spec-{SPEC}")
 
 
@@ -55,14 +42,14 @@ def _repos(tmp_path: Path, check: str = "test ! -e FAIL", public: bool = False) 
     """A project ``proto`` with ``spec-25`` on origin and a ticket worktree with one commit."""
     origin = tmp_path / "origin.git"
     git("init", "-q", "--bare", "-b", "main", origin)
-    checkout = _clone(origin, tmp_path / "proto")
-    _commit(checkout, ".gitignore", ".claude/\n.venv\n")
+    checkout = clone(origin, tmp_path / "proto")
+    commit(checkout, ".gitignore", ".claude/\n.venv\n")
     git("-C", checkout, "push", "-q", "origin", "main")
     git("-C", checkout, "push", "-q", "origin", f"main:spec-{SPEC}")
     git("-C", checkout, "fetch", "-q", "origin")
     ticket = checkout / ".claude" / "worktrees" / BRANCH
     git("-C", checkout, "worktree", "add", "-q", "-b", BRANCH, ticket, f"origin/spec-{SPEC}")
-    _commit(ticket, "greeting.txt", "hello\n")
+    commit(ticket, "greeting.txt", "hello\n")
 
     projects = tmp_path / "projects"
     projects.mkdir()
@@ -112,7 +99,7 @@ def test_a_conflict_is_refused_naming_its_files_and_leaves_no_scratch_worktree(t
 
 def test_a_failing_check_is_refused_and_leaves_the_integration_branch_unmoved(tmp_path):
     repos = _repos(tmp_path)
-    _commit(repos.ticket, "FAIL", "the check fails while this file exists\n")
+    commit(repos.ticket, "FAIL", "the check fails while this file exists\n")
     before = repos.remote_tip()
 
     with pytest.raises(RefusalError, match=r"the check failed on the merged result"):

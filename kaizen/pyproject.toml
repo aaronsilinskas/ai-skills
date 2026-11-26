@@ -53,6 +53,7 @@ dev = [
     "import-linter>=2.16",
     # Pinned exactly, so a new mypy release never changes what the check reports.
     "mypy==2.4.1",
+    "pylint>=4.1.4",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
 ]
@@ -76,6 +77,25 @@ select = [
     "C4",  # flake8-comprehensions (cleaner list/dict/set expressions)
     "SIM", # flake8-simplify (redundant code patterns)
     "RUF", # ruff-native rules
+    "D",   # pydocstyle, its formatting rules only (see ignore)
+    "PT",  # flake8-pytest-style
+    "PGH", # pygrep-hooks (blanket type: ignore and noqa)
+    "TC",  # flake8-type-checking
+]
+ignore = [
+    # A missing docstring is fine: the D1 rules would demand one on every public name.
+    "D1",
+    # D211 and D212 are the pair kept, a docstring starting on its opening line.
+    "D203",
+    "D213",
+    # A summary may wrap over several lines, closing on its last one.
+    "D205",
+    "D209",
+    # What a docstring says is review's call, not lint's.
+    "D401",
+    "D404",
+    # A docstring's last section ends at its closing quotes.
+    "D413",
 ]
 
 [tool.mypy]
@@ -133,3 +153,17 @@ name = "the registry does not import the ticket worktree"
 type = "forbidden"
 source_modules = ["kaizen.shared.registry"]
 forbidden_modules = ["kaizen.shared.ticket_worktree"]
+
+# pylint runs for one check only, duplicate code; ruff covers the rest. Below 8 lines it flags
+# argv lists and dataclass fields that only look alike.
+[tool.pylint.main]
+disable = ["all"]
+enable = ["duplicate-code"]
+
+[tool.pylint.reports]
+score = false
+
+[tool.pylint.similarities]
+min-similarity-lines = 8
+ignore-imports = true
+ignore-signatures = true

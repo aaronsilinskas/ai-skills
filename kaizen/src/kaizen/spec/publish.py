@@ -1,4 +1,4 @@
-"""Publish a grilled local spec to GitHub and ship the domain-doc edits from grilling.
+r"""Publish a grilled local spec to GitHub and ship the domain-doc edits from grilling.
 
 The publish step at the tail of ``grill-with-docs`` (see the Spec workflow in the
 home's docs), in order:
@@ -24,7 +24,7 @@ Usage
 -----
 Run from the project's root::
 
-    kaizen spec publish docs/spec/<slug>.md \\
+    kaizen spec publish docs/spec/<slug>.md \
         --idea 1179 --co-author "Claude Opus 5.5 <noreply@anthropic.com>"
     kaizen spec publish docs/spec/<slug>.md --dry-run
 """

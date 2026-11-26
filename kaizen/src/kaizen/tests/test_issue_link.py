@@ -129,7 +129,8 @@ def test_link_with_neither_parent_nor_blocker_refuses_naming_both_flags(kaizen, 
 
     assert code == 1
     assert err.startswith("refused: nothing to link")
-    assert "--parent" in err and "--blocked-by" in err
+    assert "--parent" in err
+    assert "--blocked-by" in err
     assert shell.calls == []
 
 

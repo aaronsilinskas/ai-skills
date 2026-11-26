@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# check.sh: kaizen's own check. Runs lint, format, types, import contracts, tests and the synced
-# files' line length through uv from kaizen/, and exits non-zero if any of them fails. Every
-# step runs even after an earlier failure, so one run surfaces every problem.
+# check.sh: kaizen's own check. Runs lint, format, types, import contracts, duplicate code, tests
+# and the synced files' line length through uv from kaizen/, and exits non-zero if any of them
+# fails. Every step runs even after an earlier failure, so one run surfaces every problem.
 #
 #   bash kaizen/scripts/check.sh
 #
@@ -31,6 +31,7 @@ step "ruff check" uv run ruff check
 step "ruff format" uv run ruff format --check
 step "mypy" uv run mypy
 step "import contracts" uv run lint-imports
+step "duplicate code" uv run pylint src scripts
 step "pytest" uv run pytest -q
 step "synced line length" uv run python scripts/line_length_check.py
 

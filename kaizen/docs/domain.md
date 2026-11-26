@@ -18,7 +18,7 @@ Each command's `--help` says what it checks and does; this map holds only what `
   Fixtures use generic homes, owners and paths; `test_fixture_names.py` fails on any other owner named in a repo reference there or in the templates.
   `leak_home.py` builds the fixture home both leak check test files judge text in.
   `test_dry_run.py` runs every command's `--dry-run`, as listed by `commands.py`, and fails on any git or gh call it doesn't know as a query.
-- `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pytest and `line_length_check.py`, all through `uv`.
+- `kaizen/scripts/check.sh`: kaizen's check command, and the one list of what it runs: ruff, the ruff formatter's check, mypy, import-linter, pylint (duplicate code only), pytest and `line_length_check.py`, all through `uv`.
 - `kaizen/src/kaizen/tests/scripts.py`: loads each Python script in `kaizen/scripts/` by path for its tests, since the scripts sit outside the package.
 - `kaizen/scripts/release_check.py`: the release workflow's version and wheel checks, also runnable by hand.
   Its tests sit with the package's, in `kaizen/src/kaizen/tests/test_release_check.py`.

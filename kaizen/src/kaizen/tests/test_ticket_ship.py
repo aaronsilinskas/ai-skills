@@ -24,6 +24,7 @@ from kaizen.tests.ticket_shell import (
     cli_home,
     failed,
     home_for,
+    proto_pr,
     quiet,
     write_marker,
 )
@@ -91,19 +92,9 @@ def test_ship_opens_a_pr_from_the_branch_into_the_default_branch(tmp_path):
     shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (create,) = shell.ran("pr", "create")
-    assert create[: create.index("--body-file")] == [
-        "gh",
-        "-R",
-        "owner/proto",
-        "pr",
-        "create",
-        "--base",
-        "main",
-        "--head",
-        BRANCH,
-        "--title",
-        TITLE,
-    ]
+    assert create[: create.index("--body-file")] == proto_pr(
+        "create", "--base", "main", "--head", BRANCH, "--title", TITLE
+    )
     assert shipped.url == NEW_PR
 
 
@@ -281,16 +272,7 @@ def test_reshipping_updates_the_open_prs_title_and_body_from_the_arguments(tmp_p
     ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (edit,) = shell.ran("pr", "edit")
-    assert edit[: edit.index("--body-file")] == [
-        "gh",
-        "-R",
-        "owner/proto",
-        "pr",
-        "edit",
-        OPEN_PR,
-        "--title",
-        TITLE,
-    ]
+    assert edit[: edit.index("--body-file")] == proto_pr("edit", OPEN_PR, "--title", TITLE)
     assert shell.bodies == [f"Closes #1358\n\nWrites the state once per Reboot.\n\n{FOOTER}\n"]
 
 
@@ -516,8 +498,10 @@ def test_ship_refuses_a_docs_change_that_touches_code_naming_only_the_code_files
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     message = str(refused.value)
-    assert "src/state.py" in message and "package.json" in message
-    assert "docs/setup.md" not in message and "srcs/notes.md" not in message
+    assert "src/state.py" in message
+    assert "package.json" in message
+    assert "docs/setup.md" not in message
+    assert "srcs/notes.md" not in message
     assert "open an issue" in message
     assert not shell.ran("push")
 
@@ -530,7 +514,8 @@ def test_ship_refuses_a_docs_change_that_touches_a_file_a_glob_code_path_matches
         ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     message = str(refused.value)
-    assert "new_module.py" in message and "docs/example.py" not in message
+    assert "new_module.py" in message
+    assert "docs/example.py" not in message
     assert not shell.ran("push")
 
 
