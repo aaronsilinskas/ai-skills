@@ -271,7 +271,7 @@ dev = [
 dev = [
     { name = "import-linter", specifier = ">=2.16" },
     { name = "mypy", specifier = "==2.4.1" },
-    { name = "pylint", specifier = ">=4.1.4" },
+    { name = "pylint", specifier = "==4.1.4" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "ruff", specifier = ">=0.15.6" },
 ]

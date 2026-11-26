@@ -11,7 +11,15 @@ from pathlib import Path
 import pytest
 
 from kaizen.shared.common import RefusalError
-from kaizen.tests.ticket_shell import Reply, Shell, failed, home_for, install_hook, quiet
+from kaizen.tests.ticket_shell import (
+    Reply,
+    Shell,
+    failed,
+    home_for,
+    install_hook,
+    proto_pr_argv,
+    quiet,
+)
 from kaizen.ticket.abandon import abandon
 
 BRANCH = "fix-53-retry-the-flaky-upload"
@@ -87,7 +95,7 @@ def test_abandon_closes_the_pr_deletes_both_branches_and_removes_the_worktree_in
 
     repo = str(tmp_path / "proto")
     assert _mutations(shell) == [
-        ["gh", "-R", "owner/proto", "pr", "close", "77"],
+        proto_pr_argv("close", "77"),
         ["git", "-C", repo, "push", "-q", "origin", "--delete", BRANCH],
         ["git", "-C", repo, "worktree", "remove", str(worktree)],
         ["git", "-C", repo, "branch", "-D", BRANCH],
@@ -100,7 +108,7 @@ def test_abandon_posts_the_reason_as_the_pr_close_comment(tmp_path):
     _abandon(tmp_path, shell, reason="Superseded by #80")
 
     assert shell.ran("pr", "close") == [
-        ["gh", "-R", "owner/proto", "pr", "close", "77", "--comment", "Superseded by #80"]
+        proto_pr_argv("close", "77", "--comment", "Superseded by #80")
     ]
 
 

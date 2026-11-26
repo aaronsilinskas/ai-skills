@@ -24,7 +24,7 @@ from kaizen.tests.ticket_shell import (
     cli_home,
     failed,
     home_for,
-    proto_pr,
+    proto_pr_argv,
     quiet,
     write_marker,
 )
@@ -92,7 +92,7 @@ def test_ship_opens_a_pr_from_the_branch_into_the_default_branch(tmp_path):
     shipped = ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (create,) = shell.ran("pr", "create")
-    assert create[: create.index("--body-file")] == proto_pr(
+    assert create[: create.index("--body-file")] == proto_pr_argv(
         "create", "--base", "main", "--head", BRANCH, "--title", TITLE
     )
     assert shipped.url == NEW_PR
@@ -272,7 +272,7 @@ def test_reshipping_updates_the_open_prs_title_and_body_from_the_arguments(tmp_p
     ship(worktree, TITLE, body, shell, home=home_for(projects), say=quiet)
 
     (edit,) = shell.ran("pr", "edit")
-    assert edit[: edit.index("--body-file")] == proto_pr("edit", OPEN_PR, "--title", TITLE)
+    assert edit[: edit.index("--body-file")] == proto_pr_argv("edit", OPEN_PR, "--title", TITLE)
     assert shell.bodies == [f"Closes #1358\n\nWrites the state once per Reboot.\n\n{FOOTER}\n"]
 
 

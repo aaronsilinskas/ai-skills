@@ -23,7 +23,7 @@ from kaizen.tests.ticket_shell import (
     cli_home,
     failed,
     home_for,
-    proto_pr,
+    proto_pr_argv,
     quiet,
     sub_issue_json,
 )
@@ -90,7 +90,7 @@ def test_ship_opens_one_ready_pr_from_the_integration_branch_into_the_default_br
     shipped = _ship(tmp_path, shell)
 
     (create,) = shell.ran("pr", "create")
-    assert create[: create.index("--body-file")] == proto_pr(
+    assert create[: create.index("--body-file")] == proto_pr_argv(
         "create", "--base", "main", "--head", "spec-25", "--title", TITLE
     )
     assert "--draft" not in create
@@ -227,7 +227,7 @@ def test_reusing_the_open_pr_updates_its_title_and_body_from_the_arguments(tmp_p
     _ship(tmp_path, shell)
 
     (edit,) = shell.ran("pr", "edit")
-    assert edit[: edit.index("--body-file")] == proto_pr("edit", OPEN_PR, "--title", TITLE)
+    assert edit[: edit.index("--body-file")] == proto_pr_argv("edit", OPEN_PR, "--title", TITLE)
     assert shell.bodies == [CLOSES + f"Adds the spec lifecycle.\n\n{FOOTER}\n"]
 
 

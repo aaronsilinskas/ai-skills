@@ -8,17 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from kaizen.shared.common import run_subprocess
-from kaizen.tests.real_git import git
+from kaizen.tests.real_git import clone, commit, git
 from kaizen.tests.ticket_shell import home_for
 from kaizen.ticket.compare import compare
 
 BRANCH = "fix-7-add-greeting"
-
-
-def _commit(repo: Path, name: str, text: str) -> None:
-    (repo / name).write_text(text)
-    git("-C", repo, "add", name)
-    git("-C", repo, "commit", "-q", "-m", f"Write {name}")
 
 
 @dataclass(frozen=True)
@@ -42,18 +36,15 @@ def _repos(tmp_path: Path) -> Repos:
     git-ignored ``tools/helper`` in the main checkout listed in its ``worktree_links``."""
     origin = tmp_path / "origin.git"
     git("init", "-q", "--bare", "-b", "main", origin)
-    checkout = tmp_path / "proto"
-    git("clone", "-q", origin, checkout)
-    git("-C", checkout, "config", "user.name", "Test")
-    git("-C", checkout, "config", "user.email", "test@example.com")
-    _commit(checkout, ".gitignore", ".claude/\ntools/\n")
+    checkout = clone(origin, tmp_path / "proto")
+    commit(checkout, ".gitignore", ".claude/\ntools/\n")
     git("-C", checkout, "push", "-q", "origin", "main")
     (checkout / "tools").mkdir()
     (checkout / "tools" / "helper").write_text("a downloaded tool\n")
     base_commit = git("-C", checkout, "rev-parse", "HEAD").strip()
     ticket = checkout / ".claude" / "worktrees" / BRANCH
     git("-C", checkout, "worktree", "add", "-q", "-b", BRANCH, ticket, "origin/main")
-    _commit(ticket, "FAIL", "the command fails while this file exists\n")
+    commit(ticket, "FAIL", "the command fails while this file exists\n")
     (ticket / "tools").mkdir()
     (ticket / "tools" / "helper").symlink_to(checkout / "tools" / "helper")  # as ticket start does
 

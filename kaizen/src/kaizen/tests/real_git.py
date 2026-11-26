@@ -11,7 +11,7 @@ def git(*args: str | Path) -> str:
 
 
 def commit(repo: Path, name: str, text: str) -> str:
-    """Writes *text* to *name* in *repo*, commits it and returns the new ``HEAD``."""
+    """Returns the new ``HEAD``."""
     (repo / name).write_text(text)
     git("-C", repo, "add", name)
     git("-C", repo, "commit", "-q", "-m", f"Write {name}")
@@ -19,7 +19,7 @@ def commit(repo: Path, name: str, text: str) -> str:
 
 
 def clone(origin: Path, dest: Path) -> Path:
-    """Clones *origin* to *dest* with a committer identity set, and returns *dest*."""
+    """A clone with a committer identity set, so tests can commit in it."""
     git("clone", "-q", origin, dest)
     git("-C", dest, "config", "user.name", "Test")
     git("-C", dest, "config", "user.email", "test@example.com")

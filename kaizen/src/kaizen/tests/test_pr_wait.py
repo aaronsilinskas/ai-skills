@@ -11,7 +11,7 @@ import pytest
 
 from kaizen.pr.wait import wait
 from kaizen.shared.common import RefusalError
-from kaizen.tests.ticket_shell import Shell, failed, home_for
+from kaizen.tests.ticket_shell import Shell, failed, home_for, proto_pr_argv
 
 
 class Clock:
@@ -244,7 +244,7 @@ def test_a_ticket_worktree_waits_on_its_branchs_pr_in_its_projects_repo(tmp_path
     clock, lines = Clock(), list[str]()
 
     assert _wait(shell, clock, lines, target=str(worktree), home=home_for(projects)) == 0
-    assert shell.ran("gh", "-R", "owner/proto", "pr", "checks", BRANCH)
+    assert shell.ran(*proto_pr_argv("checks", BRANCH))
     assert lines[-1] == f"all 1 check(s) passed on PR {BRANCH}"
 
 
