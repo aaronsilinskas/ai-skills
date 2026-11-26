@@ -17,6 +17,7 @@ from kaizen.shared.command_records import CommandRecord, HomelessCommand, Instal
 from kaizen.shared.version import Version
 from kaizen.tests.commands import command_parsers
 from kaizen.tests.ticket_shell import (
+    FINISHED_PR,
     RELAY,
     SITE,
     SPEC_START,
@@ -359,7 +360,7 @@ def test_kaizen_project_leak_check_searches_the_ticket_worktree_it_is_pointed_at
 def _pr_checks(bucket: str) -> Shell:
     link = "https://github.com/o/r/actions/runs/7/job/70"
     check = {"name": "check", "bucket": bucket, "workflow": "CI", "link": link}
-    return Shell({("pr", "checks"): json.dumps([check])})
+    return Shell({**FINISHED_PR, ("pr", "checks"): json.dumps([check])})
 
 
 @pytest.mark.parametrize(
@@ -636,7 +637,7 @@ def test_kaizen_exits_with_its_own_code_when_the_reader_of_all_its_output_has_go
 
 
 def test_the_last_stderr_line_of_a_crash_follows_its_traceback(kaizen, capsys):
-    shell = Shell({("pr", "checks"): FileNotFoundError(2, "No such file", "gh")})
+    shell = Shell({("gh",): FileNotFoundError(2, "No such file", "gh")})
 
     assert kaizen(["pr", "wait", "42", "--timeout", "0"], run=shell) == 1
 

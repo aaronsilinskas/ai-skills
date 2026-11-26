@@ -108,12 +108,18 @@ kaizen ticket ship <worktree> --title "<PR title>" --body-file <file>
 
 The title names the change, not the problem the issue names.
 `ship` adds the `Closes` line and the home's PR footer, so the body file leaves both out.
-Hand the PR URL it prints to the user.
-If `ship` reports auto-merge on, the PR merges itself once its checks pass; otherwise the user merges it.
-To wait for the PR's CI, run `kaizen pr wait <worktree>`, never a `gh pr checks` or `gh run watch` loop: `gh pr checks` exits 8 while checks are pending.
-It exits 0 when the checks pass (or the repo has no CI), 1 naming each failed check and its log command (or with `refused:`, such as for a PR it can't find), and 2 on `--timeout`.
+After opening the PR, `ship` waits for it as `kaizen pr wait` does, so give its shell call a 10-minute timeout.
+The ticket is finished only when `ship` exits 0: the PR's checks passed (or the repo has no CI) and it merges cleanly with the default branch.
+A non-zero exit means the work is unfinished, whatever was pushed: its `not finished:` line says why.
+On exit 1 (a failed check, with its log command, or a conflict), fix it, commit, and run `ship` again; never hand back a ticket in that state.
+On exit 2 the wait timed out: run `kaizen pr wait <worktree>` until it exits 0 or 1.
+Then hand the PR URL it printed to the user.
+If `ship` reports auto-merge on, the PR merges itself once its checks pass, and a merge during the wait counts as finished; otherwise the user merges it.
+To wait on a PR again, run `kaizen pr wait <worktree>`, never a `gh pr checks` or `gh run watch` loop: `gh pr checks` exits 8 while checks are pending.
+It exits 0 when the checks pass (or the repo has no CI) and the PR merges cleanly, and 2 on `--timeout`.
+It exits 1 naming each failed check and its log command, or a conflict, or with `refused:`, such as for a PR it can't find.
 Give the shell call a timeout above `--timeout` (540 seconds by default), or run it in the background.
-After review fixes, update the body file if the change grew, commit, and run `ship` again; it pushes and refreshes the open PR.
+After review fixes, update the body file if the change grew, commit, and run `ship` again; it pushes, refreshes the open PR and waits again.
 
 ## Finish: after the PR merged
 

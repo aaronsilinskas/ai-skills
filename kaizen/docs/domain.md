@@ -87,6 +87,9 @@ Paths below are relative to `kaizen/src/kaizen/`.
   It refuses an issue reference to a repo outside the home.
 - `shared/pr.py`: the GitHub PR steps the ship and finish commands share, ending each PR body with the home's PR footer unless that setting is empty.
   A ship leak-checks the exact title and body it sends, `Closes` lines and footer included, so the leak rules see every line GitHub gets.
+- `shared/pr_wait.py`: the wait on a PR until it is finished (its checks passed, or the repo has no CI, and it merges cleanly, or it merged), which `pr wait` runs and both ship commands run after opening or updating their PR.
+  Each poll reads the PR's mergeable state before its checks, since GitHub runs no `pull_request` workflow on a PR that conflicts with its base.
+  The wait sits in `shared/` because the ship commands can't import `pr/`; each ship's handler runs it after `ship` returns, so the `ship` functions the tests call never wait.
 - `shared/worktree.py`: worktree listing, adding a **ticket worktree**, the **scratch worktree** a command adds and removes in one run, and the guard against removing a worktree the pre-commit hook runs from.
   `ticket start` and `ticket compare` both link a project's `worktree_links` through it.
 - `shared/command.py`: runs a project's shell command and maps the ticket's and base's outcomes to one of `kaizen ticket compare`'s verdicts.
@@ -107,7 +110,7 @@ One module per command; each group's `--help` lists them.
   `project add` takes every key from a flag, and prompts for the rest only through its `ask` seam, which the CLI sets only when stdin is a terminal; without one it refuses a missing required key rather than prompt.
   Its detections only query, and each detected value is printed with its source, never applied silently; the page it writes is parsed back with the registry's parser before anything is written.
 - `issue/`: `issue show`, `issue link` and `issue publish`, built on the issue graph.
-- `pr/`: `pr wait`, which waits for a PR's checks and exits by their outcome.
+- `pr/`: `pr wait`, which resolves a ticket worktree to its branch's PR and waits on it through `shared/pr_wait.py`, exiting by the outcome.
 - `home/`: `home init`, which makes the git repo it runs in a new home, and needs no home itself.
   Its output and files name no home but the new one (ADR 0002), and the marker is written last, so a failure partway leaves none and a rerun finishes the rest.
   `home sync` brings a home's synced files and managed settings back in step, and with `--check` fails on any difference without writing, so a home's CI can run it.
