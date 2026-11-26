@@ -27,6 +27,24 @@ repos:
         name: kaizen work-tracking references
         entry: kaizen hook work-tracking
         language: system
+      # The hooks kaizen added after its last release run from kaizen's own build, so this repo
+      # checks itself with them before the installed kaizen has them.
+      - id: kaizen-doc-paths
+        name: kaizen doc paths
+        entry: uv run --project kaizen kaizen hook doc-paths
+        language: system
+        pass_filenames: false
+        always_run: true
+        # The first study makes docs/research/.
+        args: [--allow, docs/research/]
+      - id: kaizen-glossary-terms
+        name: kaizen glossary terms
+        entry: uv run --project kaizen kaizen hook glossary-terms
+        language: system
+      - id: kaizen-test-names
+        name: kaizen test names
+        entry: uv run --project kaizen kaizen hook test-names
+        language: system
       # kaizen's own ruff, from kaizen/uv.lock, so the hook and kaizen/scripts/check.sh use one version
       # and config.
       - id: ruff-check

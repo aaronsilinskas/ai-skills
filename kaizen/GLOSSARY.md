@@ -70,7 +70,7 @@ _Avoid_: agent worktree, scratch worktree (that is a command's temporary worktre
 **Base**:
 The branch a ticket is built on and compared against: its spec's integration branch, or else the project's remote default branch.
 `kaizen ticket compare` runs against its tip, and `kaizen ticket diff --base` prints its merge base with the ticket, the commit to review from, which stays put while the base moves on.
-_Avoid_: upstream, parent branch, target branch
+_Avoid_: upstream (for a base), parent branch, target branch
 
 **Docs change**:
 A change to docs only, built without an issue.
@@ -85,7 +85,7 @@ _Avoid_: feature branch, spec branch
 **Integrate**:
 To merge one finished ticket into its spec's integration branch, once the project's check command passes on the result.
 The ticket's branch is never pushed; only the integration branch is.
-_Avoid_: land, merge in
+_Avoid_: land (for integrating a ticket), merge in
 
 **Scratch worktree**:
 A temporary worktree that one command creates and removes in the same run, such as the one an integration happens in, or the one holding a ticket's base for a comparison.
@@ -102,13 +102,13 @@ _Avoid_: next tickets, ready list
 A file in a home whose content kaizen renders from its templates, and which the home doesn't edit.
 `kaizen home sync` rewrites a copy that differs from the render, and `kaizen home sync --check` fails on one.
 A local edit is overwritten, and the home's git history keeps it (ADR 0004).
-_Avoid_: vendored file, template, generated file
+_Avoid_: vendored file, template (for a rendered synced file), generated file
 
 **Home overlay**:
 The home's own notes that sit beside its synced files and hold the rules only that home follows.
 It adds to the synced files and never edits them, and syncing never touches it.
 Syncing overwrites local edits to synced files, so a home's own rules belong here (ADR 0004).
-_Avoid_: override, customisation, local patch
+_Avoid_: override (for the home overlay), customisation, local patch
 
 **Managed settings**:
 The part of a home's Claude Code settings that syncing owns: only the git stash deny rule, whose entries `kaizen home sync` and `kaizen home init` add to the settings' deny list.
@@ -117,10 +117,10 @@ _Avoid_: synced settings, managed keys
 
 **Home setting**:
 A value in the home marker that changes kaizen's behaviour for that home, with a default when unset.
-_Avoid_: config, option, flag
+_Avoid_: config (for a home setting), option (for a home setting), flag (a command-line flag is something else)
 
 **Hook**:
-A `kaizen hook` command that a home's or project's pre-commit config runs on each commit: the leak check on the staged files, no commits to the default branch, prose marks in Markdown, and the two comment hooks, section banners and work-tracking references.
+A `kaizen hook` command that a home's or project's pre-commit config runs on each commit: the leak check on the staged files, no commits to the default branch, prose marks in Markdown, the two comment hooks, section banners and work-tracking references, and the hooks for repo paths in the agent docs, avoided glossary terms and vacuous test names.
 A hook refuses with the file, line and rule of each finding, and refuses outright when run outside a home.
 _Avoid_: pre-commit script, check (a check command is something else)
 
@@ -132,7 +132,7 @@ _Avoid_: hook config (that is the whole file), hook manifest
 **Synced version**:
 The kaizen release a home was last synced with, recorded in its home marker by `kaizen home sync` and `kaizen home init`.
 Every command compares it with the running release, and the synced files show it in the home's CI step.
-_Avoid_: pin, home version
+_Avoid_: pin (for the synced version), home version
 
 **Local build**:
 A kaizen installed from a checkout of its repo rather than a release from PyPI.

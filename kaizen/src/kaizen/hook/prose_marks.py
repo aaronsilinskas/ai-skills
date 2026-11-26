@@ -3,14 +3,12 @@ prose away as machine-written; en dashes stay allowed for ranges."""
 
 import argparse
 from collections.abc import Iterator
-from pathlib import PurePath
 
 from kaizen.hook.common import Finding, add_files_argument, read_text, refuse
+from kaizen.hook.markdown import is_markdown
 from kaizen.shared.command_records import HomeCommand
 from kaizen.shared.common import Runner, Subparsers
 from kaizen.shared.home import Home
-
-_MARKDOWN = (".md", ".markdown")
 
 _MARKS = {
     "\u2014": "em dash",
@@ -29,7 +27,7 @@ _FIX = (
 def prose_mark_findings(names: list[str]) -> Iterator[Finding]:
     """Each line of the Markdown files among *names* holding a refused mark, once per mark."""
     for name in names:
-        if PurePath(name).suffix.lower() not in _MARKDOWN or (text := read_text(name)) is None:
+        if not is_markdown(name) or (text := read_text(name)) is None:
             continue
         for number, line in enumerate(text.splitlines(), start=1):
             for mark, label in _MARKS.items():

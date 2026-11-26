@@ -27,4 +27,18 @@ KAIZEN_REPO_ITEM = """\
         name: kaizen work-tracking references
         entry: kaizen hook work-tracking
         language: system
+      - id: kaizen-doc-paths
+        name: kaizen doc paths
+        entry: kaizen hook doc-paths
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: kaizen-glossary-terms
+        name: kaizen glossary terms
+        entry: kaizen hook glossary-terms
+        language: system
+      - id: kaizen-test-names
+        name: kaizen test names
+        entry: kaizen hook test-names
+        language: system
 """
