@@ -10,7 +10,11 @@ A **feature** is anything a user or caller can use or configure: a command, a fl
 
 Three inputs settle a feature, and each has one owner:
 
-- **Cost**, measured by you: what each part adds. Name it concretely, in your own judgement: code and tests, docs and help text, new config surface, new failure modes, interactions with other features, upkeep on every later change.
+- **Cost**, measured by you, as two figures side by side, never folded into one score:
+  - **lines**: the code, tests, docs and help text it adds.
+  - **spread**: how far it reaches. Count the files it touches, the classes and functions, the interfaces it exposes or changes (commands, flags, config keys) and the seams it crosses, with **module**, **interface** and **seam** as the codebase-design skill defines them.
+
+  Then name in a few words what the figures miss: new failure modes, interactions with other features. Spread weighs heaviest, since every later change pays for each file, interface and seam a feature reaches.
 - **Use**, measured by you, from evidence (below). "Might be useful" is a guess, and a guess counts as unknown use.
 - **Value** to the people using it, rated by the user: **high**, **low** or **unsure**. Ask only for a feature that cost and use leave undecided (its use is unknown, or real use meets a real cost and neither clearly wins), and record the answer in the ledger. The rating is the user's alone: leave it as `-` until they give it.
 
@@ -47,10 +51,10 @@ Report it as a **Cost and use** section:
 ```markdown
 ## Cost and use
 
-| Part | Cost | Use (source) |
-| --- | --- | --- |
-| `export` command, JSON output | one command, one test file, a README section | 4 issues ask to move data out (#12, #31, #40, #52) |
-| `--format csv` | a second writer and its tests | none: every request names JSON |
+| Part | Lines | Spread | Use (source) |
+| --- | --- | --- | --- |
+| `export` command, JSON output | ~90: the command, its tests, a README section | 3 files, 2 functions, 1 new command, no new seam | 4 issues ask to move data out (#12, #31, #40, #52) |
+| `--format csv` | ~60: a second writer and its tests | 2 files, 1 class, 1 new flag, a writer seam with two adapters | none: every request names JSON |
 
 Smallest version: `export` with JSON output only.
 Verdict: **build smaller**. Deferred: `--format csv`, revisit when an issue asks for CSV.
@@ -70,20 +74,27 @@ Run it when the user asks to audit a project's features, or one module or path o
    2. **cut**: it has a real cost and no evidenced use across the chances it had to be used.
    3. **merge**: another feature does the same job, in the project or in a tool its users already run (such as a hook in the standard collection of the hook runner the project uses); fold it into that one.
    4. **shrink**: it is used, but only some of its parts are, such as an option whose values nobody passes; the unused parts go.
-   5. **measure**: its use is unknown; name the signal it waits for and where that would come from. Telemetry may be that signal, named as a proposal of its own for proposal mode.
+   5. **measure**: its use is unknown, or it is used but costly enough that the use alone doesn't settle it. Name the signal it waits for and where that would come from: for a used but costly feature, the user's value rating. Telemetry may be that signal, named as a proposal of its own for proposal mode.
    6. **keep**: its evidenced use justifies its cost.
 
    Judge a young feature like any other, by its use across the chances it had.
-5. **Write the report** to the temp directory, as [HTML-REPORT.md](HTML-REPORT.md) specifies, open it, and ask the user which candidates to explore.
-6. **Grill** through the candidates the user picks: call the Skill tool with "grilling". Ask the user to rate the value of each undecided one, and write each decision to the ledger as it is made.
+5. **Grade confidence** in each candidate's bucket (cut, merge, shrink or measure) by its bucket's criteria below, and list which held: **high** when every criterion holds, **medium** when some do, **low** when the evidence is too thin to test most of them. A high-confidence cut is a clear cut: it needs no value rating. Every other candidate goes to the user for one.
+   - **cut**: zero use across the counted chances; no caller in code, docs, scripts or CI; no ledger row naming it groundwork.
+   - **merge**: the other feature does the whole job; its users already run it; no caller depends on a difference between the two.
+   - **shrink**: the parts that go have zero use across the counted chances and no caller; the parts that stay have evidenced use.
+   - **measure**: every evidence source was checked; the named signal can be gathered.
+6. **Write the report** to the temp directory, as [HTML-REPORT.md](HTML-REPORT.md) specifies, open it, and ask the user which candidates to explore.
+7. **Grill** through the candidates the user picks: call the Skill tool with "grilling". Ask the user to rate the value of each one short of a high-confidence cut, and write each decision to the ledger as it is made.
 
-The audit is done when every feature in scope sits in one bucket with its cost and use, the report is written, and each decision from the grilling is in the ledger.
+The audit is done when every feature in scope sits in one bucket with its cost and use, every candidate has its confidence and the criteria that held, the report is written, and each decision from the grilling is in the ledger.
 
 ### Counting use
 
 Count what shows a feature serving someone, not what touches it:
 
-- **Use comes from outside the build.** Drop the calls from the session that built or changed the feature: its building and testing.
+- **Use comes from outside the build.** Drop the calls from every build session: a session that edited the feature's code by any route (the Edit or Write tools, a Bash write such as `sed -i`, a redirect or `git apply`), sub-agent transcripts included, each judged as its own session. Find them from the edits, not from Edit calls alone.
+- **Audits are not use.** Drop the transcripts of feature-backpressure's own audit runs, whose greps and dry runs touch every feature.
+- **A flag used only in build sessions** is dev-only: sort it as **measure**, not keep, since its users are the people building it and only their value rating settles it. A flag with no calls anywhere is still judged for cut.
 - **Setup commands count outcomes**, such as homes made or repos registered, not calls, so dev runs don't inflate them.
 - **Hooks count outcomes**: each pass and each fail, not each call. A guard that has never failed may be idle or may be working: sort it as **measure**, with the user's value rating as the signal it waits for.
 - **Once-per-trigger features** (once per spec, once per repo) are judged against how often their trigger happened, so a low count by design doesn't read as disuse.
@@ -121,9 +132,9 @@ The ledger stays current by these rules:
 ## Checklist
 
 - [ ] The ledger was read first, and no declined or deferred item came back without its revisit condition
-- [ ] Every part of the proposal has its cost and its use, with the use's source
-- [ ] Value came from the user, asked only where cost and use left a part undecided
+- [ ] Every part of the proposal has its cost, lines and spread side by side, and its use, with the use's source
+- [ ] Value came from the user, asked only where cost and use left a part undecided, and never for a high-confidence cut
 - [ ] The report ends on exactly one verdict, with deferred extras or the settling evidence named
 - [ ] The ledger holds a row for every verdict
-- [ ] An audit applied the ledger's audit rules, put every feature in scope in one bucket with its cost and use, and capped its report's cards at 10 with a count of the rest
+- [ ] An audit applied the ledger's audit rules, put every feature in scope in one bucket with its cost and use, graded each candidate's confidence with the criteria that held, and ranked its report's cards by cost alone, capped at 10 with a count of the rest
 - [ ] No cut is made without the user's approval, and each approved cut ships as its own change

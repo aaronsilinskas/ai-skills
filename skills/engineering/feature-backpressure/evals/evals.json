@@ -215,7 +215,9 @@
         "The feature-backpressure skill triggers",
         "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
         "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
-        "The response asks the user which candidates to explore before cutting anything"
+        "The response asks the user which candidates to explore before cutting anything",
+        "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+        "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\""
       ],
       "assertions": [
         {
@@ -232,6 +234,14 @@
         },
         {
           "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        },
+        {
+          "text": "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+          "type": "output_check"
+        },
+        {
+          "text": "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
           "type": "output_check"
         }
       ]
@@ -239,17 +249,20 @@
     {
       "id": 10,
       "prompt": "Which of kaizen's ticket and hook commands could we cut? Audit them at commit 7cb42d2 using agent transcripts as evidence.",
-      "expected_output": "Known answers from the kaizen pilot: `ticket publish --wait-timeout` sorts as cut, `hook no-commit-to-branch` as merge, and `ticket diff`, young but heavily used, as keep.",
+      "expected_output": "Known answers from the kaizen pilot: `ticket publish --wait-timeout` sorts as a high-confidence cut, `hook no-commit-to-branch` as merge, `ticket diff`, young but heavily used, as keep, and `ticket compare --runs`, used only while it was built, as measure.",
       "files": [],
       "expectations": [
         "The feature-backpressure skill triggers",
         "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
         "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
         "The response asks the user which candidates to explore before cutting anything",
-        "`ticket publish --wait-timeout` sorts as cut",
+        "`ticket publish --wait-timeout` sorts as cut with high confidence",
         "`hook no-commit-to-branch` sorts as merge",
         "`ticket diff` sorts as keep despite its young age",
-        "Calls from the session that built a command are left out of its use count, and hooks are counted by pass and fail outcomes"
+        "Build sessions are found from any edit to a feature's code (Edit or Write tools, Bash writes, sub-agent transcripts) and their calls left out, feature-backpressure's own audit transcripts are left out, and hooks are counted by pass and fail outcomes",
+        "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+        "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
+        "`ticket compare --runs`, used only in its build session, sorts as measure"
       ],
       "assertions": [
         {
@@ -269,7 +282,7 @@
           "type": "output_check"
         },
         {
-          "text": "`ticket publish --wait-timeout` sorts as cut",
+          "text": "`ticket publish --wait-timeout` sorts as cut with high confidence",
           "type": "output_check"
         },
         {
@@ -281,7 +294,19 @@
           "type": "output_check"
         },
         {
-          "text": "Calls from the session that built a command are left out of its use count, and hooks are counted by pass and fail outcomes",
+          "text": "Build sessions are found from any edit to a feature's code (Edit or Write tools, Bash writes, sub-agent transcripts) and their calls left out, feature-backpressure's own audit transcripts are left out, and hooks are counted by pass and fail outcomes",
+          "type": "output_check"
+        },
+        {
+          "text": "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+          "type": "output_check"
+        },
+        {
+          "text": "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
+          "type": "output_check"
+        },
+        {
+          "text": "`ticket compare --runs`, used only in its build session, sorts as measure",
           "type": "output_check"
         }
       ]
@@ -297,7 +322,9 @@
         "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
         "The response asks the user which candidates to explore before cutting anything",
         "Use evidence comes from sources other than agent transcripts: the user's knowledge, the issue tracker or reachability",
-        "Each measure candidate names the signal it waits for"
+        "Each measure candidate names the signal it waits for",
+        "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+        "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\""
       ],
       "assertions": [
         {
@@ -322,6 +349,14 @@
         },
         {
           "text": "Each measure candidate names the signal it waits for",
+          "type": "output_check"
+        },
+        {
+          "text": "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+          "type": "output_check"
+        },
+        {
+          "text": "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
           "type": "output_check"
         }
       ]

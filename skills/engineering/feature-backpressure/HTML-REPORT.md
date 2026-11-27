@@ -5,7 +5,7 @@ The audit report is one self-contained HTML file: inline CSS, no scripts, no ext
 ## Order and cap
 
 - **Candidates** are the features in the cut, merge, shrink and measure buckets.
-- Sort them by bucket in that order, then by cost, highest first, so the costliest cuts lead.
+- Rank them by cost alone, highest first, whatever their bucket, so the costliest features lead. Spread weighs heaviest: compare seams crossed, then interfaces, then files, then classes and functions, and break a tie on lines.
 - Show the top 10 as cards. Close the list with a count of the candidates left out, by bucket, so the user can ask for the next batch.
 - Keeps and trivials get no cards: show each as a count.
 - The ledger gets one line: how many rows were skipped as settled, re-checked, and dropped for features that no longer exist.
@@ -25,6 +25,7 @@ The audit report is one self-contained HTML file: inline CSS, no scripts, no ext
       .badge { display: inline-block; padding: 0 .5rem; border-radius: 999px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
       .cut { background: #fee2e2; color: #991b1b; } .merge { background: #ede9fe; color: #5b21b6; }
       .shrink { background: #fef3c7; color: #92400e; } .measure { background: #e0f2fe; color: #075985; }
+      .high { background: #dcfce7; color: #166534; } .medium { background: #f5f5f4; color: #44403c; } .low { background: #fafaf9; color: #78716c; border: 1px dashed #a8a29e; }
       .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
       @media (max-width: 40rem) { .sides { grid-template-columns: 1fr; } }
       code { font-family: ui-monospace, monospace; font-size: 13px; }
@@ -42,16 +43,17 @@ The audit report is one self-contained HTML file: inline CSS, no scripts, no ext
 
 ## Header
 
-The project, the scope audited, the commit, the date, and one line of totals: units found, then the count in each bucket. Straight into the cards after it.
+The project, the scope audited, the commit, the date, and one line of totals: features found, the count in each bucket, and how many candidates are high-confidence cuts. Straight into the cards after it.
 
 ## Candidate card
 
 One `<article>` per candidate:
 
-- **Title**: the feature's name as a user types or sees it (`ticket publish --wait-timeout`), and its bucket as a badge.
-- **Cost and use**, side by side in the `.sides` grid. Cost: what the feature adds (code, tests, docs, config surface, failure modes). Use: the count or finding, its source, and the window it covers, counted by the skill's **Counting use** rules.
+- **Title**: the feature's name as a user types or sees it (`ticket publish --wait-timeout`), its bucket as a badge, and its confidence as a second badge (`high`, `medium` or `low`).
+- **Cost and use**, side by side in the `.sides` grid. Cost: its lines and its spread on two lines, as the skill's **Cost** defines them, and a few words for any failure mode they miss. Use: the count or finding, its source, and the window it covers, counted by the skill's **Counting use** rules.
 - **Added**: the date of the commit that added it.
 - **Action**: one sentence. For a cut, what goes; for a merge, what it folds into; for a shrink, which parts go; for a measure, the signal it waits for and where it would come from.
-- **Value**: the user's rating from the ledger, or "ask" when cost and use leave the feature undecided.
+- **Confidence**: each of its bucket's criteria, marked held or not held.
+- **Value**: the user's rating from the ledger, "not asked: high-confidence cut" for a clear cut, or "ask" for every other candidate.
 
 Prose stays short: one line per field. When a card needs a paragraph, the evidence isn't settled yet.
