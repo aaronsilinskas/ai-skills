@@ -1,0 +1,365 @@
+{
+  "skill_name": "feature-backpressure",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a dark mode feature to the settings page.",
+      "expected_output": "The skill fires and weighs the feature's cost against evidence of use before building it, ending on one verdict.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a --verbose flag to the sync command so it prints every file it copies.",
+      "expected_output": "The skill fires on the new flag and weighs it before building.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Give the export command an option to choose between JSON, CSV and XML output.",
+      "expected_output": "The skill fires, splits the option into its formats, and proposes the smallest version the evidenced use serves.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+        "Formats without evidence of use are listed as deferred extras or the verdict is measure first"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        },
+        {
+          "text": "Formats without evidence of use are listed as deferred extras or the verdict is measure first",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Add a retry_limit config key so users can set how many times an upload is retried.",
+      "expected_output": "The skill fires on the new config key and weighs it before building.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "The spec proposes a new `report` command with --since, --until, --format and --group-by. Implement it.",
+      "expected_output": "The skill fires on the proposed command and flags before implementation, and asks the user to rate value only for parts cost and use leave undecided.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "The response has a Cost and use section naming each part's cost and its use with a source",
+        "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+        "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+        "The response asks the user for value (high, low or unsure) only on undecided parts, never rating value itself"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "The response has a Cost and use section naming each part's cost and its use with a source",
+          "type": "output_check"
+        },
+        {
+          "text": "The response ends on exactly one verdict: build, build smaller, measure first or decline",
+          "type": "output_check"
+        },
+        {
+          "text": "The response reads docs/feature-backpressure.md before weighing, and writes a row when the verdict needs one",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user for value (high, low or unsure) only on undecided parts, never rating value itself",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Fix the bug where the sync command crashes on an empty directory.",
+      "expected_output": "The skill stays quiet: a bug fix adds no feature.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill does not trigger"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill does not trigger",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Refactor the config loader into one module without changing its behaviour.",
+      "expected_output": "The skill stays quiet: a refactor adds no feature.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill does not trigger"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill does not trigger",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Fix the typos in the README's install section.",
+      "expected_output": "The skill stays quiet: a docs edit adds no feature.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill does not trigger"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill does not trigger",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Audit this project's features for feature creep.",
+      "expected_output": "The skill fires in audit mode: it reads the ledger, scans every feature, sorts each into a bucket and writes the HTML report.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+        "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+        "The response asks the user which candidates to explore before cutting anything",
+        "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+        "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\""
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+          "type": "output_check"
+        },
+        {
+          "text": "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        },
+        {
+          "text": "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+          "type": "output_check"
+        },
+        {
+          "text": "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Which of kaizen's ticket and hook commands could we cut? Audit them at commit 7cb42d2 using agent transcripts as evidence.",
+      "expected_output": "Known answers from the kaizen pilot: `ticket publish --wait-timeout` sorts as a high-confidence cut, `hook no-commit-to-branch` as merge, `ticket diff`, young but heavily used, as keep, and `ticket compare --runs`, used only while it was built, as measure.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+        "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+        "The response asks the user which candidates to explore before cutting anything",
+        "`ticket publish --wait-timeout` sorts as cut with high confidence",
+        "`hook no-commit-to-branch` sorts as merge",
+        "`ticket diff` sorts as keep despite its young age",
+        "Build sessions are found from any edit to a feature's code (Edit or Write tools, Bash writes, sub-agent transcripts) and their calls left out, feature-backpressure's own audit transcripts are left out, and hooks are counted by pass and fail outcomes",
+        "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+        "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
+        "`ticket compare --runs`, used only in its build session, sorts as measure"
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+          "type": "output_check"
+        },
+        {
+          "text": "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        },
+        {
+          "text": "`ticket publish --wait-timeout` sorts as cut with high confidence",
+          "type": "output_check"
+        },
+        {
+          "text": "`hook no-commit-to-branch` sorts as merge",
+          "type": "output_check"
+        },
+        {
+          "text": "`ticket diff` sorts as keep despite its young age",
+          "type": "output_check"
+        },
+        {
+          "text": "Build sessions are found from any edit to a feature's code (Edit or Write tools, Bash writes, sub-agent transcripts) and their calls left out, feature-backpressure's own audit transcripts are left out, and hooks are counted by pass and fail outcomes",
+          "type": "output_check"
+        },
+        {
+          "text": "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+          "type": "output_check"
+        },
+        {
+          "text": "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
+          "type": "output_check"
+        },
+        {
+          "text": "`ticket compare --runs`, used only in its build session, sorts as measure",
+          "type": "output_check"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Review the settings screens of our mobile app and tell me which features are worth keeping. We have no telemetry.",
+      "expected_output": "The skill fires in audit mode on an application: use comes from the user's knowledge, the issue tracker and reachability, and features whose use stays unknown go to measure, naming the signal they wait for.",
+      "files": [],
+      "expectations": [
+        "The feature-backpressure skill triggers",
+        "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+        "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+        "The response asks the user which candidates to explore before cutting anything",
+        "Use evidence comes from sources other than agent transcripts: the user's knowledge, the issue tracker or reachability",
+        "Each measure candidate names the signal it waits for",
+        "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+        "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\""
+      ],
+      "assertions": [
+        {
+          "text": "The feature-backpressure skill triggers",
+          "type": "output_check"
+        },
+        {
+          "text": "Every feature in scope sits in one bucket (trivial, cut, merge, shrink, measure or keep) with its cost and its use",
+          "type": "output_check"
+        },
+        {
+          "text": "A self-contained HTML report is written to the temp directory, with at most 10 candidate cards and keeps shown as a count",
+          "type": "output_check"
+        },
+        {
+          "text": "The response asks the user which candidates to explore before cutting anything",
+          "type": "output_check"
+        },
+        {
+          "text": "Use evidence comes from sources other than agent transcripts: the user's knowledge, the issue tracker or reachability",
+          "type": "output_check"
+        },
+        {
+          "text": "Each measure candidate names the signal it waits for",
+          "type": "output_check"
+        },
+        {
+          "text": "Cards are ranked by cost alone, highest first, and each card's cost gives lines and spread (files, classes and functions, interfaces, seams) side by side",
+          "type": "output_check"
+        },
+        {
+          "text": "Each card carries a confidence (high, medium or low) with the criteria that held, and a high-confidence cut's Value reads \"not asked: high-confidence cut\"",
+          "type": "output_check"
+        }
+      ]
+    }
+  ]
+}
