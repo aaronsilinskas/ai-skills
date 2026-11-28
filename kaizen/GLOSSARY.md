@@ -32,7 +32,7 @@ _Avoid_: triage labels (for the whole set), standard labels
 
 **Main checkout**:
 A project's own clone at its registered path.
-It may hold other sessions' uncommitted work, so ticket work never happens there.
+It may hold other sessions' uncommitted work.
 _Avoid_: working copy, local repo
 
 **Check command**:
